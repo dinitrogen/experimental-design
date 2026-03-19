@@ -2,6 +2,11 @@ import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { defineString } from "firebase-functions/params";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+
+initializeApp();
+const db = getFirestore();
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY ?? "");
 
@@ -182,6 +187,59 @@ export const notifyTaskSubmitted = onDocumentUpdated(
       {
         name: "Task",
         value: after.taskId || "Unknown",
+        inline: true,
+      },
+    ]);
+  },
+);
+
+// ── Achievement Unlocked Notification ──
+
+// Keep in sync with ACHIEVEMENT_TEMPLATES in src/app/core/models/achievement.model.ts
+// (Cloud Functions can't import from Angular source due to separate build targets)
+const ACHIEVEMENT_TITLES: Record<string, string> = {
+  'first-login': 'Welcome Aboard',
+  'login-streak-3': 'Hat Trick',
+  'login-streak-7': 'Aura Farming',
+  'complete-first-task': 'Task Rookie',
+  'complete-three-tasks': 'Task Master',
+  'review-all-guides': 'Study Guide Scholar',
+  'complete-parachute-drop': 'Parachute Drop',
+  'complete-sugar-solubility': 'Sugar Solubility',
+};
+
+export const notifyAchievementUnlocked = onDocumentUpdated(
+  'achievements/{achievementId}',
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    // Only fire when completed changes from false to true
+    if (before.completed || !after.completed) return;
+
+    // Look up student display name
+    let studentName = 'Unknown';
+    try {
+      const userDoc = await db.doc(`users/${after.studentUid}`).get();
+      if (userDoc.exists) {
+        studentName = userDoc.data()?.displayName || after.studentUid;
+      }
+    } catch {
+      studentName = after.studentUid || 'Unknown';
+    }
+
+    const achievementTitle = ACHIEVEMENT_TITLES[after.templateId] || after.templateId;
+
+    await sendDiscordEmbed('🏆 Achievement Unlocked', 0xffa000, [
+      {
+        name: 'Student',
+        value: studentName,
+        inline: true,
+      },
+      {
+        name: 'Achievement',
+        value: achievementTitle,
         inline: true,
       },
     ]);
