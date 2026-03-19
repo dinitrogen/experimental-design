@@ -1,7 +1,11 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onDocumentUpdated } from "firebase-functions/v2/firestore";
+import { defineString } from "firebase-functions/params";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY ?? "");
+
+const discordWebhookUrl = defineString("DISCORD_WEBHOOK_URL", { default: "" });
 
 const responseSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -97,3 +101,89 @@ Return one row per IV level in the same order as provided.`;
     throw new HttpsError("internal", "AI returned invalid JSON.");
   }
 });
+
+// ── Discord Notification Helper ──
+
+async function sendDiscordEmbed(
+  title: string,
+  color: number,
+  fields: { name: string; value: string; inline?: boolean }[],
+) {
+  const url = discordWebhookUrl.value();
+  if (!url) {
+    console.log("Discord webhook not configured — skipping notification");
+    return;
+  }
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        embeds: [
+          {
+            title,
+            color,
+            fields,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      }),
+    });
+    console.log("Discord notification sent:", title);
+  } catch (error) {
+    console.error("Discord notification failed:", error);
+  }
+}
+
+// ── Report Submission Notification ──
+
+export const notifyReportSubmitted = onDocumentUpdated(
+  "submissions/{submissionId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    if (before.status === "submitted" || after.status !== "submitted") return;
+
+    await sendDiscordEmbed("📝 Practice Report Submitted", 0x1565c0, [
+      {
+        name: "Student",
+        value: after.studentDisplayName || after.studentUid || "Unknown",
+        inline: true,
+      },
+      {
+        name: "Event",
+        value: after.practiceEventId || "Unknown",
+        inline: true,
+      },
+    ]);
+  },
+);
+
+// ── Task Submission Notification ──
+
+export const notifyTaskSubmitted = onDocumentUpdated(
+  "taskSubmissions/{submissionId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    if (before.status === "submitted" || after.status !== "submitted") return;
+
+    await sendDiscordEmbed("✅ Task Submitted", 0x2e7d32, [
+      {
+        name: "Student",
+        value: after.studentDisplayName || after.studentUid || "Unknown",
+        inline: true,
+      },
+      {
+        name: "Task",
+        value: after.taskId || "Unknown",
+        inline: true,
+      },
+    ]);
+  },
+);
