@@ -20,7 +20,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MarkdownComponent } from 'ngx-markdown';
 import { TaskService } from '../../core/services/task.service';
-import { TaskSubmission, getTaskDefinition, TaskDefinition, TaskPrompt } from '../../core/models/task.model';
+import { TaskSubmission, getTaskDefinition, TaskDefinition, TaskPrompt, PromptGrade } from '../../core/models/task.model';
 import {
   Firestore,
   doc,
@@ -76,7 +76,7 @@ import {
           </mat-card-header>
           <mat-card-content>
             <div class="markdown-body">
-              <markdown [data]="markdownContent()"></markdown>
+              <markdown [data]="markdownContent()" katex></markdown>
             </div>
           </mat-card-content>
         </mat-card>
@@ -86,7 +86,7 @@ import {
         <!-- Student Responses -->
         <h2>Student Responses</h2>
         @for (response of submission()!.responses; track $index; let i = $index) {
-          <mat-card class="response-card">
+          <mat-card class="response-card" [class.graded-correct]="promptGrades()[i]?.correct === true" [class.graded-incorrect]="promptGrades()[i]?.correct === false">
             <mat-card-content>
               <h3>{{ getPromptLabel(i) }}</h3>
               @if (isTablePrompt(i)) {
@@ -115,6 +115,66 @@ import {
               } @else {
                 <p class="response-text">{{ response || '(No response provided)' }}</p>
               }
+              @if (getPrompt(i)?.expectedAnswer != null) {
+                <p class="expected-answer">Expected: {{ getPrompt(i)!.expectedAnswer }}</p>
+              }
+              @if (getPrompt(i)?.expectedTableValues) {
+                <details class="expected-table-details">
+                  <summary>Show expected values</summary>
+                  <table class="data-table expected-table">
+                    @if (getPrompt(i)?.columns; as cols) {
+                      <thead>
+                        <tr>
+                          @for (col of cols; track col) {
+                            <th>{{ col }}</th>
+                          }
+                        </tr>
+                      </thead>
+                    }
+                    <tbody>
+                      @for (row of getPrompt(i)!.expectedTableValues!; track $index) {
+                        <tr>
+                          @for (cell of row; track $index) {
+                            <td>{{ cell ?? '—' }}</td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </details>
+              }
+
+              <!-- Grading controls -->
+              <div class="grade-controls">
+                <button
+                  mat-icon-button
+                  [class.active-correct]="promptGrades()[i]?.correct === true"
+                  (click)="setGrade(i, true)"
+                  matTooltip="Mark correct"
+                  aria-label="Mark correct"
+                >
+                  <mat-icon>check_circle</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  [class.active-incorrect]="promptGrades()[i]?.correct === false"
+                  (click)="setGrade(i, false)"
+                  matTooltip="Mark incorrect"
+                  aria-label="Mark incorrect"
+                >
+                  <mat-icon>cancel</mat-icon>
+                </button>
+                @if (promptGrades()[i]?.correct === false) {
+                  <mat-form-field appearance="outline" class="grade-comment-field">
+                    <mat-label>Comment / correct answer</mat-label>
+                    <input
+                      matInput
+                      [value]="promptGrades()[i]?.comment ?? ''"
+                      (input)="setGradeComment(i, $event)"
+                    />
+                  </mat-form-field>
+                }
+              </div>
             </mat-card-content>
           </mat-card>
         }
@@ -264,6 +324,59 @@ import {
       gap: 8px;
       margin-top: 8px;
     }
+
+    .grade-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #eee;
+    }
+
+    .grade-controls .active-correct {
+      color: #2e7d32;
+    }
+
+    .grade-controls .active-incorrect {
+      color: #c62828;
+    }
+
+    .grade-comment-field {
+      flex: 1;
+      margin-left: 8px;
+    }
+
+    .response-card.graded-correct {
+      border-left: 3px solid #2e7d32;
+    }
+
+    .response-card.graded-incorrect {
+      border-left: 3px solid #c62828;
+    }
+
+    .expected-answer {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: #666;
+      font-style: italic;
+    }
+
+    .expected-table-details {
+      margin-top: 8px;
+    }
+
+    .expected-table-details summary {
+      font-size: 13px;
+      color: #666;
+      cursor: pointer;
+      font-style: italic;
+    }
+
+    .expected-table {
+      margin-top: 4px;
+      opacity: 0.75;
+    }
   `,
 })
 export class TaskReviewDetailComponent implements OnInit {
@@ -281,6 +394,7 @@ export class TaskReviewDetailComponent implements OnInit {
   protected readonly taskDef = signal<TaskDefinition | null>(null);
   protected readonly markdownContent = signal('');
   protected readonly feedback = signal('');
+  protected readonly promptGrades = signal<PromptGrade[]>([]);
 
   async ngOnInit(): Promise<void> {
     try {
@@ -294,6 +408,14 @@ export class TaskReviewDetailComponent implements OnInit {
 
       const def = getTaskDefinition(sub.taskId);
       this.taskDef.set(def ?? null);
+
+      // Initialize prompt grades from existing data or empty array
+      const promptCount = def?.prompts.length ?? sub.responses.length;
+      const existing = sub.promptGrades ?? [];
+      const grades: PromptGrade[] = Array.from({ length: promptCount }, (_, i) =>
+        existing[i] ?? { correct: true }
+      );
+      this.promptGrades.set(grades);
 
       if (def) {
         this.http.get(def.promptFile, { responseType: 'text' }).subscribe({
@@ -316,8 +438,8 @@ export class TaskReviewDetailComponent implements OnInit {
 
     this.saving.set(true);
     try {
-      await this.taskService.saveTaskReview(sub.id, this.feedback());
-      this.submission.update((s) => s ? { ...s, status: 'reviewed' } : s);
+      await this.taskService.saveTaskReview(sub.id, this.feedback(), this.promptGrades());
+      this.submission.update((s) => s ? { ...s, status: 'reviewed', promptGrades: this.promptGrades() } : s);
       this.snackBar.open('Review saved!', '', { duration: 3000 });
     } finally {
       this.saving.set(false);
@@ -360,5 +482,28 @@ export class TaskReviewDetailComponent implements OnInit {
       if (Array.isArray(parsed)) return parsed;
     } catch { /* fall through */ }
     return [];
+  }
+
+  protected setGrade(index: number, correct: boolean): void {
+    this.promptGrades.update((prev) => {
+      const copy = [...prev];
+      const current = copy[index];
+      // Toggle off if clicking same state
+      if (current?.correct === correct) {
+        copy[index] = { correct: true };
+      } else {
+        copy[index] = { correct, comment: correct ? undefined : current?.comment };
+      }
+      return copy;
+    });
+  }
+
+  protected setGradeComment(index: number, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.promptGrades.update((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], comment: value };
+      return copy;
+    });
   }
 }

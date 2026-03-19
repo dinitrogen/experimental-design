@@ -86,11 +86,12 @@ import { ApplicationsStepComponent } from './steps/applications';
           <app-countdown-timer #timer [durationMinutes]="50" (expired)="onTimerExpired()" />
           <button
             mat-icon-button
-            (click)="clearForm()"
-            aria-label="Clear form and start over"
-            matTooltip="Clear Form"
+            class="discard-btn"
+            (click)="discardReport()"
+            aria-label="Discard report"
+            matTooltip="Discard Report"
           >
-            <mat-icon>restart_alt</mat-icon>
+            <mat-icon>delete</mat-icon>
           </button>
           <button
             mat-icon-button
@@ -343,6 +344,10 @@ import { ApplicationsStepComponent } from './steps/applications';
       gap: 8px;
       margin-top: 16px;
     }
+
+    .discard-btn {
+      color: #c62828;
+    }
   `,
 })
 export class ReportBuilderComponent implements OnInit, OnDestroy {
@@ -493,18 +498,18 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
     this.dialog.open(PracticeSettingsDialogComponent, { width: '400px' });
   }
 
-  protected clearForm(): void {
+  protected discardReport(): void {
     const sub = this.submission();
     if (!sub?.id) return;
 
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '440px',
       data: {
-        title: 'Clear Form',
-        message: 'This will erase all your current work and reset the report to a blank form. This cannot be undone. Previously submitted reports will not be affected.',
-        confirmText: 'Clear Form',
+        title: 'Discard Report',
+        message: 'This will permanently delete your in-progress report and all of its data. This cannot be undone. Previously submitted reports will not be affected.',
+        confirmText: 'Discard Report',
         confirmColor: 'warn',
-        icon: 'restart_alt',
+        icon: 'delete',
       },
     });
 
@@ -515,12 +520,11 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this.pendingChanges = {};
 
-        const reset = await this.submissionService.resetDraft(sub.id!, this.slug());
-        this.submission.set(reset);
-        this.stepperRef?.reset();
-        this.snackBar.open('Form cleared. You can start fresh!', 'OK', { duration: 3000 });
+        await this.submissionService.deleteSubmission(sub.id!);
+        this.snackBar.open('Report discarded.', 'OK', { duration: 3000 });
+        this.router.navigate(['/practice-events']);
       } catch {
-        this.snackBar.open('Failed to clear form. Please try again.', 'OK', { duration: 5000 });
+        this.snackBar.open('Failed to discard report. Please try again.', 'OK', { duration: 5000 });
       }
     });
   }

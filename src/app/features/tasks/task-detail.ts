@@ -19,7 +19,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MarkdownComponent } from 'ngx-markdown';
 import { TaskService } from '../../core/services/task.service';
-import { TaskDefinition, TaskSubmission, TaskPrompt } from '../../core/models/task.model';
+import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../core/models/task.model';
 
 @Component({
   selector: 'app-task-detail',
@@ -75,7 +75,7 @@ import { TaskDefinition, TaskSubmission, TaskPrompt } from '../../core/models/ta
         <mat-card class="prompt-card">
           <mat-card-content>
             <div class="markdown-body">
-              <markdown [data]="markdownContent()"></markdown>
+              <markdown [data]="markdownContent()" katex></markdown>
             </div>
           </mat-card-content>
         </mat-card>
@@ -85,134 +85,189 @@ import { TaskDefinition, TaskSubmission, TaskPrompt } from '../../core/models/ta
         <h2>Your Responses</h2>
 
         @for (prompt of task()!.prompts; track $index; let i = $index) {
-          <mat-card class="response-card">
-            <mat-card-content>
-              <h3>{{ prompt.label }}</h3>
+          @if (!prompt.inline) {
+            @if (shouldShowDivider(i)) {
+              <mat-divider class="iv-divider" />
+            }
+            <mat-card class="response-card">
+              <mat-card-content>
+                <h3>{{ prompt.label }}</h3>
+                @if (prompt.subLabel) {
+                  <p class="sub-label">{{ prompt.subLabel }}</p>
+                }
 
-              @if (isSubmitted() || isReviewed()) {
-                <!-- Read-only view -->
-                @switch (prompt.type) {
-                  @case ('table') {
-                    <div class="table-wrapper">
-                      <table class="data-table">
-                        @if (prompt.columns) {
-                          <thead>
-                            <tr>
-                              @for (col of prompt.columns; track col) {
-                                <th>{{ col }}</th>
-                              }
-                            </tr>
-                          </thead>
-                        }
-                        <tbody>
-                          @for (row of getTableData(i); track $index) {
-                            <tr>
-                              @for (cell of row; track $index) {
-                                <td>{{ cell || '—' }}</td>
-                              }
-                            </tr>
+                @if (isSubmitted() || isReviewed()) {
+                  <!-- Read-only view -->
+                  @switch (prompt.type) {
+                    @case ('table') {
+                      <div class="table-wrapper">
+                        <table class="data-table">
+                          @if (prompt.columns) {
+                            <thead>
+                              <tr>
+                                @for (col of prompt.columns; track col) {
+                                  <th>{{ col }}</th>
+                                }
+                              </tr>
+                            </thead>
                           }
-                        </tbody>
-                      </table>
+                          <tbody>
+                            @for (row of getTableData(i); track $index) {
+                              <tr>
+                                @for (cell of row; track $index) {
+                                  <td>{{ cell || '—' }}</td>
+                                }
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    }
+                    @default {
+                      <p class="submitted-response">{{ responses()[i] || '(No response provided)' }}</p>
+                    }
+                  }
+                  @if (isReviewed() && getPromptGrade(i); as grade) {
+                    <div class="prompt-grade" [class.correct]="grade.correct" [class.incorrect]="!grade.correct">
+                      <mat-icon>{{ grade.correct ? 'check_circle' : 'cancel' }}</mat-icon>
+                      @if (!grade.correct && grade.comment) {
+                        <span>{{ grade.comment }}</span>
+                      } @else if (grade.correct) {
+                        <span>Correct</span>
+                      } @else {
+                        <span>Incorrect</span>
+                      }
                     </div>
                   }
-                  @default {
-                    <p class="submitted-response">{{ responses()[i] || '(No response provided)' }}</p>
-                  }
-                }
-                @if (prompt.type === 'number' && prompt.expectedAnswer != null && isReviewed()) {
-                  <div class="check-result" [class.correct]="isNumberCorrect(i)" [class.incorrect]="!isNumberCorrect(i)">
-                    <mat-icon>{{ isNumberCorrect(i) ? 'check_circle' : 'cancel' }}</mat-icon>
-                    {{ isNumberCorrect(i) ? 'Correct' : 'Expected: ' + prompt.expectedAnswer }}
-                  </div>
-                }
-              } @else {
-                <!-- Editable view -->
-                @switch (prompt.type) {
-                  @case ('text') {
-                    <mat-form-field appearance="outline" class="response-field">
-                      <mat-label>{{ prompt.label }}</mat-label>
-                      <textarea
-                        matInput
-                        [value]="responses()[i]"
-                        (input)="onResponseChange(i, $event)"
-                        rows="4"
-                      ></textarea>
-                      @if (prompt.hint) {
-                        <mat-hint>{{ prompt.hint }}</mat-hint>
+                  <!-- Inline read-only for next prompt if it's inline -->
+                  @if (getNextPrompt(i)?.inline) {
+                    <div class="inline-group submitted">
+                      <p class="submitted-response">{{ responses()[i + 1] || '(No response provided)' }}</p>
+                      @if (isReviewed() && getPromptGrade(i + 1); as inlineGrade) {
+                        <div class="prompt-grade inline-grade" [class.correct]="inlineGrade.correct" [class.incorrect]="!inlineGrade.correct">
+                          <mat-icon>{{ inlineGrade.correct ? 'check_circle' : 'cancel' }}</mat-icon>
+                          @if (!inlineGrade.correct && inlineGrade.comment) {
+                            <span>{{ inlineGrade.comment }}</span>
+                          }
+                        </div>
                       }
-                    </mat-form-field>
+                    </div>
                   }
-                  @case ('short-answer') {
-                    <mat-form-field appearance="outline" class="response-field">
-                      <mat-label>{{ prompt.label }}</mat-label>
-                      <input
-                        matInput
-                        [value]="responses()[i]"
-                        (input)="onResponseChange(i, $event)"
-                      />
-                      @if (prompt.hint) {
-                        <mat-hint>{{ prompt.hint }}</mat-hint>
-                      }
-                    </mat-form-field>
-                  }
-                  @case ('number') {
-                    <mat-form-field appearance="outline" class="response-field number-field">
-                      <mat-label>{{ prompt.label }}</mat-label>
-                      <input
-                        matInput
-                        type="number"
-                        step="any"
-                        [value]="responses()[i]"
-                        (input)="onResponseChange(i, $event)"
-                      />
-                      @if (prompt.hint) {
-                        <mat-hint>{{ prompt.hint }}</mat-hint>
-                      }
-                    </mat-form-field>
-                  }
-                  @case ('table') {
-                    <div class="table-wrapper">
-                      <table class="data-table editable">
-                        @if (prompt.columns) {
-                          <thead>
-                            <tr>
-                              @for (col of prompt.columns; track col) {
-                                <th>{{ col }}</th>
-                              }
-                            </tr>
-                          </thead>
+                } @else {
+                  <!-- Editable view -->
+                  @if (getNextPrompt(i)?.inline) {
+                    <!-- Side-by-side value + unit -->
+                    <div class="inline-group">
+                      @switch (prompt.type) {
+                        @case ('number') {
+                          <mat-form-field appearance="outline" class="response-field number-field">
+                            <mat-label>Value</mat-label>
+                            <input
+                              matInput
+                              type="number"
+                              step="any"
+                              [value]="responses()[i]"
+                              (input)="onResponseChange(i, $event)"
+                            />
+                          </mat-form-field>
                         }
-                        <tbody>
-                          @for (row of getTableData(i); track $index; let r = $index) {
-                            <tr>
-                              @for (cell of row; track $index; let c = $index) {
-                                <td>
-                                  @if (isCellReadOnly(prompt, r, c)) {
-                                    <span class="readonly-cell">{{ cell }}</span>
-                                  } @else {
-                                    <input
-                                      class="table-input"
-                                      [value]="cell"
-                                      (input)="onTableCellChange(i, r, c, $event)"
-                                      [attr.aria-label]="(prompt.columns?.[c] ?? 'Column ' + (c + 1)) + ' Row ' + (r + 1)"
-                                    />
+                        @default {
+                          <mat-form-field appearance="outline" class="response-field">
+                            <mat-label>Value</mat-label>
+                            <input
+                              matInput
+                              [value]="responses()[i]"
+                              (input)="onResponseChange(i, $event)"
+                            />
+                          </mat-form-field>
+                        }
+                      }
+                      <mat-form-field appearance="outline" class="unit-field">
+                        <mat-label>Units</mat-label>
+                        <input
+                          matInput
+                          [value]="responses()[i + 1]"
+                          (input)="onResponseChange(i + 1, $event)"
+                        />
+                      </mat-form-field>
+                    </div>
+                  } @else {
+                    @switch (prompt.type) {
+                      @case ('text') {
+                        <mat-form-field appearance="outline" class="response-field">
+                          <mat-label>{{ prompt.label }}</mat-label>
+                          <textarea
+                            matInput
+                            [value]="responses()[i]"
+                            (input)="onResponseChange(i, $event)"
+                            rows="4"
+                          ></textarea>
+                        </mat-form-field>
+                      }
+                      @case ('short-answer') {
+                        <mat-form-field appearance="outline" class="response-field">
+                          <mat-label>{{ prompt.label }}</mat-label>
+                          <input
+                            matInput
+                            [value]="responses()[i]"
+                            (input)="onResponseChange(i, $event)"
+                          />
+                        </mat-form-field>
+                      }
+                      @case ('number') {
+                        <mat-form-field appearance="outline" class="response-field number-field">
+                          <mat-label>{{ prompt.label }}</mat-label>
+                          <input
+                            matInput
+                            type="number"
+                            step="any"
+                            [value]="responses()[i]"
+                            (input)="onResponseChange(i, $event)"
+                          />
+                        </mat-form-field>
+                      }
+                      @case ('table') {
+                        <div class="table-wrapper">
+                          <table class="data-table editable">
+                            @if (prompt.columns) {
+                              <thead>
+                                <tr>
+                                  @for (col of prompt.columns; track col) {
+                                    <th>{{ col }}</th>
                                   }
-                                </td>
+                                </tr>
+                              </thead>
+                            }
+                            <tbody>
+                              @for (row of getTableData(i); track $index; let r = $index) {
+                                <tr>
+                                  @for (cell of row; track $index; let c = $index) {
+                                    <td>
+                                      @if (isCellReadOnly(prompt, r, c)) {
+                                        <span class="readonly-cell">{{ cell }}</span>
+                                      } @else {
+                                        <input
+                                          class="table-input"
+                                          [value]="cell"
+                                          placeholder="Enter value"
+                                          (input)="onTableCellChange(i, r, c, $event)"
+                                          [attr.aria-label]="(prompt.columns?.[c] ?? 'Column ' + (c + 1)) + ' Row ' + (r + 1)"
+                                        />
+                                      }
+                                    </td>
+                                  }
+                                </tr>
                               }
-                            </tr>
-                          }
-                        </tbody>
-                      </table>
-                    </div>
-                    @if (prompt.hint) {
-                      <p class="table-hint">{{ prompt.hint }}</p>
+                            </tbody>
+                          </table>
+                        </div>
+                      }
                     }
                   }
                 }
-              }
-            </mat-card-content>
-          </mat-card>
+              </mat-card-content>
+            </mat-card>
+          }
         }
 
         @if (!isSubmitted() && !isReviewed()) {
@@ -365,31 +420,67 @@ import { TaskDefinition, TaskSubmission, TaskPrompt } from '../../core/models/ta
       font-weight: 500;
     }
 
+    .data-table.editable td:not(:has(.readonly-cell)) {
+      background: #f8fbff;
+      padding: 0;
+    }
+
     .table-input {
       width: 100%;
       border: none;
       background: transparent;
       font-size: 14px;
-      padding: 4px 0;
+      padding: 8px 12px;
       outline: none;
+      box-sizing: border-box;
+    }
+
+    .table-input::placeholder {
+      color: #aaa;
+      font-style: italic;
     }
 
     .table-input:focus {
-      border-bottom: 2px solid #1565c0;
+      background: #e8f0fe;
+      outline: 2px solid #1565c0;
+      outline-offset: -2px;
     }
 
-    .data-table.editable td {
-      padding: 4px 8px;
+    .data-table.editable td:has(.readonly-cell) {
+      padding: 8px 12px;
+    }
+
+    .iv-divider {
+      margin: 32px 0 24px;
     }
 
     .readonly-cell {
       color: #666;
     }
 
-    .table-hint {
-      font-size: 12px;
+    .sub-label {
+      font-size: 13px;
       color: #666;
-      margin-top: 8px;
+      margin: -8px 0 12px;
+    }
+
+    .inline-group {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .inline-group .number-field {
+      flex: 1;
+      max-width: 200px;
+    }
+
+    .unit-field {
+      width: 160px;
+    }
+
+    .inline-group.submitted {
+      margin-top: 4px;
     }
 
     .check-result {
@@ -407,6 +498,29 @@ import { TaskDefinition, TaskSubmission, TaskPrompt } from '../../core/models/ta
 
     .check-result.incorrect {
       color: #c62828;
+    }
+
+    .prompt-grade {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .prompt-grade.correct {
+      color: #2e7d32;
+    }
+
+    .prompt-grade.incorrect {
+      color: #c62828;
+    }
+
+    .inline-grade {
+      margin-top: 0;
+      margin-left: 4px;
+      white-space: nowrap;
     }
   `,
 })
@@ -437,6 +551,27 @@ export class TaskDetailComponent implements OnInit {
     return this.responses().some((r) => r.trim().length > 0);
   }
 
+  protected getNextPrompt(index: number): TaskPrompt | undefined {
+    return this.task()?.prompts[index + 1];
+  }
+
+  /** Show a divider when the IV Level prefix changes between non-inline prompts */
+  protected shouldShowDivider(index: number): boolean {
+    if (index === 0) return false;
+    const prompts = this.task()?.prompts;
+    if (!prompts) return false;
+    const getPrefix = (label: string) => label.match(/^IV Level \d+/)?.[0] ?? '';
+    const currentPrefix = getPrefix(prompts[index].label);
+    if (!currentPrefix) return false;
+    // Find the previous non-inline prompt
+    for (let j = index - 1; j >= 0; j--) {
+      if (!prompts[j].inline) {
+        return getPrefix(prompts[j].label) !== currentPrefix;
+      }
+    }
+    return false;
+  }
+
   async ngOnInit(): Promise<void> {
     const taskDef = this.taskService.getTask(this.taskId());
     if (!taskDef) {
@@ -455,7 +590,29 @@ export class TaskDetailComponent implements OnInit {
     // Get or create submission
     const sub = await this.taskService.getOrCreateTaskSubmission(taskDef.id);
     this.submission.set(sub);
-    this.responses.set([...sub.responses]);
+
+    // If prompt structure changed, reinitialize responses to match current prompts
+    if (sub.responses.length !== taskDef.prompts.length) {
+      const freshResponses = taskDef.prompts.map((p) => {
+        if (p.type === 'table') {
+          const rows = p.rows ?? 1;
+          const cols = p.columns?.length ?? 1;
+          return JSON.stringify(
+            Array.from({ length: rows }, (_, r) =>
+              Array.from({ length: cols }, (_, c) => p.prefilled?.[r]?.[c] ?? '')
+            )
+          );
+        }
+        return '';
+      });
+      this.responses.set(freshResponses);
+      // Persist the corrected responses so the mismatch is fixed permanently
+      if (sub.id) {
+        this.taskService.saveDraft(sub.id, freshResponses);
+      }
+    } else {
+      this.responses.set([...sub.responses]);
+    }
     this.loading.set(false);
   }
 
@@ -502,6 +659,10 @@ export class TaskDetailComponent implements OnInit {
     if (isNaN(student)) return false;
     const tolerance = prompt.tolerance ?? 0.01;
     return Math.abs(student - prompt.expectedAnswer) <= tolerance;
+  }
+
+  protected getPromptGrade(index: number): PromptGrade | null {
+    return this.submission()?.promptGrades?.[index] ?? null;
   }
 
   protected async saveDraft(): Promise<void> {

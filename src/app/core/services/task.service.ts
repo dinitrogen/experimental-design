@@ -18,6 +18,7 @@ import {
   TASK_DEFINITIONS,
   TaskDefinition,
   TaskSubmission,
+  PromptGrade,
   getTaskDefinition,
 } from '../models/task.model';
 
@@ -187,14 +188,22 @@ export class TaskService {
   }
 
   /** Coach: save feedback for a task submission */
-  async saveTaskReview(submissionId: string, feedback: string): Promise<void> {
+  async saveTaskReview(
+    submissionId: string,
+    feedback: string,
+    promptGrades?: PromptGrade[],
+  ): Promise<void> {
     const docRef = doc(this.firestore, `taskSubmissions/${submissionId}`);
-    await updateDoc(docRef, {
+    const data: Record<string, unknown> = {
       coachFeedback: feedback,
       status: 'reviewed',
       reviewedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
-    });
+    };
+    if (promptGrades) {
+      data['promptGrades'] = promptGrades;
+    }
+    await updateDoc(docRef, data);
   }
 
   /** Coach: delete a task submission (resets the task for the student) */
