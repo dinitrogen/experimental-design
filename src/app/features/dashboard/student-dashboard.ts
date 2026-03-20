@@ -222,7 +222,7 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
       font-size: 40px;
       width: 40px;
       height: 40px;
-      color: #1565c0;
+      color: var(--primary-color);
     }
 
     .stat-value {
@@ -294,7 +294,7 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
 
     .score-badge {
       font-weight: 500;
-      color: #1565c0;
+      color: var(--primary-color);
       font-size: 15px;
     }
 

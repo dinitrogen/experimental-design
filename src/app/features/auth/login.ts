@@ -98,7 +98,7 @@ import { ChangePasswordDialogComponent } from '../../shared/components/change-pa
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+      background: var(--login-gradient);
       padding: 16px;
     }
 
@@ -112,7 +112,7 @@ import { ChangePasswordDialogComponent } from '../../shared/components/change-pa
       font-size: 40px;
       width: 40px;
       height: 40px;
-      color: #1565c0;
+      color: var(--login-icon-color);
     }
 
     .full-width {

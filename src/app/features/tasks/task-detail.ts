@@ -441,8 +441,8 @@ import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../c
     }
 
     .table-input:focus {
-      background: #e8f0fe;
-      outline: 2px solid #1565c0;
+      background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+      outline: 2px solid var(--primary-color);
       outline-offset: -2px;
     }
 

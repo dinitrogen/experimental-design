@@ -6,9 +6,12 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { THEME_OPTIONS, ThemeName } from '../../core/models/theme.model';
 
 interface NavItem {
   label: string;
@@ -29,6 +32,7 @@ interface NavItem {
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
+    MatMenuModule,
   ],
   template: `
     <mat-sidenav-container class="shell-container">
@@ -104,6 +108,23 @@ interface NavItem {
           }
           <span class="toolbar-spacer"></span>
           <span class="user-name">{{ userName() }}</span>
+          <button
+            mat-icon-button
+            [matMenuTriggerFor]="settingsMenu"
+            aria-label="Settings"
+            matTooltip="Settings"
+          >
+            <mat-icon>settings</mat-icon>
+          </button>
+          <mat-menu #settingsMenu="matMenu">
+            <div class="menu-section-label">Theme</div>
+            @for (option of themeOptions; track option.name) {
+              <button mat-menu-item (click)="setTheme(option.name)">
+                <mat-icon>{{ theme() === option.name ? 'radio_button_checked' : option.icon }}</mat-icon>
+                <span>{{ option.label }}</span>
+              </button>
+            }
+          </mat-menu>
         </mat-toolbar>
 
         <main class="main-content">
@@ -121,7 +142,7 @@ interface NavItem {
       width: 260px;
       display: flex;
       flex-direction: column;
-      background-color: #f5f5f5;
+      background-color: var(--sidenav-bg);
     }
 
     .sidenav-header {
@@ -129,7 +150,7 @@ interface NavItem {
       align-items: center;
       gap: 12px;
       padding: 16px 20px;
-      border-bottom: 1px solid #e0e0e0;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .collapse-button {
@@ -137,7 +158,7 @@ interface NavItem {
     }
 
     .logo-icon {
-      color: #1565c0;
+      color: var(--logo-color);
       font-size: 32px;
       width: 32px;
       height: 32px;
@@ -150,7 +171,7 @@ interface NavItem {
 
     .sidenav-footer {
       margin-top: auto;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid var(--border-color);
       padding: 8px;
     }
 
@@ -160,8 +181,8 @@ interface NavItem {
     }
 
     .active-link {
-      background: rgba(21, 101, 192, 0.08) !important;
-      color: #1565c0;
+      background: var(--active-link-bg) !important;
+      color: var(--active-link-color);
     }
 
     .toolbar-title {
@@ -178,6 +199,15 @@ interface NavItem {
       opacity: 0.9;
     }
 
+    .menu-section-label {
+      padding: 8px 16px 4px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.6;
+    }
+
     .main-content {
       min-height: calc(100vh - 64px);
     }
@@ -185,11 +215,14 @@ interface NavItem {
 })
 export class ShellComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
+  private readonly themeService = inject(ThemeService);
   private readonly breakpointObserver = inject(BreakpointObserver);
   private breakpointSub?: Subscription;
 
   protected readonly isMobile = signal(false);
   protected readonly sidenavOpen = signal(true);
+  protected readonly theme = this.themeService.theme;
+  protected readonly themeOptions = THEME_OPTIONS;
 
   protected readonly userName = computed(
     () => this.authService.user()?.displayName || this.authService.user()?.email || ''
@@ -238,6 +271,10 @@ export class ShellComponent implements OnInit, OnDestroy {
     if (this.isMobile()) {
       this.sidenavOpen.set(false);
     }
+  }
+
+  protected setTheme(theme: ThemeName): void {
+    this.themeService.setTheme(theme);
   }
 
   protected async logout(): Promise<void> {

@@ -192,8 +192,8 @@ interface RoleRow {
     }
 
     .role-card.designer {
-      background: #e3f2fd;
-      border-left: 3px solid #1565c0;
+      background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      border-left: 3px solid var(--primary-color);
     }
 
     .role-card.data-lead {

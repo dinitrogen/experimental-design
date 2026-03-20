@@ -41,8 +41,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
       gap: 8px;
       padding: 4px 12px;
       border-radius: 24px;
-      background: #e3f2fd;
-      color: #1565c0;
+      background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      color: var(--primary-color);
       font-weight: 500;
       font-variant-numeric: tabular-nums;
     }

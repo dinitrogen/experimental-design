@@ -26,7 +26,7 @@ function niceInterval(range: number, targetTicks = 8): number {
     canvas {
       width: 100%;
       max-width: 700px;
-      border: 1px solid #e0e0e0;
+      border: 1px solid var(--border-color, #e0e0e0);
       border-radius: 4px;
       background: #fff;
       touch-action: none;
@@ -180,7 +180,8 @@ export class GraphCanvasComponent {
   }
 
   private drawPoints(ctx: CanvasRenderingContext2D, data: GraphData): void {
-    ctx.fillStyle = '#1565c0';
+    const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#1565c0';
+    ctx.fillStyle = primary;
     for (const pt of data.points ?? []) {
       const [px, py] = this.toPixel(data, pt.x, pt.y);
       ctx.beginPath();
@@ -193,6 +194,10 @@ export class GraphCanvasComponent {
     const bars = data.bars ?? [];
     const yRange = data.yMax - data.yMin;
     if (yRange <= 0) return;
+
+    const styles = getComputedStyle(document.documentElement);
+    const primary = styles.getPropertyValue('--primary-color').trim() || '#1565c0';
+    const primaryDark = styles.getPropertyValue('--primary-dark').trim() || '#0d47a1';
 
     this.tickY = niceInterval(yRange);
 
@@ -250,9 +255,9 @@ export class GraphCanvasComponent {
       const topY = M.top + PH - ((bar.y - data.yMin) / yRange) * PH;
       const barHeight = baseY - topY;
 
-      ctx.fillStyle = '#1565c0';
+      ctx.fillStyle = primary;
       ctx.fillRect(barLeft, topY, barWidth, barHeight);
-      ctx.strokeStyle = '#0d47a1';
+      ctx.strokeStyle = primaryDark;
       ctx.lineWidth = 1;
       ctx.strokeRect(barLeft, topY, barWidth, barHeight);
 
@@ -265,7 +270,7 @@ export class GraphCanvasComponent {
       ctx.fillText(label, barLeft + barWidth / 2, M.top + PH + 6);
 
       // Value above bar
-      ctx.fillStyle = '#1565c0';
+      ctx.fillStyle = primary;
       ctx.font = 'bold 11px sans-serif';
       ctx.textBaseline = 'bottom';
       ctx.fillText(this.fmt(bar.y), barLeft + barWidth / 2, topY - 3);

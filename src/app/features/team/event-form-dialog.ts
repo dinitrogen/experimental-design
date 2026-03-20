@@ -182,7 +182,7 @@ import { TeamEvent } from '../../core/models/team-event.model';
 
     .team-header h3 {
       margin: 0 0 8px;
-      color: #1565c0;
+      color: var(--primary-color);
     }
 
     .add-team-btn {

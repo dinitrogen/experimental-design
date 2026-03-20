@@ -402,7 +402,7 @@ import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
     .score-badge {
       font-size: 16px;
       font-weight: 500;
-      color: #1565c0;
+      color: var(--primary-color);
     }
 
     .loading-container {
@@ -451,7 +451,7 @@ import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
     .score-display {
       font-size: 24px;
       font-weight: 500;
-      color: #1565c0;
+      color: var(--primary-color);
     }
 
     .list-item {

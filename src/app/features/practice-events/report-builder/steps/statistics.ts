@@ -481,7 +481,7 @@ import * as stats from '../../../../core/utils/statistics';
       font-family: 'Roboto Mono', monospace;
       transition: border-color 0.2s, background 0.2s;
     }
-    .blank-input:focus { border-bottom-color: #0d47a1; outline: none; background: #e3f2fd; }
+    .blank-input:focus { border-bottom-color: var(--primary-dark); outline: none; background: color-mix(in srgb, var(--primary-color) 12%, transparent); }
     .blank-input[readonly] { border-bottom-style: dashed; color: #888; cursor: default; }
     .blank-input.sm { width: 44px; }
     .blank-input.wide { width: 100px; }

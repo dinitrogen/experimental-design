@@ -120,7 +120,7 @@ import { Resource, ResourceCategory, ReadingProgress } from '../../core/models/r
     }
 
     .category-chips button.active {
-      background-color: #1565c0;
+      background-color: var(--primary-color);
       color: white;
     }
 

@@ -128,7 +128,7 @@ import { AppUser } from '../../core/models/user.model';
       font-size: 32px;
       width: 32px;
       height: 32px;
-      color: #1565c0;
+      color: var(--primary-color);
     }
 
     .stat-card.accent mat-icon {

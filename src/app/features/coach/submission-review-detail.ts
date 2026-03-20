@@ -725,7 +725,7 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
     }
 
     .total-value {
-      color: #1976d2;
+      color: var(--primary-color);
     }
 
     .stats-summary th,

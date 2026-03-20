@@ -295,7 +295,7 @@ interface RosterRow {
     }
 
     .section-icon {
-      color: #1565c0;
+      color: var(--primary-color);
     }
 
     .roster-card {
@@ -363,8 +363,8 @@ interface RosterRow {
     }
 
     .event-icon {
-      background: #e3f2fd;
-      color: #1565c0;
+      background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      color: var(--primary-color);
       border-radius: 50%;
       padding: 8px;
       font-size: 24px;

@@ -238,7 +238,7 @@ interface TaskView {
     }
 
     .status-not-started { color: #9e9e9e; }
-    .status-in-progress { color: #1565c0; }
+    .status-in-progress { color: var(--primary-color); }
     .status-submitted { color: #2e7d32; }
     .status-reviewed { color: #6a1b9a; }
     .status-assigned { color: #2e7d32; }
@@ -285,8 +285,8 @@ interface TaskView {
       --mdc-chip-label-text-color: #666;
     }
     .status-chip-in-progress {
-      --mdc-chip-label-text-color: #1565c0;
-      --mdc-chip-elevated-container-color: #e3f2fd;
+      --mdc-chip-label-text-color: var(--primary-color);
+      --mdc-chip-elevated-container-color: color-mix(in srgb, var(--primary-color) 12%, transparent);
     }
     .status-chip-submitted {
       --mdc-chip-label-text-color: #2e7d32;
