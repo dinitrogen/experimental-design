@@ -49,6 +49,7 @@ import { Resource, ResourceCategory, ReadingProgress } from '../../core/models/r
         }
       </div>
 
+      @if (loaded()) {
       <div class="card-grid">
         @for (guide of filteredGuides(); track guide.id) {
           <mat-card [class.hidden-guide]="isCoach() && isHidden(guide.id)">
@@ -88,8 +89,9 @@ import { Resource, ResourceCategory, ReadingProgress } from '../../core/models/r
           </mat-card>
         }
       </div>
+      }
 
-      @if (filteredGuides().length === 0) {
+      @if (loaded() && filteredGuides().length === 0) {
         <div class="empty-state">
           <mat-icon>search_off</mat-icon>
           <p>No guides found for this category.</p>
@@ -197,6 +199,7 @@ export class StudyGuideListComponent implements OnInit {
   protected readonly pdfContent = signal<string | null>(null);
 
   protected readonly isCoach = this.authService.isCoach;
+  protected readonly loaded = this.resourceService.hiddenGuidesLoaded;
 
   protected readonly categories = signal<CategoryInfo[]>(this.resourceService.getCategories());
 

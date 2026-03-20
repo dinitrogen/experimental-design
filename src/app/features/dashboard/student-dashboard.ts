@@ -35,6 +35,7 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
       </h1>
 
       <div class="stats-row">
+        @if (guidesLoaded()) {
         <mat-card class="stat-card">
           <mat-card-content>
             <mat-icon class="stat-icon">menu_book</mat-icon>
@@ -60,6 +61,7 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
             </div>
           </mat-card-content>
         </mat-card>
+        }
       </div>
 
       <!-- My Submissions -->
@@ -209,6 +211,10 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
       margin-bottom: 32px;
+    }
+
+    .stats-row mat-card {
+      overflow: hidden;
     }
 
     .stat-card mat-card-content {
@@ -385,6 +391,7 @@ export class StudentDashboardComponent implements OnInit {
   protected readonly submissions = signal<ReportSubmission[]>([]);
   protected readonly achievements = signal<Achievement[]>([]);
   private readonly taskSubmissions = signal<TaskSubmission[]>([]);
+  protected readonly guidesLoaded = this.resourceService.hiddenGuidesLoaded;
 
   protected readonly displayName = computed(
     () => this.authService.user()?.displayName || 'Student'
@@ -441,6 +448,7 @@ export class StudentDashboardComponent implements OnInit {
       this.achievementService.getMyAchievements(),
       this.taskService.getMyTaskSubmissions(),
       this.taskService.loadAssignments(),
+      this.resourceService.loadHiddenGuides(),
     ] as const);
     this.completedCount.set(count);
     this.submissions.set(submissions);

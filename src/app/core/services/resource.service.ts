@@ -204,6 +204,7 @@ const CATEGORIES: CategoryInfo[] = [
 export class ResourceService {
   private readonly firestore = inject(Firestore);
   readonly hiddenGuideIds = signal<Set<string>>(new Set());
+  readonly hiddenGuidesLoaded = signal(false);
 
   async loadHiddenGuides(): Promise<void> {
     const snap = await getDoc(doc(this.firestore, 'settings/hiddenGuides'));
@@ -211,6 +212,7 @@ export class ResourceService {
       const ids: string[] = snap.data()['ids'] ?? [];
       this.hiddenGuideIds.set(new Set(ids));
     }
+    this.hiddenGuidesLoaded.set(true);
   }
 
   async toggleGuideVisibility(guideId: string): Promise<void> {

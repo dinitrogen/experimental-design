@@ -20,6 +20,7 @@ import { ResourceService } from '../../core/services/resource.service';
         and practice writing a full competition report.
       </p>
 
+      @if (loaded()) {
       <div class="card-grid">
         @for (event of practiceEvents(); track event.id) {
           <mat-card [class.hidden-guide]="isCoach() && isHidden(event.id)">
@@ -49,6 +50,7 @@ import { ResourceService } from '../../core/services/resource.service';
           </mat-card>
         }
       </div>
+      }
     </div>
   `,
   styles: `
@@ -78,6 +80,7 @@ export class PracticeEventListComponent implements OnInit {
   private readonly resourceService = inject(ResourceService);
 
   protected readonly isCoach = this.authService.isCoach;
+  protected readonly loaded = this.resourceService.hiddenGuidesLoaded;
 
   protected readonly practiceEvents = computed(() => {
     const all = this.resourceService.getGuidesByCategory('practice-events');

@@ -58,6 +58,12 @@ export class AchievementService {
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Achievement);
   }
 
+  /** Get all achievements across all students (single query) */
+  async getAllAchievements(): Promise<Achievement[]> {
+    const snapshot = await getDocs(collection(this.firestore, 'achievements'));
+    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Achievement);
+  }
+
   /** Assign an achievement to a student */
   async assign(studentUid: string, templateId: string): Promise<void> {
     const coach = this.authService.user();

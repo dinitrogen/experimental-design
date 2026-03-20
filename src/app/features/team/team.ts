@@ -21,7 +21,7 @@ import { AchievementService } from '../../core/services/achievement.service';
 import { TeamService } from '../../core/services/team.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AppUser } from '../../core/models/user.model';
-import { ACHIEVEMENT_TEMPLATES, sortAchievements } from '../../core/models/achievement.model';
+import { Achievement, ACHIEVEMENT_TEMPLATES, sortAchievements } from '../../core/models/achievement.model';
 import { TeamEvent, RoleAssignments } from '../../core/models/team-event.model';
 import { EventFormDialogComponent } from './event-form-dialog';
 import { TeamRolesDialogComponent, TeamRolesDialogData } from './team-roles-dialog';
@@ -458,10 +458,11 @@ export class TeamComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [students, coachList, events] = await Promise.all([
+      const [students, coachList, events, allAchievements] = await Promise.all([
         this.studentService.getAllStudents(),
         this.studentService.getAllCoaches(),
         this.teamService.getTeamEvents(),
+        this.achievementService.getAllAchievements(),
       ]);
 
       // Build member map for event member lookup
@@ -475,10 +476,18 @@ export class TeamComponent implements OnInit {
       // Filter out students excluded from roster
       const rosterStudents = students.filter((s) => !s.excludeFromRoster);
 
-      // Fetch achievements for each student
+      // Group achievements by student
+      const achievementsByUid = new Map<string, Achievement[]>();
+      for (const a of allAchievements) {
+        const list = achievementsByUid.get(a.studentUid) ?? [];
+        list.push(a);
+        achievementsByUid.set(a.studentUid, list);
+      }
+
+      // Build roster rows
       const rows: RosterRow[] = [];
       for (const student of rosterStudents) {
-        const rawAchievements = await this.achievementService.getAchievementsForStudent(student.uid);
+        const rawAchievements = achievementsByUid.get(student.uid) ?? [];
 
         const achievements = sortAchievements(rawAchievements).map((a) => {
           const tmpl = ACHIEVEMENT_TEMPLATES.find((t) => t.id === a.templateId);
