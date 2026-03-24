@@ -86,6 +86,12 @@ import {
         <!-- Student Responses -->
         <h2>Student Responses</h2>
         @for (response of submission()!.responses; track $index; let i = $index) {
+          @if (getPrompt(i)?.sectionHeader) {
+            @if (i > 0) {
+              <mat-divider />
+            }
+            <h3 class="section-header">{{ getPrompt(i)!.sectionHeader }}</h3>
+          }
           <mat-card class="response-card" [class.graded-correct]="promptGrades()[i]?.correct === true" [class.graded-incorrect]="promptGrades()[i]?.correct === false">
             <mat-card-content>
               <h3>{{ getPromptLabel(i) }}</h3>

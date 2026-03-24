@@ -86,13 +86,19 @@ import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../c
 
         @for (prompt of task()!.prompts; track $index; let i = $index) {
           @if (!prompt.inline) {
+            @if (prompt.sectionHeader) {
+              @if (i > 0) {
+                <mat-divider class="iv-divider" />
+              }
+              <h2>{{ prompt.sectionHeader }}</h2>
+            }
             @if (shouldShowDivider(i)) {
               <mat-divider class="iv-divider" />
             }
             <mat-card class="response-card">
               <mat-card-content>
                 <h3>{{ prompt.label }}</h3>
-                @if (prompt.subLabel) {
+                @if (prompt.subLabel && !getNextPrompt(i)?.inline) {
                   <p class="sub-label">{{ prompt.subLabel }}</p>
                 }
 
@@ -141,7 +147,11 @@ import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../c
                   }
                   <!-- Inline read-only for next prompt if it's inline -->
                   @if (getNextPrompt(i)?.inline) {
-                    <div class="inline-group submitted">
+                    <div class="inline-partner">
+                      <h3>{{ getNextPrompt(i)!.label }}</h3>
+                      @if (getNextPrompt(i)!.subLabel) {
+                        <p class="sub-label">{{ getNextPrompt(i)!.subLabel }}</p>
+                      }
                       <p class="submitted-response">{{ responses()[i + 1] || '(No response provided)' }}</p>
                       @if (isReviewed() && getPromptGrade(i + 1); as inlineGrade) {
                         <div class="prompt-grade inline-grade" [class.correct]="inlineGrade.correct" [class.incorrect]="!inlineGrade.correct">
@@ -156,40 +166,66 @@ import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../c
                 } @else {
                   <!-- Editable view -->
                   @if (getNextPrompt(i)?.inline) {
-                    <!-- Side-by-side value + unit -->
+                    <!-- Side-by-side pair -->
                     <div class="inline-group">
-                      @switch (prompt.type) {
-                        @case ('number') {
-                          <mat-form-field appearance="outline" class="response-field number-field">
-                            <mat-label>Value</mat-label>
-                            <input
-                              matInput
-                              type="number"
-                              step="any"
-                              [value]="responses()[i]"
-                              (input)="onResponseChange(i, $event)"
-                            />
-                          </mat-form-field>
+                      <div class="inline-field">
+                        @if (prompt.subLabel) {
+                          <p class="sub-label">{{ prompt.subLabel }}</p>
                         }
-                        @default {
-                          <mat-form-field appearance="outline" class="response-field">
-                            <mat-label>Value</mat-label>
-                            <input
-                              matInput
-                              [value]="responses()[i]"
-                              (input)="onResponseChange(i, $event)"
-                            />
-                          </mat-form-field>
+                        @switch (prompt.type) {
+                          @case ('number') {
+                            <mat-form-field appearance="outline" class="response-field number-field">
+                              <mat-label>{{ prompt.inputLabel || prompt.label }}</mat-label>
+                              <input
+                                matInput
+                                type="number"
+                                step="any"
+                                [value]="responses()[i]"
+                                (input)="onResponseChange(i, $event)"
+                              />
+                            </mat-form-field>
+                          }
+                          @default {
+                            <mat-form-field appearance="outline" class="response-field">
+                              <mat-label>{{ prompt.inputLabel || prompt.label }}</mat-label>
+                              <input
+                                matInput
+                                [value]="responses()[i]"
+                                (input)="onResponseChange(i, $event)"
+                              />
+                            </mat-form-field>
+                          }
                         }
-                      }
-                      <mat-form-field appearance="outline" class="unit-field">
-                        <mat-label>Units</mat-label>
-                        <input
-                          matInput
-                          [value]="responses()[i + 1]"
-                          (input)="onResponseChange(i + 1, $event)"
-                        />
-                      </mat-form-field>
+                      </div>
+                      <div class="inline-field">
+                        @if (getNextPrompt(i)!.subLabel) {
+                          <p class="sub-label">{{ getNextPrompt(i)!.subLabel }}</p>
+                        }
+                        @switch (getNextPrompt(i)!.type) {
+                          @case ('number') {
+                            <mat-form-field appearance="outline" class="response-field number-field">
+                              <mat-label>{{ getNextPrompt(i)!.label }}</mat-label>
+                              <input
+                                matInput
+                                type="number"
+                                step="any"
+                                [value]="responses()[i + 1]"
+                                (input)="onResponseChange(i + 1, $event)"
+                              />
+                            </mat-form-field>
+                          }
+                          @default {
+                            <mat-form-field appearance="outline" class="response-field">
+                              <mat-label>{{ getNextPrompt(i)!.label }}</mat-label>
+                              <input
+                                matInput
+                                [value]="responses()[i + 1]"
+                                (input)="onResponseChange(i + 1, $event)"
+                              />
+                            </mat-form-field>
+                          }
+                        }
+                      </div>
                     </div>
                   } @else {
                     @switch (prompt.type) {
@@ -466,21 +502,31 @@ import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../c
 
     .inline-group {
       display: flex;
-      gap: 12px;
-      align-items: flex-start;
+      gap: 16px;
+      align-items: flex-end;
     }
 
-    .inline-group .number-field {
+    .inline-field {
       flex: 1;
-      max-width: 200px;
+      min-width: 0;
     }
 
-    .unit-field {
-      width: 160px;
+    .inline-field .sub-label {
+      font-size: 13px;
+      color: #666;
+      margin: 0 0 4px;
     }
 
-    .inline-group.submitted {
-      margin-top: 4px;
+    .inline-field .response-field,
+    .inline-field .number-field {
+      width: 100%;
+      max-width: none;
+    }
+
+    .inline-partner {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e0e0e0;
     }
 
     .check-result {
