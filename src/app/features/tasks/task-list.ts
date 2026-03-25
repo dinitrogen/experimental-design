@@ -68,9 +68,9 @@ interface TaskView {
         <div class="task-list">
           @for (task of tasks(); track task.definition.id) {
             <mat-card class="task-card" [class.overdue]="!isCoach() && task.isOverdue && task.status === 'not-started'" [class.unassigned]="isCoach() && !task.assignment">
-              <mat-card-content>
-                @if (isCoach()) {
-                  <!-- Coach view -->
+              @if (isCoach()) {
+                <!-- Coach view -->
+                <mat-card-content>
                   <div class="task-icon-area">
                     @if (task.assignment) {
                       <mat-icon class="status-icon status-assigned">assignment_turned_in</mat-icon>
@@ -95,32 +95,34 @@ interface TaskView {
                       }
                     </div>
                   </div>
-                  <div class="task-action">
-                    <a mat-icon-button [routerLink]="['/tasks', task.definition.id]" aria-label="View task" matTooltip="View Task">
-                      <mat-icon>visibility</mat-icon>
-                    </a>
-                    <button mat-icon-button [matMenuTriggerFor]="assignMenu" aria-label="Assignment options">
-                      <mat-icon>more_vert</mat-icon>
+                </mat-card-content>
+                <mat-card-actions class="coach-actions">
+                  <a mat-button [routerLink]="['/tasks', task.definition.id]">
+                    View Task
+                  </a>
+                  <button mat-button [matMenuTriggerFor]="assignMenu">
+                    Assign
+                  </button>
+                  <mat-menu #assignMenu="matMenu">
+                    <button mat-menu-item (click)="assignToAll(task.definition)">
+                      <mat-icon>group</mat-icon>
+                      <span>Assign to All</span>
                     </button>
-                    <mat-menu #assignMenu="matMenu">
-                      <button mat-menu-item (click)="assignToAll(task.definition)">
-                        <mat-icon>group</mat-icon>
-                        <span>Assign to All</span>
+                    <button mat-menu-item (click)="assignIndividually(task.definition)">
+                      <mat-icon>person_add</mat-icon>
+                      <span>Assign Individually</span>
+                    </button>
+                    @if (task.assignment) {
+                      <button mat-menu-item (click)="unassign(task.definition)">
+                        <mat-icon>block</mat-icon>
+                        <span>Unassign</span>
                       </button>
-                      <button mat-menu-item (click)="assignIndividually(task.definition)">
-                        <mat-icon>person_add</mat-icon>
-                        <span>Assign Individually</span>
-                      </button>
-                      @if (task.assignment) {
-                        <button mat-menu-item (click)="unassign(task.definition)">
-                          <mat-icon>block</mat-icon>
-                          <span>Unassign</span>
-                        </button>
-                      }
-                    </mat-menu>
-                  </div>
-                } @else {
-                  <!-- Student view -->
+                    }
+                  </mat-menu>
+                </mat-card-actions>
+              } @else {
+                <!-- Student view -->
+                <mat-card-content>
                   <div class="task-icon-area">
                     @switch (task.status) {
                       @case ('submitted') { <mat-icon class="status-icon status-submitted">check_circle</mat-icon> }
@@ -173,8 +175,8 @@ interface TaskView {
                       }
                     }
                   </div>
-                }
-              </mat-card-content>
+                </mat-card-content>
+              }
             </mat-card>
           }
         </div>
@@ -306,6 +308,12 @@ interface TaskView {
 
     .task-action {
       flex-shrink: 0;
+    }
+
+    .coach-actions {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 8px 8px;
     }
 
     @media (max-width: 600px) {
