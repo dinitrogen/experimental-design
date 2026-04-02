@@ -40,6 +40,8 @@ export class AuthService {
       try {
         if (firebaseUser) {
           await this.loadUserProfile(firebaseUser);
+          const userDoc = doc(this.firestore, `users/${firebaseUser.uid}`);
+          await updateDoc(userDoc, { lastLogin: Timestamp.now() });
         } else {
           this.currentUser.set(null);
         }
@@ -52,9 +54,6 @@ export class AuthService {
   async login(email: string, password: string): Promise<void> {
     const credential = await signInWithEmailAndPassword(this.auth, email, password);
     await this.loadUserProfile(credential.user);
-    // Track last login time
-    const userDoc = doc(this.firestore, `users/${credential.user.uid}`);
-    await updateDoc(userDoc, { lastLogin: Timestamp.now() });
   }
 
   async logout(): Promise<void> {

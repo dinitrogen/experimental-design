@@ -68,10 +68,12 @@ $$s = \sqrt{\frac{\sum_{i=1}^{n}(x_i - \bar{x})^2}{n - 1}}$$
 1. **Calculate the mean** $(\bar{x})$ of the data set.
 2. **Subtract the mean** from each data value to find each deviation $(x_i - \bar{x})$.
 3. **Square** each deviation $(x_i - \bar{x})^2$.
-4. **Sum** the squared deviations and **divide by $n - 1$**.
-5. **Take the square root** of the result.
+4. **Sum** the squared deviations and **divide by $n - 1$**. This result is the **variance** $(s^2)$.
+5. **Take the square root** of the variance to get the **standard deviation**.
 
 *Include units.*
+
+> **Variance note:** The value at Step 4 (before the square root) is called the **variance**. Its units are the *square* of the data units — for example, if your data is in cm, variance is in cm². Taking the square root converts it back to the original units, giving the standard deviation.
 
 ---
 
@@ -93,11 +95,13 @@ $$\bar{x} = \frac{4 + 8 + 15 + 22 + 30}{5} = \frac{79}{5} = 15.8$$
 | 22     | 6.2              | 38.44                |
 | 30     | 14.2             | 201.64               |
 
-**Step 4 — Sum of squared deviations divided by $n - 1$:**
+**Step 4 — Sum of squared deviations divided by $n - 1$ (this is the variance):**
 
-$$\frac{139.24 + 60.84 + 0.64 + 38.44 + 201.64}{5 - 1} = \frac{440.80}{4} = 110.20$$
+$$s^2 = \frac{139.24 + 60.84 + 0.64 + 38.44 + 201.64}{5 - 1} = \frac{440.80}{4} = \boxed{110.20}$$
 
-**Step 5 — Square root:**
+*The variance is 110.20 units².*
+
+**Step 5 — Square root of the variance:**
 
 $$s = \sqrt{110.20} \approx \boxed{10.50}$$
 
@@ -110,7 +114,10 @@ $$s = \sqrt{110.20} \approx \boxed{10.50}$$
 | Statistic | What It Tells You | Formula / Key Idea |
 |-----------|--------------------|--------------------|
 | **IQR**   | Spread of the middle 50% of data | $Q3 - Q1$ |
-| **Standard Deviation** | Average distance of each value from the mean | $s = \sqrt{\frac{\sum(x_i - \bar{x})^2}{n - 1}}$ |
+| **Variance** | Average squared distance from the mean | $s^2 = \frac{\sum(x_i - \bar{x})^2}{n - 1}$ — units are squared (e.g. cm²) |
+| **Standard Deviation** | Average distance of each value from the mean | $s = \sqrt{s^2}$ — same units as the data |
+
+> **For states competitions:** Variance should be included as one of your additional variation statistics alongside Range, IQR, and Standard Deviation.
 
 ---
 
@@ -135,7 +142,7 @@ $$s = \sqrt{110.20} \approx \boxed{10.50}$$
 | 1 | Mean $= \frac{x_1 + x_2 + \cdots + x_n}{n}$ |
 | 2 | Deviations $= x_i - \bar{x}$ |
 | 3 | Square each deviation |
-| 4 | Sum of squared deviations $\div\ (n - 1)$ |
-| 5 | $s = \sqrt{\text{result from Step 4}}$ |
+| 4 | Variance $= $ Sum of squared deviations $\div\ (n - 1)$ |
+| 5 | $s = \sqrt{\text{variance}}$ |
 
 ---
