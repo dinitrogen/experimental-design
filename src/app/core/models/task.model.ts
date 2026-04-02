@@ -67,6 +67,66 @@ export interface TaskSubmission {
  */
 export const TASK_DEFINITIONS: TaskDefinition[] = [
   {
+    id: 'task-007-quick-design',
+    title: 'Quick Design Challenge',
+    promptFile: 'tasks/task-007-quick-design.md',
+    prompts: [
+      // ── Topic 1: Elasticity ──
+      {
+        label: 'Statement of Problem',
+        type: 'text',
+        sectionHeader: 'Topic 1 — Elasticity',
+        subLabel: 'Write a testable question about elasticity using the provided materials.',
+      },
+      {
+        label: 'Independent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you change between trials?',
+      },
+      {
+        label: 'Dependent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you measure?',
+      },
+      // ── Topic 2: Capillary Action ──
+      {
+        label: 'Statement of Problem',
+        type: 'text',
+        sectionHeader: 'Topic 2 — Capillary Action',
+        subLabel: 'Write a testable question about capillary action using the provided materials.',
+      },
+      {
+        label: 'Independent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you change between trials?',
+      },
+      {
+        label: 'Dependent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you measure?',
+      },
+      // ── Topic 3: Magnetism ──
+      {
+        label: 'Statement of Problem',
+        type: 'text',
+        sectionHeader: 'Topic 3 — Magnetism',
+        subLabel: 'Write a testable question about magnetism using the provided materials.',
+      },
+      {
+        label: 'Independent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you change between trials?',
+      },
+      {
+        label: 'Dependent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you measure?',
+      },
+    ],
+    dueDate: '2026-04-13',
+    createdAt: '2026-04-01',
+  },
+  {
     id: 'task-006-qual-obs-applications-alt',
     title: 'Qualitative Observations & Applications: Density',
     promptFile: 'tasks/task-006-qual-obs-applications-alt.md',
