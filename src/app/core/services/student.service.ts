@@ -36,6 +36,7 @@ export class StudentService {
         displayName: data['displayName'] ?? '',
         role: data['role'] ?? 'student',
         createdAt: data['createdAt'],
+        lastLogin: data['lastLogin'] ?? undefined,
         middleSchool: data['middleSchool'] ?? undefined,
         grade: data['grade'] ?? undefined,
         excludeFromRoster: data['excludeFromRoster'] ?? false,

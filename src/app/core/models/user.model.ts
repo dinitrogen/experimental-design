@@ -8,6 +8,7 @@ export interface AppUser {
   displayName: string;
   role: UserRole;
   createdAt: Timestamp;
+  lastLogin?: Timestamp;
   middleSchool?: string;
   grade?: number;
   excludeFromRoster?: boolean;

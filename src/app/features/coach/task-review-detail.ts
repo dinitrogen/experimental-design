@@ -447,6 +447,14 @@ export class TaskReviewDetailComponent implements OnInit {
       await this.taskService.saveTaskReview(sub.id, this.feedback(), this.promptGrades());
       this.submission.update((s) => s ? { ...s, status: 'reviewed', promptGrades: this.promptGrades() } : s);
       this.snackBar.open('Review saved!', '', { duration: 3000 });
+    } catch (err: unknown) {
+      console.error('Failed to save task review:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('permission') || message.includes('unauthenticated') || message.includes('UNAUTHENTICATED')) {
+        this.snackBar.open('Session expired — please refresh the page and try again.', 'Dismiss', { duration: 8000 });
+      } else {
+        this.snackBar.open('Failed to save review. Please try again.', 'Dismiss', { duration: 5000 });
+      }
     } finally {
       this.saving.set(false);
     }
@@ -461,6 +469,9 @@ export class TaskReviewDetailComponent implements OnInit {
       await this.taskService.deleteTaskSubmission(sub.id);
       this.snackBar.open('Submission deleted — task reset for student', '', { duration: 3000 });
       this.goBack();
+    } catch (err: unknown) {
+      console.error('Failed to delete task submission:', err);
+      this.snackBar.open('Failed to delete submission. Please try again.', 'Dismiss', { duration: 5000 });
     } finally {
       this.saving.set(false);
     }

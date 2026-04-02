@@ -14,10 +14,12 @@ import { Timestamp } from '@angular/fire/firestore';
 import { StudentService } from '../../core/services/student.service';
 import { ResourceService } from '../../core/services/resource.service';
 import { AchievementService } from '../../core/services/achievement.service';
+import { TaskService } from '../../core/services/task.service';
 import { AppUser } from '../../core/models/user.model';
 import { ReadingProgress } from '../../core/models/resource.model';
 import { ReportSubmission } from '../../core/models/submission.model';
 import { Achievement, ACHIEVEMENT_TEMPLATES, getTemplate, sortAchievements } from '../../core/models/achievement.model';
+import { TaskSubmission, TASK_DEFINITIONS } from '../../core/models/task.model';
 
 @Component({
   selector: 'app-student-detail',
@@ -46,7 +48,10 @@ import { Achievement, ACHIEVEMENT_TEMPLATES, getTemplate, sortAchievements } fro
           <button mat-icon-button (click)="goBack()" aria-label="Back to students" matTooltip="Back to students">
             <mat-icon>arrow_back</mat-icon>
           </button>
-          <h1 class="page-title">{{ studentName() }}</h1>
+          <div>
+            <h1 class="page-title">{{ studentName() }}</h1>
+            <p class="last-login">Last login: {{ lastLoginDisplay() }}</p>
+          </div>
         </div>
 
         <!-- Summary Cards -->
@@ -130,6 +135,55 @@ import { Achievement, ACHIEVEMENT_TEMPLATES, getTemplate, sortAchievements } fro
 
               <tr mat-header-row *matHeaderRowDef="subColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: subColumns"></tr>
+            </table>
+          </mat-card>
+        }
+
+        <!-- Achievements -->
+        <h2 class="section-title">Tasks</h2>
+        @if (taskRows().length === 0) {
+          <mat-card>
+            <mat-card-content class="empty-state">
+              <p>No tasks assigned.</p>
+            </mat-card-content>
+          </mat-card>
+        } @else {
+          <mat-card>
+            <table mat-table [dataSource]="taskRows()" class="full-table">
+              <ng-container matColumnDef="task">
+                <th mat-header-cell *matHeaderCellDef>Task</th>
+                <td mat-cell *matCellDef="let row">{{ row.title }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="assigned">
+                <th mat-header-cell *matHeaderCellDef>Assigned</th>
+                <td mat-cell *matCellDef="let row">
+                  <mat-icon [class.check-yes]="row.assigned" [class.check-no]="!row.assigned">
+                    {{ row.assigned ? 'check_circle' : 'remove_circle_outline' }}
+                  </mat-icon>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="submitted">
+                <th mat-header-cell *matHeaderCellDef>Submitted</th>
+                <td mat-cell *matCellDef="let row">
+                  <mat-icon [class.check-yes]="row.submitted" [class.check-no]="!row.submitted">
+                    {{ row.submitted ? 'check_circle' : 'remove_circle_outline' }}
+                  </mat-icon>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="reviewed">
+                <th mat-header-cell *matHeaderCellDef>Reviewed</th>
+                <td mat-cell *matCellDef="let row">
+                  <mat-icon [class.check-yes]="row.reviewed" [class.check-no]="!row.reviewed">
+                    {{ row.reviewed ? 'check_circle' : 'remove_circle_outline' }}
+                  </mat-icon>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="taskColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: taskColumns"></tr>
             </table>
           </mat-card>
         }
@@ -245,6 +299,12 @@ import { Achievement, ACHIEVEMENT_TEMPLATES, getTemplate, sortAchievements } fro
 
     .page-header .page-title {
       margin: 0;
+    }
+
+    .last-login {
+      margin: 2px 0 0;
+      font-size: 13px;
+      color: #888;
     }
 
     .loading-container {
@@ -369,6 +429,14 @@ import { Achievement, ACHIEVEMENT_TEMPLATES, getTemplate, sortAchievements } fro
     .assign-btn {
       margin-top: 4px;
     }
+
+    .check-yes {
+      color: #2e7d32;
+    }
+
+    .check-no {
+      color: #ccc;
+    }
   `,
 })
 export class StudentDetailComponent {
@@ -377,6 +445,7 @@ export class StudentDetailComponent {
   private readonly studentService = inject(StudentService);
   private readonly resourceService = inject(ResourceService);
   private readonly achievementService = inject(AchievementService);
+  private readonly taskService = inject(TaskService);
   private readonly router = inject(Router);
 
   protected readonly loading = signal(true);
@@ -384,9 +453,11 @@ export class StudentDetailComponent {
   protected readonly submissions = signal<ReportSubmission[]>([]);
   protected readonly guideProgress = signal<ReadingProgress[]>([]);
   protected readonly achievements = signal<Achievement[]>([]);
+  protected readonly taskSubmissions = signal<TaskSubmission[]>([]);
 
   protected readonly subColumns = ['event', 'status', 'score', 'actions'];
   protected readonly progressColumns = ['guide', 'status', 'completedAt', 'actions'];
+  protected readonly taskColumns = ['task', 'assigned', 'submitted', 'reviewed'];
 
   protected readonly studentName = computed(() => this.student()?.displayName || 'Student');
 
@@ -406,6 +477,38 @@ export class StudentDetailComponent {
     return ACHIEVEMENT_TEMPLATES.filter((t) => !assigned.has(t.id));
   });
 
+  protected readonly lastLoginDisplay = computed(() => {
+    const ts = this.student()?.lastLogin;
+    if (!ts) return 'Never';
+    return ts.toDate().toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  });
+
+  protected readonly taskRows = computed(() => {
+    const uid = this.student()?.uid;
+    if (!uid) return [];
+    const subs = this.taskSubmissions();
+    const assignments = this.taskService.assignments();
+    return TASK_DEFINITIONS.map((def) => {
+      const assignment = assignments[def.id];
+      const isAssigned = assignment
+        ? assignment.type === 'all' || assignment.studentUids.includes(uid)
+        : false;
+      const sub = subs.find((s) => s.taskId === def.id);
+      return {
+        title: def.title,
+        assigned: isAssigned,
+        submitted: sub?.status === 'submitted' || sub?.status === 'reviewed',
+        reviewed: sub?.status === 'reviewed',
+      };
+    });
+  });
+
   constructor() {
     effect(() => {
       const uid = this.id();
@@ -416,16 +519,22 @@ export class StudentDetailComponent {
   private async loadData(uid: string): Promise<void> {
     try {
       this.loading.set(true);
-      const [students, subs, progress, achs] = await Promise.all([
+      const [students, subs, progress, achs, taskSubs] = await Promise.all([
         this.studentService.getAllStudents(),
         this.studentService.getStudentSubmissions(uid),
         this.studentService.getStudentProgress(uid),
         this.achievementService.getAchievementsForStudent(uid),
+        this.taskService.getTaskSubmissionsForStudent(uid),
       ]);
+      // Ensure task assignments are loaded (may already be cached)
+      if (Object.keys(this.taskService.assignments()).length === 0) {
+        await this.taskService.loadAssignments();
+      }
       this.student.set(students.find((s) => s.uid === uid) ?? null);
       this.submissions.set(subs);
       this.guideProgress.set(progress);
       this.achievements.set(sortAchievements(achs));
+      this.taskSubmissions.set(taskSubs);
     } finally {
       this.loading.set(false);
     }

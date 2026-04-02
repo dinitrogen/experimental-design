@@ -893,6 +893,14 @@ export class SubmissionReviewDetailComponent {
       await this.submissionService.saveReview(sub.id, feedback ?? '', total, scores, this.stateNational());
       this.submission.update((s) => s ? { ...s, status: 'reviewed' as const } : s);
       this.snackBar.open('Review saved!', 'OK', { duration: 3000 });
+    } catch (err: unknown) {
+      console.error('Failed to save review:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('permission') || message.includes('unauthenticated') || message.includes('UNAUTHENTICATED')) {
+        this.snackBar.open('Session expired — please refresh the page and try again.', 'Dismiss', { duration: 8000 });
+      } else {
+        this.snackBar.open('Failed to save review. Please try again.', 'Dismiss', { duration: 5000 });
+      }
     } finally {
       this.saving.set(false);
     }
