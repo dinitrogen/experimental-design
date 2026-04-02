@@ -15,7 +15,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'cer-writing',
     order: 1,
     summary: 'Templates for writing Claim/Evidence/Reasoning sections: Data Trend, Variation, Outliers, and Conclusion.',
-    fileName: 'exd-cer-guide.md',
+    fileName: 'guides/exd-cer-guide.md',
     coachOnly: false,
   },
   {
@@ -25,7 +25,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'cer-writing',
     order: 2,
     summary: 'Practice problem: Effect of Ramp Height on Ball Roll Distance. Includes data table, graphing, and CER writing exercises.',
-    fileName: 'exd-cer-homework.md',
+    fileName: 'guides/exd-cer-homework.md',
     coachOnly: false,
   },
   {
@@ -35,7 +35,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'cer-writing',
     order: 3,
     summary: 'Complete worked solutions for the CER practice homework with step-by-step calculations.',
-    fileName: 'exd-cer-homework-answer-key.md',
+    fileName: 'guides/exd-cer-homework-answer-key.md',
     coachOnly: true,
   },
   {
@@ -45,7 +45,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'statistics',
     order: 1,
     summary: 'Focused guide on IQR and Standard Deviation with step-by-step examples and calculation templates.',
-    fileName: 'exd-iqr-stddev-reference.md',
+    fileName: 'guides/exd-iqr-stddev-reference.md',
     coachOnly: false,
   },
   {
@@ -55,7 +55,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'statistics',
     order: 2,
     summary: 'Comprehensive guide covering mean, median, mode, range, data tables, graphs, and experimental error types.',
-    fileName: 'exd-statistics-reference.md',
+    fileName: 'guides/exd-statistics-reference.md',
     coachOnly: false,
   },
   {
@@ -65,7 +65,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'team-strategy',
     order: 1,
     summary: 'Time allocation and parallel role workflow for the ~50-minute competition event.',
-    fileName: 'exd-event-timeline.md',
+    fileName: 'guides/exd-event-timeline.md',
     coachOnly: false,
   },
   {
@@ -75,7 +75,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'team-strategy',
     order: 2,
     summary: 'Detailed role assignments (Designer, Data Lead, Analyst) and section-by-section point values.',
-    fileName: 'exd-team-strategy.md',
+    fileName: 'guides/exd-team-strategy.md',
     coachOnly: false,
   },
   {
@@ -85,7 +85,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'applications',
     order: 1,
     summary: '10 experiment topics with improvement ideas, real-world applications, and future experiment suggestions.',
-    fileName: 'exd-applications.md',
+    fileName: 'guides/exd-applications.md',
     coachOnly: false,
   },
   {
@@ -95,7 +95,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'practice-events',
     order: 1,
     summary: 'Design an experiment to investigate how a variable affects parachute drop time. Includes materials list and setup.',
-    fileName: 'practice-event-parachute-drop.md',
+    fileName: 'practice-events/practice-event-parachute-drop.md',
     coachOnly: false,
   },
   {
@@ -105,7 +105,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'practice-events',
     order: 2,
     summary: 'Instructor guide with viable approaches, expected data, and quality ratings.',
-    fileName: 'practice-event-parachute-drop-teacher-guide.md',
+    fileName: 'practice-events/practice-event-parachute-drop-teacher-guide.md',
     coachOnly: true,
   },
   {
@@ -115,7 +115,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'practice-events',
     order: 3,
     summary: 'Comprehensive answer key with two full experiments, statistics, graphs, and CER sections.',
-    fileName: 'practice-event-parachute-drop-answer-key.md',
+    fileName: 'practice-events/practice-event-parachute-drop-answer-key.md',
     coachOnly: true,
   },
   {
@@ -125,7 +125,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'practice-events',
     order: 4,
     summary: 'Example of an ideal ~50-minute competition report, covering all sections with detailed reasoning.',
-    fileName: 'practice-event-parachute-drop-completed-report.md',
+    fileName: 'practice-events/practice-event-parachute-drop-completed-report.md',
     coachOnly: true,
   },
   {
@@ -135,7 +135,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'practice-events',
     order: 5,
     summary: 'Design an experiment to understand sugar dissolution in water. Scenario-based prompt with practical constraints.',
-    fileName: 'practice-event-sugar-solubility.md',
+    fileName: 'practice-events/practice-event-sugar-solubility.md',
     coachOnly: false,
   },
   {
@@ -145,7 +145,7 @@ const STUDY_GUIDES: Resource[] = [
     category: 'practice-events',
     order: 6,
     summary: 'Teacher guide with materials prep, feasibility ratings, expected dissolution times, and timing budget.',
-    fileName: 'practice-event-sugar-solubility-teacher-guide.md',
+    fileName: 'practice-events/practice-event-sugar-solubility-teacher-guide.md',
     coachOnly: true,
   },
   {
@@ -155,7 +155,17 @@ const STUDY_GUIDES: Resource[] = [
     category: 'practice-events',
     order: 7,
     summary: 'Design an experiment to investigate a factor that affects the rate of diffusion. Includes beakers, hotplate, food coloring, and more.',
-    fileName: 'practice-event-diffusion.md',
+    fileName: 'practice-events/practice-event-diffusion.md',
+    coachOnly: false,
+  },
+  {
+    id: 'practice-surface-tension',
+    title: 'Practice Event: Surface Tension',
+    slug: 'practice-surface-tension',
+    category: 'practice-events',
+    order: 8,
+    summary: 'Design an experiment to investigate a factor that affects the surface tension of water. Penny drops, soap, salt, and more.',
+    fileName: 'practice-events/practice-event-surface-tension.md',
     coachOnly: false,
   },
 ];

@@ -143,7 +143,7 @@ export class StudyGuideDetailComponent implements OnInit {
     this.guide.set(found);
 
     // Load markdown content from public/guides/
-    this.http.get(`guides/${found.fileName}`, { responseType: 'text' }).subscribe({
+    this.http.get(found.fileName, { responseType: 'text' }).subscribe({
       next: (content) => {
         this.markdownContent.set(content);
         this.loading.set(false);

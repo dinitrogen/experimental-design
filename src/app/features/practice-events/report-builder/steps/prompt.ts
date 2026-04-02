@@ -64,7 +64,7 @@ export class PromptStepComponent implements OnInit {
       return;
     }
 
-    this.http.get(`guides/${guide.fileName}`, { responseType: 'text' }).pipe(
+    this.http.get(guide.fileName, { responseType: 'text' }).pipe(
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (content) => {

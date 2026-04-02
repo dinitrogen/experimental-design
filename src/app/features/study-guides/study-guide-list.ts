@@ -258,7 +258,7 @@ export class StudyGuideListComponent implements OnInit {
 
   protected downloadPdf(guide: Resource, event: Event): void {
     event.stopPropagation();
-    this.http.get(`guides/${guide.fileName}`, { responseType: 'text' }).subscribe({
+    this.http.get(guide.fileName, { responseType: 'text' }).subscribe({
       next: async (content) => {
         this.pdfContent.set(content);
         // Wait for Angular + ngx-markdown + KaTeX to render
