@@ -509,7 +509,8 @@ export class TaskReviewDetailComponent implements OnInit {
       if (current?.correct === correct) {
         copy[index] = { correct: true };
       } else {
-        copy[index] = { correct, comment: correct ? undefined : current?.comment };
+        const comment = correct ? undefined : current?.comment;
+        copy[index] = comment != null ? { correct, comment } : { correct };
       }
       return copy;
     });
@@ -519,7 +520,7 @@ export class TaskReviewDetailComponent implements OnInit {
     const value = (event.target as HTMLInputElement).value;
     this.promptGrades.update((prev) => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], comment: value };
+      copy[index] = { ...copy[index], comment: value || undefined };
       return copy;
     });
   }

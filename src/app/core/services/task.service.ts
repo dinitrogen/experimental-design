@@ -201,7 +201,9 @@ export class TaskService {
       updatedAt: Timestamp.now(),
     };
     if (promptGrades) {
-      data['promptGrades'] = promptGrades;
+      data['promptGrades'] = promptGrades.map((g) =>
+        g.comment != null ? { correct: g.correct, comment: g.comment } : { correct: g.correct }
+      );
     }
     await updateDoc(docRef, data);
   }
