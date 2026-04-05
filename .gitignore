@@ -44,8 +44,6 @@ __screenshots__/
 Thumbs.db
 
 # Environment secrets
-src/environments/environment.ts
-src/environments/environment.prod.ts
 functions/.env
 
 # Firebase project-specific config

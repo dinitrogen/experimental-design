@@ -2,6 +2,17 @@
 #
 # ── Required GitHub Secrets ──────────────────────────────────────────────────
 #
+#  FIREBASE_CONFIG  (required for the Angular app to connect to Firebase)
+#    The Firebase web app configuration object as a JSON literal (without quotes
+#    around the outer object).  Copy it from the Firebase console:
+#      1. Firebase console → Project settings → Your apps → Web app.
+#      2. Under "SDK setup and configuration", choose "Config".
+#      3. Copy only the object literal assigned to `firebaseConfig` – it looks like:
+#           { apiKey: "…", authDomain: "…", projectId: "…", … }
+#    How to add it:
+#      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#      Name: FIREBASE_CONFIG   Value: <paste the object literal>
+#
 #  FIREBASE_PROJECT_ID
 #    Your Firebase project ID (e.g. "my-app-12345").
 #    Where to find it:
@@ -60,6 +71,12 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Write Angular environment file
+        env:
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+        run: |
+          printf 'export const environment = {\n  production: true,\n  useEmulators: false,\n  firebase: %s,\n};\n' "$FIREBASE_CONFIG" > src/environments/environment.prod.ts
 
       - name: Build Angular app
         run: npm run build
