@@ -1,4 +1,5 @@
-# Deploy to Firebase Hosting and Functions on every merge to main.
+# Deploy to Firebase Hosting only on every merge to main.
+# Cloud Functions are not deployed in this workflow.
 #
 # ── Required GitHub Secrets ──────────────────────────────────────────────────
 #
@@ -34,18 +35,9 @@
 #      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
 #      Name: FIREBASE_SERVICE_ACCOUNT   Value: <paste the entire JSON>
 #
-#  GOOGLE_GENAI_API_KEY  (required for Cloud Functions to call the Gemini API)
-#    Your Google Generative AI (Gemini) API key used by the Cloud Functions.
-#    Where to find it:
-#      1. Open Google AI Studio → https://aistudio.google.com/app/apikey
-#      2. Copy an existing key or create a new one.
-#    How to add it:
-#      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
-#      Name: GOOGLE_GENAI_API_KEY   Value: <your API key>
-#
 # ─────────────────────────────────────────────────────────────────────────────
 
-name: Deploy to Firebase
+name: Deploy to Firebase Hosting
 
 on:
   push:
@@ -54,7 +46,7 @@ on:
 
 jobs:
   deploy:
-    name: Build & Deploy
+    name: Build & Deploy Hosting
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -81,23 +73,12 @@ jobs:
       - name: Build Angular app
         run: npm run build
 
-      - name: Install Cloud Functions dependencies
-        run: npm ci
-        working-directory: functions
-
-      - name: Build Cloud Functions
-        run: npm run build
-        working-directory: functions
-
-      - name: Write Functions environment file
-        run: echo "GOOGLE_GENAI_API_KEY=${{ secrets.GOOGLE_GENAI_API_KEY }}" > functions/.env
-
-      - name: Deploy to Firebase (hosting + functions)
+      - name: Deploy to Firebase (hosting only)
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/firebase-sa.json
           npx firebase-tools deploy \
             --project "${{ secrets.FIREBASE_PROJECT_ID }}" \
-            --only hosting,functions \
+            --only hosting \
             --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
