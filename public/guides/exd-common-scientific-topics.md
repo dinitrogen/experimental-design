@@ -58,7 +58,7 @@ Each row below lists a topic, one or two suggested IV / DV combinations, the exp
 | 15 | **Water Temperature & Dissolving Time** | Temperature of the water (°C) | Time for a sugar cube to fully dissolve (s) | **Negative** — hotter water → faster dissolving | Higher temperature increases molecular kinetic energy, causing water molecules to collide with the solute more frequently and break it apart faster. |
 | 16 | **Particle Size & Dissolving Rate** | Grain size of sugar (powdered, granulated, cube) | Time to dissolve completely (s) | **Negative** — smaller particles → shorter dissolving time | Smaller particles have a greater surface-area-to-volume ratio, exposing more solute to the solvent and speeding dissolution. |
 | 17 | **Vinegar Amount & Gas Production** | Volume of vinegar added to baking soda (mL) | Height of foam produced (cm) | **Positive (up to a limit)** — more vinegar → more foam, until baking soda is fully reacted | The reaction $\text{NaHCO}_3 + \text{CH}_3\text{COOH} \rightarrow \text{CO}_2 + \text{H}_2\text{O} + \text{NaCH}_3\text{COO}$ produces $\text{CO}_2$ gas. More acid reacts with more baking soda, generating more gas until the limiting reagent is consumed. |
-| 18 | **Salt Concentration & Freezing Point** | Amount of salt dissolved in water (g) | Temperature at which the solution freezes (°C) | **Negative** — more salt → lower freezing point | Dissolved solute particles interfere with ice crystal formation (freezing-point depression): $\Delta T_f = K_f \cdot m \cdot i$, where $m$ is molality and $i$ is the van 't Hoff factor. |
+| 18 | **Salt Concentration & Freezing Point** | Amount of salt dissolved in water (g) | Temperature at which the solution freezes (°C) | **Negative** — more salt → lower freezing point | Dissolved solute particles interfere with ice crystal formation (freezing-point depression): $\Delta T_f = K_f \cdot m \cdot i$, where $K_f$ is the cryoscopic constant (a property of the solvent — for water it is 1.86 °C·kg/mol), $m$ is molality, and $i$ is the number of particles the solute splits into. |
 
 ---
 
@@ -87,7 +87,7 @@ Each row below lists a topic, one or two suggested IV / DV combinations, the exp
 | # | Topic | Independent Variable (IV) | Dependent Variable (DV) | Expected Correlation | Scientific Explanation |
 |:-:|:------|:--------------------------|:------------------------|:---------------------|:-----------------------|
 | 25 | **Rubber Band Length & Pitch** | Vibrating length of a rubber band (cm) | Pitch / frequency of the sound produced (Hz) | **Negative** — longer vibrating length → lower pitch | Frequency of a vibrating string: $f = \tfrac{1}{2L}\sqrt{\tfrac{T}{\mu}}$. Increasing length $L$ lowers frequency, producing a deeper sound. |
-| 26 | **Water Level in a Bottle & Pitch** | Volume of water in a glass bottle (mL) | Pitch produced when the bottle rim is struck (Hz) | **Negative** — more water → lower pitch when struck | When struck, the glass and water vibrate together. More water adds mass, lowering the natural frequency. (Note: when *blowing* across the top, the trend reverses because the air column shortens.) |
+| 26 | **Water Level in a Bottle & Pitch** | Volume of water in a glass bottle (mL) | Pitch produced when the bottle rim is struck (Hz) | **Negative** — more water → lower pitch when struck | When struck, the glass and water vibrate together. More water adds mass, lowering the natural frequency. |
 
 ---
 
@@ -95,7 +95,7 @@ Each row below lists a topic, one or two suggested IV / DV combinations, the exp
 
 | # | Topic | Independent Variable (IV) | Dependent Variable (DV) | Expected Correlation | Scientific Explanation |
 |:-:|:------|:--------------------------|:------------------------|:---------------------|:-----------------------|
-| 27 | **Light Exposure & Plant Growth** | Hours of light per day (h) | Height of the plant after a set number of days (cm) | **Positive (up to a point)** — more light → more growth, plateauing at saturation | Plants use light energy for photosynthesis ($6\text{CO}_2 + 6\text{H}_2\text{O} \xrightarrow{\text{light}} \text{C}_6\text{H}_{12}\text{O}_6 + 6\text{O}_2$). More light drives more sugar production for growth, until other factors become limiting. |
+| 27 | **Light Exposure & Plant Growth** | Hours of light per day (h) | Height of the plant after a set number of days (cm) | **Positive (up to a point)** — more light → more growth, plateauing at saturation | Plants use light energy for photosynthesis ($6\text{CO}_2 + 6\text{H}_2\text{O} \xrightarrow{\text{light}} \text{C}_6\text{H}_{12}\text{O}_6 + 6\text{O}_2$). More light drives more sugar production for growth, until other factors (water, nutrients, or $\text{CO}_2$) become limiting. |
 | 28 | **Fertilizer Concentration & Seed Germination** | Concentration of liquid fertilizer (mL/L) | Percentage of seeds germinated after 7 days (%) | **Positive then negative** — moderate fertilizer helps; too much inhibits germination | Nutrients support early root growth, but excess fertilizer raises solute concentration, creating osmotic stress that pulls water away from the seed. |
 
 ---
