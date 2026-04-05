@@ -24,15 +24,22 @@
 #      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
 #      Name: FIREBASE_PROJECT_ID   Value: <your project ID>
 #
-#  FIREBASE_SERVICE_ACCOUNT
-#    A JSON service-account key with permission to deploy.
-#    Where to find / create it:
-#      1. Firebase console → Project settings → Service accounts tab.
-#      2. Click "Generate new private key" and confirm.
-#      3. A .json file is downloaded — copy the entire file contents.
+#  FIREBASE_TOKEN  (required to authenticate the Firebase CLI for deployment)
+#    A long-lived Firebase CI token.  Unlike a service-account key this token
+#    acts on behalf of a real Google user and therefore already carries the
+#    "Service Account User" IAM binding that Cloud Functions deployment
+#    requires (iam.serviceAccounts.ActAs on the App Engine default SA).
+#    How to generate it:
+#      1. On your local machine, install the Firebase CLI:
+#           npm install -g firebase-tools
+#      2. Run:
+#           firebase login:ci
+#      3. A browser window opens – sign in with a Google account that is a
+#         Firebase project Owner or Editor for your project.
+#      4. Copy the token that is printed in the terminal.
 #    How to add it:
 #      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
-#      Name: FIREBASE_SERVICE_ACCOUNT   Value: <paste the entire JSON>
+#      Name: FIREBASE_TOKEN   Value: <paste the token>
 #
 #  GOOGLE_GENAI_API_KEY  (required for Cloud Functions to call the Gemini API)
 #    Your Google Generative AI (Gemini) API key used by the Cloud Functions.
@@ -94,11 +101,9 @@ jobs:
 
       - name: Deploy to Firebase (hosting + functions)
         run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/firebase-sa.json
           npx firebase-tools deploy \
             --project "${{ secrets.FIREBASE_PROJECT_ID }}" \
             --only hosting,functions \
+            --token "${{ secrets.FIREBASE_TOKEN }}" \
             --non-interactive
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
 
