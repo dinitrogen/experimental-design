@@ -1,19 +1,5 @@
 # Common Scientific Topics for Experimental Design
 
-*A quick-reference guide of topics frequently seen at Science Olympiad Experimental Design (Division B). Use this to brainstorm hypotheses, identify variables, and recall the science behind expected results.*
-
----
-
-## How to Use This Guide
-
-During the event you will be given materials and a general topic area. Recognizing the underlying science **before** you sit down helps you:
-
-1. **Choose strong IV / DV pairs** — pick variables that produce a clear, measurable trend.
-2. **Predict the correlation** — a solid hypothesis backed by a formula or principle earns more points.
-3. **Explain your reasoning** — judges reward concise scientific explanations in your CER sections.
-
-Each row below lists a topic, one or two suggested IV / DV combinations, the expected correlation, and a brief scientific explanation.
-
 ---
 
 ## Physics Topics
@@ -91,21 +77,12 @@ Each row below lists a topic, one or two suggested IV / DV combinations, the exp
 
 ---
 
-## Biology & Life Science Topics
-
-| # | Topic | Independent Variable (IV) | Dependent Variable (DV) | Expected Correlation | Scientific Explanation |
-|:-:|:------|:--------------------------|:------------------------|:---------------------|:-----------------------|
-| 27 | **Light Exposure & Plant Growth** | Hours of light per day (h) | Height of the plant after a set number of days (cm) | **Positive (up to a point)** — more light → more growth, plateauing at saturation | Plants use light energy for photosynthesis ($6\text{CO}_2 + 6\text{H}_2\text{O} \xrightarrow{\text{light}} \text{C}_6\text{H}_{12}\text{O}_6 + 6\text{O}_2$). More light drives more sugar production for growth, until other factors (water, nutrients, or $\text{CO}_2$) become limiting. |
-| 28 | **Fertilizer Concentration & Seed Germination** | Concentration of liquid fertilizer (mL/L) | Percentage of seeds germinated after 7 days (%) | **Positive then negative** — moderate fertilizer helps; too much inhibits germination | Nutrients support early root growth, but excess fertilizer raises solute concentration, creating osmotic stress that pulls water away from the seed. |
-
----
-
 ## Diffusion & Absorption Topics
 
 | # | Topic | Independent Variable (IV) | Dependent Variable (DV) | Expected Correlation | Scientific Explanation |
 |:-:|:------|:--------------------------|:------------------------|:---------------------|:-----------------------|
-| 29 | **Water Temperature & Food-Coloring Diffusion Rate** | Temperature of the water (°C) | Time for food coloring to spread a set distance (s) or diameter of color spread (cm) after a set time | **Positive for spread / Negative for time** — hotter water → faster diffusion | Higher temperature increases molecular kinetic energy, so particles move faster and diffuse more quickly (average kinetic energy $\propto T$). |
-| 30 | **Paper Towel Brand & Water Absorption** | Brand / type of paper towel | Volume of water absorbed in 30 seconds (mL) | **Varies by brand** — thicker / more textured towels typically absorb more | Absorption depends on capillary action and fiber density. More and finer fibers create more capillary channels, drawing in water faster through adhesive forces between water and cellulose. |
+| 27 | **Water Temperature & Food-Coloring Diffusion Rate** | Temperature of the water (°C) | Time for food coloring to spread a set distance (s) or diameter of color spread (cm) after a set time | **Positive for spread / Negative for time** — hotter water → faster diffusion | Higher temperature increases molecular kinetic energy, so particles move faster and diffuse more quickly (average kinetic energy $\propto T$). |
+| 28 | **Paper Towel Brand & Water Absorption** | Brand / type of paper towel | Volume of water absorbed in 30 seconds (mL) | **Varies by brand** — thicker / more textured towels typically absorb more | Absorption depends on capillary action and fiber density. More and finer fibers create more capillary channels, drawing in water faster through adhesive forces between water and cellulose. |
 
 ---
 
@@ -139,19 +116,7 @@ Each row below lists a topic, one or two suggested IV / DV combinations, the exp
 | 24 | Coils & Electromagnet Strength | ↑ Positive | $B = \mu_0 n I$ |
 | 25 | Rubber Band Length & Pitch | ↓ Negative | $f = \tfrac{1}{2L}\sqrt{T/\mu}$ |
 | 26 | Water Level & Pitch (struck) | ↓ Negative | Added mass lowers frequency |
-| 27 | Light & Plant Growth | ↑ Positive | Photosynthesis rate ∝ light |
-| 28 | Fertilizer & Germination | ↑ then ↓ | Nutrient benefit vs. osmotic stress |
-| 29 | Water Temp & Diffusion | ↑ Positive (spread) | KE ∝ $T$ |
-| 30 | Paper Towel & Absorption | Varies | Capillary action & fiber density |
-
----
-
-## Tips for State-Level Success
-
-- **Know the science first.** Judges look for correct scientific reasoning in your hypothesis and CER sections. Memorizing the formulas and principles above will help you write a strong hypothesis quickly.
-- **Pick measurable DVs.** Whenever possible choose a DV you can measure with a number and a unit (e.g., cm, s, g, °C) rather than a subjective observation.
-- **Expect the unexpected.** At the state level the materials or topic may be unfamiliar. Use the categories above to connect an unfamiliar prompt to a known science principle.
-- **Control your constants.** For every IV / DV pair listed, think about what must stay the same (constants) to make the test fair.
-- **Use at least 3 IV levels with 3 trials each.** This gives you enough data to calculate meaningful statistics (mean, standard deviation, IQR) and draw a proper line of best fit.
+| 27 | Water Temp & Diffusion | ↑ Positive (spread) | KE ∝ $T$ |
+| 28 | Paper Towel & Absorption | Varies | Capillary action & fiber density |
 
 ---

@@ -94,7 +94,7 @@ const STUDY_GUIDES: Resource[] = [
     slug: 'common-scientific-topics',
     category: 'applications',
     order: 2,
-    summary: '30 common topics with suggested IV/DV pairs, expected correlations, and key scientific formulas for state-level preparation.',
+    summary: '28 common topics with suggested IV/DV pairs, expected correlations, and key scientific formulas for state-level preparation.',
     fileName: 'guides/exd-common-scientific-topics.md',
     coachOnly: false,
   },
