@@ -89,6 +89,16 @@ const STUDY_GUIDES: Resource[] = [
     coachOnly: false,
   },
   {
+    id: 'common-scientific-topics',
+    title: 'Common Scientific Topics',
+    slug: 'common-scientific-topics',
+    category: 'applications',
+    order: 2,
+    summary: '28 common topics with suggested IV/DV pairs, expected correlations, and key scientific formulas for state-level preparation.',
+    fileName: 'guides/exd-common-scientific-topics.md',
+    coachOnly: false,
+  },
+  {
     id: 'practice-parachute-drop',
     title: 'Practice Event: Parachute Drop',
     slug: 'practice-parachute-drop',
