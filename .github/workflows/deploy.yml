@@ -1,0 +1,87 @@
+# Deploy to Firebase Hosting and Functions on every merge to main.
+#
+# ── Required GitHub Secrets ──────────────────────────────────────────────────
+#
+#  FIREBASE_PROJECT_ID
+#    Your Firebase project ID (e.g. "my-app-12345").
+#    Where to find it:
+#      1. Open the Firebase console → https://console.firebase.google.com
+#      2. Select your project.
+#      3. Click the gear icon (⚙) → Project settings.
+#      4. Copy the "Project ID" shown on the General tab.
+#    How to add it:
+#      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#      Name: FIREBASE_PROJECT_ID   Value: <your project ID>
+#
+#  FIREBASE_SERVICE_ACCOUNT
+#    A JSON service-account key with permission to deploy.
+#    Where to find / create it:
+#      1. Firebase console → Project settings → Service accounts tab.
+#      2. Click "Generate new private key" and confirm.
+#      3. A .json file is downloaded — copy the entire file contents.
+#    How to add it:
+#      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#      Name: FIREBASE_SERVICE_ACCOUNT   Value: <paste the entire JSON>
+#
+#  GOOGLE_GENAI_API_KEY  (required for Cloud Functions to call the Gemini API)
+#    Your Google Generative AI (Gemini) API key used by the Cloud Functions.
+#    Where to find it:
+#      1. Open Google AI Studio → https://aistudio.google.com/app/apikey
+#      2. Copy an existing key or create a new one.
+#    How to add it:
+#      GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#      Name: GOOGLE_GENAI_API_KEY   Value: <your API key>
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Deploy to Firebase
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Angular app
+        run: npm run build
+
+      - name: Install Cloud Functions dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Build Cloud Functions
+        run: npm run build
+        working-directory: functions
+
+      - name: Write Functions environment file
+        run: echo "GOOGLE_GENAI_API_KEY=${{ secrets.GOOGLE_GENAI_API_KEY }}" > functions/.env
+
+      - name: Deploy to Firebase (hosting + functions)
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/firebase-sa.json
+          npx firebase-tools deploy \
+            --project "${{ secrets.FIREBASE_PROJECT_ID }}" \
+            --only hosting,functions \
+            --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
+
