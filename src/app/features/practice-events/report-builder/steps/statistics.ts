@@ -5,7 +5,7 @@ import {
   output,
   computed,
   signal,
-  OnInit,
+  linkedSignal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -514,7 +514,7 @@ import * as stats from '../../../../core/utils/statistics';
     .check-section { margin: 24px 0 16px; }
   `,
 })
-export class StatisticsStepComponent implements OnInit {
+export class StatisticsStepComponent {
   readonly dataTable = input<DataTableEntry[]>([]);
   readonly numTrials = input(5);
   readonly statisticsNotes = input('');
@@ -523,7 +523,18 @@ export class StatisticsStepComponent implements OnInit {
   readonly allowCheckMyWork = input(true);
   readonly changed = output<Partial<ReportSubmission>>();
 
-  protected readonly localCalcs = signal<ManualCalculations>(createBlankManualCalcs(4));
+  protected readonly localCalcs = linkedSignal(() => {
+    const nRows = this.numRows();
+    const nTrials = this.activeTrials();
+    const calcs = { ...(this.manualCalculations() ?? createBlankManualCalcs(nRows, nTrials)) };
+    if (!calcs.summaryTable) {
+      calcs.summaryTable = [];
+    }
+    while (calcs.summaryTable.length < nRows) {
+      calcs.summaryTable.push({ mean: '', median: '', mode: '', range: '', iqr: '', stddev: '', variance: '' });
+    }
+    return calcs;
+  });
   protected readonly showValidation = signal(false);
   protected readonly summaryFields: (keyof StatsSummaryRow)[] = [
     'mean', 'median', 'mode', 'range', 'iqr', 'stddev', 'variance',
@@ -617,18 +628,6 @@ export class StatisticsStepComponent implements OnInit {
     while (result.length < n) result.push({ value: '', deviation: '', squared: '' });
     return result.slice(0, n);
   });
-
-  ngOnInit(): void {
-    const calcs = { ...(this.manualCalculations() ?? createBlankManualCalcs(this.numRows(), this.activeTrials())) };
-    // Backfill summaryTable for drafts saved before this field existed
-    if (!calcs.summaryTable) {
-      calcs.summaryTable = [];
-    }
-    while (calcs.summaryTable.length < this.numRows()) {
-      calcs.summaryTable.push({ mean: '', median: '', mode: '', range: '', iqr: '', stddev: '', variance: '' });
-    }
-    this.localCalcs.set(calcs);
-  }
 
   protected checkSummaryTable(): void {
     this.showValidation.set(true);

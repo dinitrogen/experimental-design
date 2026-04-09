@@ -130,11 +130,29 @@ export class SubmissionService {
     return results.sort((a, b) => (b.updatedAt?.toMillis() ?? 0) - (a.updatedAt?.toMillis() ?? 0));
   }
 
-  /** Get all submissions for the current user */
+  /** Get all submissions for the current user (solo + team) */
   async getMySubmissions(): Promise<ReportSubmission[]> {
     const user = this.authService.user();
     if (!user) return [];
-    return this.getSubmissionsForStudent(user.uid);
+
+    const submissionsCol = collection(this.firestore, 'submissions');
+
+    // Solo submissions
+    const soloQ = query(submissionsCol, where('studentUid', '==', user.uid));
+    const soloSnap = await getDocs(soloQ);
+    const solo = soloSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as ReportSubmission);
+
+    // Team submissions
+    const teamQ = query(submissionsCol, where('teamMemberUids', 'array-contains', user.uid));
+    const teamSnap = await getDocs(teamQ);
+    const team = teamSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as ReportSubmission);
+
+    // Merge and deduplicate by ID
+    const byId = new Map<string, ReportSubmission>();
+    for (const s of [...solo, ...team]) {
+      if (s.id) byId.set(s.id, s);
+    }
+    return [...byId.values()].sort((a, b) => (b.updatedAt?.toMillis() ?? 0) - (a.updatedAt?.toMillis() ?? 0));
   }
 
   /** Coach: get all submitted reports */
@@ -172,10 +190,10 @@ export class SubmissionService {
   // ── Team mode methods ──────────────────────────────────────────────
 
   /** Create a shared team draft for a practice event */
-  async createTeamDraft(teamMemberUids: string[], practiceEventId: string): Promise<ReportSubmission> {
+  async createTeamDraft(teamMemberUids: string[], practiceEventId: string, teamMemberNames?: string[]): Promise<ReportSubmission> {
     const submissionsCol = collection(this.firestore, 'submissions');
     const newDoc = doc(submissionsCol);
-    const blank = createBlankTeamSubmission(teamMemberUids, practiceEventId);
+    const blank = createBlankTeamSubmission(teamMemberUids, practiceEventId, teamMemberNames);
     await setDoc(newDoc, blank);
     return { id: newDoc.id, ...blank };
   }

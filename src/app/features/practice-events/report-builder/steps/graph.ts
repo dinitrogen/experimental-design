@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal, computed, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal, computed, linkedSignal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -422,7 +422,7 @@ function niceInterval(range: number, targetTicks = 8): number {
     .check-section { margin: 24px 0 16px; }
   `,
 })
-export class GraphStepComponent implements OnInit {
+export class GraphStepComponent {
   readonly graphData = input<GraphData | undefined>();
   readonly dataTable = input<DataTableEntry[]>([]);
   readonly independentVar = input('');
@@ -433,8 +433,27 @@ export class GraphStepComponent implements OnInit {
 
   readonly changed = output<Partial<ReportSubmission>>();
 
-  protected readonly localGraph = signal<GraphData>({ ...DEFAULT_GRAPH });
-  protected readonly localCalcs = signal<ManualCalculations>(createBlankManualCalcs(0));
+  protected readonly localGraph = linkedSignal({
+    source: this.graphData,
+    computation: (gd) => {
+      if (gd) {
+        return {
+          ...gd,
+          points: [...(gd.points ?? [])],
+          bars: gd.bars ? [...gd.bars] : [],
+        };
+      }
+      return {
+        ...DEFAULT_GRAPH,
+        xAxisLabel: this.independentVar(),
+        yAxisLabel: this.dependentVar(),
+      };
+    },
+  });
+  protected readonly localCalcs = linkedSignal({
+    source: this.manualCalculations,
+    computation: (calcs) => calcs ? { ...calcs } : createBlankManualCalcs(0),
+  });
   protected readonly plotMode = signal<'plot' | 'lobf'>('plot');
   protected readonly lobfFirstPoint = signal<GraphPoint | null>(null);
   protected readonly showLobfCheck = signal(false);
@@ -442,28 +461,6 @@ export class GraphStepComponent implements OnInit {
     const g = this.localGraph();
     return g.chartType === 'bar' ? (g.bars?.length ?? 0) : g.points.length;
   });
-
-  ngOnInit(): void {
-    const existing = this.graphData();
-    if (existing) {
-      this.localGraph.set({
-        ...existing,
-        points: [...(existing.points ?? [])],
-        bars: existing.bars ? [...existing.bars] : [],
-      });
-    } else {
-      this.localGraph.set({
-        ...DEFAULT_GRAPH,
-        xAxisLabel: this.independentVar(),
-        yAxisLabel: this.dependentVar(),
-      });
-    }
-
-    const calcs = this.manualCalculations();
-    if (calcs) {
-      this.localCalcs.set({ ...calcs });
-    }
-  }
 
   protected updateField(field: string, value: string | number): void {
     this.localGraph.update(g => ({ ...g, [field]: value }));

@@ -152,10 +152,17 @@ export const notifyReportSubmitted = onDocumentUpdated(
 
     if (before.status === "submitted" || after.status !== "submitted") return;
 
+    const isTeam = Array.isArray(after.teamMemberUids) && after.teamMemberUids.length > 0;
+    const studentLabel = isTeam ? 'Team' : 'Student';
+    const studentValue = after.studentDisplayName
+      || (isTeam && Array.isArray(after.teamMemberNames) ? after.teamMemberNames.join(', ') : '')
+      || after.studentUid
+      || 'Unknown';
+
     await sendDiscordEmbed("📝 Practice Report Submitted", 0x1565c0, [
       {
-        name: "Student",
-        value: after.studentDisplayName || after.studentUid || "Unknown",
+        name: studentLabel,
+        value: studentValue,
         inline: true,
       },
       {

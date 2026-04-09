@@ -331,7 +331,7 @@ export class EventDetailComponent implements OnInit {
     dialogRef.afterClosed().subscribe(async (result: AssignTeamDialogResult | undefined) => {
       if (!result) return;
       try {
-        await this.submissionService.createTeamDraft(result.memberUids, e.slug);
+        await this.submissionService.createTeamDraft(result.memberUids, e.slug, result.memberNames);
         this.snackBar.open(`Team assigned with ${result.memberUids.length} members.`, 'OK', { duration: 3000 });
         // Refresh
         this.teamDrafts.set(await this.submissionService.getTeamDraftsForEvent(this.slug()));

@@ -65,6 +65,7 @@ export interface ReportSubmission {
 
   // Team mode
   teamMemberUids?: string[];
+  teamMemberNames?: string[];
   sectionLocks?: Record<string, SectionLock>;
 
   // Meta
@@ -288,11 +289,10 @@ export function createBlankSubmission(
     controlledVars: ['', '', ''],
     materials: '',
     procedure: '',
-    numTrials: 5,
+    numTrials: 3,
     dataTableIvHeader: '',
     dataTableDvHeader: '',
     dataTable: [
-      { ivValue: '', trial1: null, trial2: null, trial3: null, trial4: null, trial5: null, mean: null },
       { ivValue: '', trial1: null, trial2: null, trial3: null, trial4: null, trial5: null, mean: null },
       { ivValue: '', trial1: null, trial2: null, trial3: null, trial4: null, trial5: null, mean: null },
       { ivValue: '', trial1: null, trial2: null, trial3: null, trial4: null, trial5: null, mean: null },
@@ -314,7 +314,7 @@ export function createBlankSubmission(
     improvements: '',
     applications: '',
     futureExperiments: '',
-    manualCalculations: createBlankManualCalcs(4),
+    manualCalculations: createBlankManualCalcs(3, 3),
     sectionScores: createBlankSectionScores(),
     coachFeedback: '',
     score: null,
@@ -329,7 +329,9 @@ export function createBlankSubmission(
 export function createBlankTeamSubmission(
   teamMemberUids: string[],
   practiceEventId: string,
+  teamMemberNames?: string[],
 ): Omit<ReportSubmission, 'id'> {
-  const blank = createBlankSubmission('', practiceEventId, '');
-  return { ...blank, teamMemberUids, sectionLocks: {} };
+  const displayName = teamMemberNames?.length ? teamMemberNames.join(', ') : '';
+  const blank = createBlankSubmission('', practiceEventId, displayName);
+  return { ...blank, teamMemberUids, teamMemberNames: teamMemberNames ?? [], sectionLocks: {} };
 }

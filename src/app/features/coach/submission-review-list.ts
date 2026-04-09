@@ -82,7 +82,12 @@ import { Timestamp } from '@angular/fire/firestore';
 
                   <ng-container matColumnDef="student">
                     <th mat-header-cell *matHeaderCellDef>Student</th>
-                    <td mat-cell *matCellDef="let sub">{{ sub.studentDisplayName || sub.studentUid }}</td>
+                    <td mat-cell *matCellDef="let sub">
+                      @if (sub.teamMemberUids?.length) {
+                        <mat-icon class="team-icon" matTooltip="Team submission">group</mat-icon>
+                      }
+                      {{ sub.studentDisplayName || sub.studentUid || 'Unknown' }}
+                    </td>
                   </ng-container>
 
                   <ng-container matColumnDef="submittedAt">
@@ -280,6 +285,15 @@ import { Timestamp } from '@angular/fire/firestore';
     .chip-reviewed {
       --mat-chip-label-text-color: #2e7d32;
       --mat-chip-elevated-container-color: #e8f5e9;
+    }
+
+    .team-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      vertical-align: middle;
+      margin-right: 4px;
+      color: #1565c0;
     }
   `,
 })

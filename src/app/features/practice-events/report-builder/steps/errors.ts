@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, linkedSignal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -110,16 +110,14 @@ import { ReportSubmission, ExperimentalError } from '../../../../core/models/sub
     .full-width { width: 100%; }
   `,
 })
-export class ErrorsStepComponent implements OnInit {
+export class ErrorsStepComponent {
   readonly errors = input<ExperimentalError[]>([]);
   readonly showHints = input(true);
   readonly changed = output<Partial<ReportSubmission>>();
 
-  protected readonly localErrors = signal<ExperimentalError[]>([]);
-
-  ngOnInit(): void {
-    this.localErrors.set(this.errors().map((e) => ({ ...e })));
-  }
+  protected readonly localErrors = linkedSignal(() =>
+    this.errors().map((e) => ({ ...e }))
+  );
 
   protected updateError(index: number, field: 'type' | 'specificError' | 'resultImpact', value: string): void {
     this.localErrors.update((errs) => {

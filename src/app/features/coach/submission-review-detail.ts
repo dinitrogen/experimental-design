@@ -62,7 +62,13 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
           </button>
           <div>
             <h1 class="page-title">{{ eventName() }}</h1>
-            <p class="subtitle">Submitted by {{ submission()!.studentDisplayName || submission()!.studentUid }}</p>
+            <p class="subtitle">
+              @if (submission()!.teamMemberUids?.length) {
+                Team: {{ submission()!.studentDisplayName || 'Unknown members' }}
+              } @else {
+                Submitted by {{ submission()!.studentDisplayName || submission()!.studentUid }}
+              }
+            </p>
           </div>
         </div>
 
@@ -437,12 +443,23 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
             <mat-icon mat-card-avatar>edit_note</mat-icon>
             <mat-card-title>CER Analysis</mat-card-title>
             <span class="spacer"></span>
-            <div class="inline-score">
-              <input type="number" min="0" [max]="getMax('cer')"
-                [value]="sectionScores().cer"
-                (input)="updateSectionScore('cer', $event)"
-                aria-label="CER Analysis score" />
-              <span class="score-max">/ {{ getMax('cer') }}</span>
+            <div class="inline-score-group">
+              <div class="inline-score">
+                <span class="score-label">CER</span>
+                <input type="number" min="0" [max]="getMax('cer')"
+                  [value]="sectionScores().cer"
+                  (input)="updateSectionScore('cer', $event)"
+                  aria-label="CER Analysis score" />
+                <span class="score-max">/ {{ getMax('cer') }}</span>
+              </div>
+              <div class="inline-score">
+                <span class="score-label">Conc</span>
+                <input type="number" min="0" [max]="getMax('conclusion')"
+                  [value]="sectionScores().conclusion"
+                  (input)="updateSectionScore('conclusion', $event)"
+                  aria-label="Conclusion score" />
+                <span class="score-max">/ {{ getMax('conclusion') }}</span>
+              </div>
             </div>
           </mat-card-header>
           <mat-card-content>
@@ -482,23 +499,12 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
             <mat-icon mat-card-avatar>lightbulb</mat-icon>
             <mat-card-title>Applications & Improvements</mat-card-title>
             <span class="spacer"></span>
-            <div class="inline-score-group">
-              <div class="inline-score">
-                <span class="score-label">Conc</span>
-                <input type="number" min="0" [max]="getMax('conclusion')"
-                  [value]="sectionScores().conclusion"
-                  (input)="updateSectionScore('conclusion', $event)"
-                  aria-label="Conclusion score" />
-                <span class="score-max">/ {{ getMax('conclusion') }}</span>
-              </div>
-              <div class="inline-score">
-                <span class="score-label">App</span>
-                <input type="number" min="0" [max]="getMax('applicationsRecommendations')"
-                  [value]="sectionScores().applicationsRecommendations"
-                  (input)="updateSectionScore('applicationsRecommendations', $event)"
-                  aria-label="Applications score" />
-                <span class="score-max">/ {{ getMax('applicationsRecommendations') }}</span>
-              </div>
+            <div class="inline-score">
+              <input type="number" min="0" [max]="getMax('applicationsRecommendations')"
+                [value]="sectionScores().applicationsRecommendations"
+                (input)="updateSectionScore('applicationsRecommendations', $event)"
+                aria-label="Applications score" />
+              <span class="score-max">/ {{ getMax('applicationsRecommendations') }}</span>
             </div>
           </mat-card-header>
           <mat-card-content>

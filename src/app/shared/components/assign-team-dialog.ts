@@ -14,6 +14,7 @@ export interface AssignTeamDialogData {
 
 export interface AssignTeamDialogResult {
   memberUids: string[];
+  memberNames: string[];
 }
 
 @Component({
@@ -99,8 +100,13 @@ export class AssignTeamDialogComponent implements OnInit {
   }
 
   protected confirm(): void {
+    const uids = [...this.selectedUids()];
+    const names = this.students()
+      .filter((s) => uids.includes(s.uid))
+      .map((s) => s.displayName);
     this.dialogRef.close({
-      memberUids: [...this.selectedUids()],
+      memberUids: uids,
+      memberNames: names,
     } satisfies AssignTeamDialogResult);
   }
 }

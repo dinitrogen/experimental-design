@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, linkedSignal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -125,7 +125,7 @@ import { ReportSubmission } from '../../../../core/models/submission.model';
     .level-actions { display: flex; gap: 4px; margin-bottom: 8px; }
   `,
 })
-export class VariablesStepComponent implements OnInit {
+export class VariablesStepComponent {
   readonly independentVar = input('');
   readonly ivOperationalDef = input('');
   readonly dependentVar = input('');
@@ -135,14 +135,11 @@ export class VariablesStepComponent implements OnInit {
   readonly showHints = input(true);
   readonly changed = output<Partial<ReportSubmission>>();
 
-  protected readonly localCVs = signal<string[]>(['', '', '']);
-  protected readonly localLevels = signal<string[]>(['', '', '']);
-
-  ngOnInit(): void {
-    this.localCVs.set([...this.controlledVars()]);
-    const levels = this.ivLevels() ?? [];
-    this.localLevels.set(levels.length > 0 ? [...levels] : ['', '', '']);
-  }
+  protected readonly localCVs = linkedSignal(() => [...this.controlledVars()]);
+  protected readonly localLevels = linkedSignal(() => {
+    const levels = this.ivLevels();
+    return levels.length > 0 ? [...levels] : ['', '', ''];
+  });
 
   protected updateCV(index: number, value: string): void {
     this.localCVs.update((cvs) => {

@@ -70,6 +70,18 @@ import { ApplicationsStepComponent } from './steps/applications';
         <mat-spinner diameter="40"></mat-spinner>
         <p>Loading your report...</p>
       </div>
+    } @else if (isAlreadySubmitted()) {
+      <div class="submitted-banner">
+        <mat-icon>check_circle</mat-icon>
+        <div>
+          <h2>Report Already Submitted</h2>
+          <p>This report has been submitted for coach review and can no longer be edited.</p>
+        </div>
+        <a mat-raised-button [routerLink]="['/practice-events', slug()]">
+          <mat-icon>arrow_back</mat-icon>
+          Back to Event
+        </a>
+      </div>
     } @else if (submission()) {
       <div class="builder-header">
         <div class="header-left">
@@ -126,7 +138,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Problem Statement & Hypothesis">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Problem Statement & Hypothesis
+              @if (getStepLockIcon('problemHypothesis'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('problemHypothesis')) {
@@ -158,7 +178,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Variables">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Variables
+              @if (getStepLockIcon('variables'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('variables')) {
@@ -194,7 +222,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Materials & Procedure">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Materials & Procedure
+              @if (getStepLockIcon('materialsProcedure'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('materialsProcedure')) {
@@ -226,7 +262,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Qualitative Observations">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Qualitative Observations
+              @if (getStepLockIcon('observations'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('observations')) {
@@ -259,7 +303,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Data Table">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Data Table
+              @if (getStepLockIcon('dataTable'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('dataTable')) {
@@ -299,7 +351,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Graph">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Graph
+              @if (getStepLockIcon('graph'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('graph')) {
@@ -335,7 +395,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Statistics">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Statistics
+              @if (getStepLockIcon('statistics'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('statistics')) {
@@ -370,7 +438,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Experimental Errors">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Experimental Errors
+              @if (getStepLockIcon('errors'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('errors')) {
@@ -401,7 +477,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="CER Analysis">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              CER Analysis
+              @if (getStepLockIcon('cer'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('cer')) {
@@ -436,7 +520,15 @@ import { ApplicationsStepComponent } from './steps/applications';
           </div>
         </mat-step>
 
-        <mat-step label="Applications & Improvements">
+        <mat-step>
+          <ng-template matStepLabel>
+            <span class="step-label-row">
+              Applications & Improvements
+              @if (getStepLockIcon('applications'); as lockIcon) {
+                <mat-icon class="step-lock-icon" [class.my-lock]="lockIcon === 'lock_open'">{{ lockIcon }}</mat-icon>
+              }
+            </span>
+          </ng-template>
           @if (isTeamMode()) {
             <div class="section-lock-bar">
               @if (isSectionLockedByMe('applications')) {
@@ -592,6 +684,48 @@ import { ApplicationsStepComponent } from './steps/applications';
       display: flex;
       align-items: center;
     }
+
+    .submitted-banner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 64px 24px;
+      text-align: center;
+      color: #2e7d32;
+    }
+
+    .submitted-banner mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+    }
+
+    .submitted-banner h2 {
+      margin: 0;
+    }
+
+    .submitted-banner p {
+      margin: 0;
+      color: #666;
+    }
+
+    .step-label-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .step-lock-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      color: #e65100;
+    }
+
+    .step-lock-icon.my-lock {
+      color: #2e7d32;
+    }
   `,
 })
 export class ReportBuilderComponent implements OnInit, OnDestroy {
@@ -644,6 +778,12 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
   protected readonly isTeamMode = computed(() => {
     const sub = this.submission();
     return !!(sub?.teamMemberUids && sub.teamMemberUids.length > 0);
+  });
+
+  /** Whether the report has already been submitted (blocks editing in team mode) */
+  protected readonly isAlreadySubmitted = computed(() => {
+    const sub = this.submission();
+    return !!sub && sub.status !== 'draft';
   });
 
   /** Current section locks map */
@@ -788,6 +928,14 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
   protected hasActiveLocks(): boolean {
     if (!this.isTeamMode()) return false;
     return Object.keys(this.sectionLocks()).length > 0;
+  }
+
+  /** Returns an icon name for the step label, or empty string if no lock / not team mode */
+  protected getStepLockIcon(section: ReportSectionKey): string {
+    if (!this.isTeamMode()) return '';
+    const lock = this.sectionLocks()[section];
+    if (!lock) return '';
+    return lock.lockedByUid === this.authService.user()?.uid ? 'lock_open' : 'lock';
   }
 
   protected async checkoutSection(section: ReportSectionKey): Promise<void> {

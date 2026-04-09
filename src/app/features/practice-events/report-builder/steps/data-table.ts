@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal, computed, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal, computed, linkedSignal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -357,7 +357,7 @@ type TrialKey = (typeof ALL_TRIAL_KEYS)[number];
     .blank-input.result { border-bottom-color: #2e7d32; color: #2e7d32; font-weight: 600; }
   `,
 })
-export class DataTableStepComponent implements OnInit {
+export class DataTableStepComponent {
   readonly dataTable = input<DataTableEntry[]>([]);
   readonly numTrials = input(5);
   readonly independentVar = input('');
@@ -373,13 +373,18 @@ export class DataTableStepComponent implements OnInit {
 
   private readonly aiDataService = inject(AiDataService);
 
-  protected readonly localRows = signal<DataTableEntry[]>([]);
-  protected readonly activeTrialCount = signal(5);
+  protected readonly localRows = linkedSignal(() =>
+    this.dataTable().map((r) => ({ ...r }))
+  );
+  protected readonly activeTrialCount = linkedSignal(() => {
+    const n = this.numTrials();
+    return n >= 3 && n <= 5 ? n : 5;
+  });
   protected readonly showMeanValidation = signal(false);
   protected readonly generating = signal(false);
   protected readonly aiNotes = signal('');
-  protected readonly localIvHeader = signal('');
-  protected readonly localDvHeader = signal('');
+  protected readonly localIvHeader = linkedSignal(() => this.dataTableIvHeader());
+  protected readonly localDvHeader = linkedSignal(() => this.dataTableDvHeader());
 
   protected readonly activeTrialNums = computed(() =>
     Array.from({ length: this.activeTrialCount() }, (_, i) => i + 1)
@@ -387,14 +392,6 @@ export class DataTableStepComponent implements OnInit {
   protected readonly activeTrialKeys = computed(() =>
     ALL_TRIAL_KEYS.slice(0, this.activeTrialCount())
   );
-
-  ngOnInit(): void {
-    this.localRows.set(this.dataTable().map((r) => ({ ...r })));
-    const n = this.numTrials();
-    this.activeTrialCount.set(n >= 3 && n <= 5 ? n : 5);
-    this.localIvHeader.set(this.dataTableIvHeader());
-    this.localDvHeader.set(this.dataTableDvHeader());
-  }
 
   protected displayVal(v: number | null | undefined): string {
     return v !== null && v !== undefined && !isNaN(v) ? String(v) : '';
