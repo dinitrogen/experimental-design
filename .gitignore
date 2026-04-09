@@ -45,6 +45,8 @@ Thumbs.db
 
 # Environment secrets
 functions/.env
+src/environments/environment.ts
+src/environments/environment.prod.ts
 
 # Firebase project-specific config
 .firebaserc

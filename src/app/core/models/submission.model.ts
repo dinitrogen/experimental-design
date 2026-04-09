@@ -1,5 +1,28 @@
 import { Timestamp } from '@angular/fire/firestore';
 
+/** Section keys that map to report-builder stepper steps (excludes prompt) */
+export const REPORT_SECTION_KEYS = [
+  'problemHypothesis',
+  'variables',
+  'materialsProcedure',
+  'observations',
+  'dataTable',
+  'graph',
+  'statistics',
+  'errors',
+  'cer',
+  'applications',
+] as const;
+
+export type ReportSectionKey = typeof REPORT_SECTION_KEYS[number];
+
+/** Lock entry for a report section in team mode */
+export interface SectionLock {
+  lockedByUid: string;
+  lockedByName: string;
+  lockedAt: Timestamp;
+}
+
 export interface ReportSubmission {
   id?: string;
   studentUid: string;
@@ -39,6 +62,10 @@ export interface ReportSubmission {
   futureExperiments: string;
   manualCalculations: ManualCalculations;
   timerRemaining?: number;
+
+  // Team mode
+  teamMemberUids?: string[];
+  sectionLocks?: Record<string, SectionLock>;
 
   // Meta
   sectionScores: SectionScores;
@@ -296,4 +323,13 @@ export function createBlankSubmission(
     submittedAt: null,
     reviewedAt: null,
   };
+}
+
+/** Returns a blank team submission shared by multiple members */
+export function createBlankTeamSubmission(
+  teamMemberUids: string[],
+  practiceEventId: string,
+): Omit<ReportSubmission, 'id'> {
+  const blank = createBlankSubmission('', practiceEventId, '');
+  return { ...blank, teamMemberUids, sectionLocks: {} };
 }

@@ -12,12 +12,16 @@ import {
   query,
   where,
   limit,
+  onSnapshot,
+  runTransaction,
 } from '@angular/fire/firestore';
 import { AuthService } from './auth.service';
 import {
   ReportSubmission,
   SectionScores,
+  SectionLock,
   createBlankSubmission,
+  createBlankTeamSubmission,
 } from '../models/submission.model';
 
 @Injectable({ providedIn: 'root' })
@@ -163,5 +167,118 @@ export class SubmissionService {
   async deleteSubmission(submissionId: string): Promise<void> {
     const submissionDoc = doc(this.firestore, `submissions/${submissionId}`);
     await deleteDoc(submissionDoc);
+  }
+
+  // ── Team mode methods ──────────────────────────────────────────────
+
+  /** Create a shared team draft for a practice event */
+  async createTeamDraft(teamMemberUids: string[], practiceEventId: string): Promise<ReportSubmission> {
+    const submissionsCol = collection(this.firestore, 'submissions');
+    const newDoc = doc(submissionsCol);
+    const blank = createBlankTeamSubmission(teamMemberUids, practiceEventId);
+    await setDoc(newDoc, blank);
+    return { id: newDoc.id, ...blank };
+  }
+
+  /** Check if a team draft exists for the current user + event */
+  async getTeamDraft(practiceEventId: string): Promise<ReportSubmission | null> {
+    const user = this.authService.user();
+    if (!user) return null;
+
+    const submissionsCol = collection(this.firestore, 'submissions');
+    const q = query(
+      submissionsCol,
+      where('teamMemberUids', 'array-contains', user.uid),
+      where('practiceEventId', '==', practiceEventId),
+      where('status', '==', 'draft'),
+      limit(1)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    const docSnap = snapshot.docs[0];
+    return { id: docSnap.id, ...docSnap.data() } as ReportSubmission;
+  }
+
+  /** Coach: find a team draft for a specific event (any team) */
+  async getTeamDraftsForEvent(practiceEventId: string): Promise<ReportSubmission[]> {
+    const submissionsCol = collection(this.firestore, 'submissions');
+    const q = query(
+      submissionsCol,
+      where('practiceEventId', '==', practiceEventId),
+      where('status', '==', 'draft'),
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...d.data() }) as ReportSubmission)
+      .filter((s) => s.teamMemberUids && s.teamMemberUids.length > 0);
+  }
+
+  /** Atomically check out a section for the current user. Returns false if already locked by someone else. */
+  async checkoutSection(submissionId: string, section: string): Promise<boolean> {
+    const user = this.authService.user();
+    if (!user) return false;
+
+    const ref = doc(this.firestore, `submissions/${submissionId}`);
+    return runTransaction(this.firestore, async (txn) => {
+      const snap = await txn.get(ref);
+      const data = snap.data();
+      const locks: Record<string, SectionLock> = { ...(data?.['sectionLocks'] ?? {}) };
+
+      // Already locked by someone else
+      if (locks[section] && locks[section].lockedByUid !== user.uid) {
+        return false;
+      }
+
+      locks[section] = {
+        lockedByUid: user.uid,
+        lockedByName: user.displayName,
+        lockedAt: Timestamp.now(),
+      };
+      txn.update(ref, { sectionLocks: locks });
+      return true;
+    });
+  }
+
+  /** Release a section lock for the current user */
+  async checkinSection(submissionId: string, section: string): Promise<void> {
+    const user = this.authService.user();
+    if (!user) return;
+
+    const ref = doc(this.firestore, `submissions/${submissionId}`);
+    await runTransaction(this.firestore, async (txn) => {
+      const snap = await txn.get(ref);
+      const locks: Record<string, SectionLock> = { ...(snap.data()?.['sectionLocks'] ?? {}) };
+      if (locks[section]?.lockedByUid === user.uid) {
+        delete locks[section];
+        txn.update(ref, { sectionLocks: locks });
+      }
+    });
+  }
+
+  /** Coach: force-unlock any section regardless of who holds it */
+  async forceUnlockSection(submissionId: string, section: string): Promise<void> {
+    const ref = doc(this.firestore, `submissions/${submissionId}`);
+    await runTransaction(this.firestore, async (txn) => {
+      const snap = await txn.get(ref);
+      const locks: Record<string, SectionLock> = { ...(snap.data()?.['sectionLocks'] ?? {}) };
+      delete locks[section];
+      txn.update(ref, { sectionLocks: locks });
+    });
+  }
+
+  /** Coach: force-unlock ALL sections at once */
+  async forceUnlockAll(submissionId: string): Promise<void> {
+    const ref = doc(this.firestore, `submissions/${submissionId}`);
+    await updateDoc(ref, { sectionLocks: {} });
+  }
+
+  /** Subscribe to real-time updates on a submission document. Returns unsubscribe function. */
+  listenToSubmission(submissionId: string, callback: (sub: ReportSubmission) => void): () => void {
+    const ref = doc(this.firestore, `submissions/${submissionId}`);
+    return onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        callback({ id: snap.id, ...snap.data() } as ReportSubmission);
+      }
+    });
   }
 }
