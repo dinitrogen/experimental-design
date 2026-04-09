@@ -12,6 +12,7 @@ import {
   query,
   where,
 } from '@angular/fire/firestore';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AppUser } from '../models/user.model';
@@ -22,6 +23,7 @@ import { ReportSubmission } from '../models/submission.model';
 export class StudentService {
   private readonly firestore = inject(Firestore);
   private readonly http = inject(HttpClient);
+  private readonly functions = inject(Functions);
 
   /** Get all students from Firestore */
   async getAllStudents(): Promise<AppUser[]> {
@@ -147,5 +149,11 @@ export class StudentService {
     const q = query(submissionsCol, where('studentUid', '==', uid));
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ReportSubmission);
+  }
+
+  /** Reset a student's password to a temporary one (coach only) */
+  async resetPassword(uid: string, newPassword: string): Promise<void> {
+    const fn = httpsCallable(this.functions, 'resetStudentPassword');
+    await fn({ uid, newPassword });
   }
 }

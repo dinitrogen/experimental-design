@@ -4,6 +4,7 @@ import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { defineString } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 
 initializeApp();
 const db = getFirestore();
@@ -250,5 +251,38 @@ export const notifyAchievementUnlocked = onDocumentUpdated(
         inline: true,
       },
     ]);
+  },
+);
+
+// ── Coach: Reset Student Password ──
+
+export const resetStudentPassword = onCall(
+  { cors: true, invoker: "public" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in.");
+    }
+
+    // Verify caller is a coach
+    const callerDoc = await db.doc(`users/${request.auth.uid}`).get();
+    if (callerDoc.data()?.role !== "coach") {
+      throw new HttpsError("permission-denied", "Only coaches can reset passwords.");
+    }
+
+    const { uid, newPassword } = request.data as { uid: string; newPassword: string };
+    if (!uid || !newPassword) {
+      throw new HttpsError("invalid-argument", "Missing uid or newPassword.");
+    }
+    if (newPassword.length < 6) {
+      throw new HttpsError("invalid-argument", "Password must be at least 6 characters.");
+    }
+
+    // Update password in Firebase Auth
+    await getAuth().updateUser(uid, { password: newPassword });
+
+    // Mark as needing password change on next login
+    await db.doc(`users/${uid}`).update({ passwordChanged: false });
+
+    return { success: true };
   },
 );

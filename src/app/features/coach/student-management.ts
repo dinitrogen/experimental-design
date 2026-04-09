@@ -12,6 +12,7 @@ import { StudentService } from '../../core/services/student.service';
 import { AppUser } from '../../core/models/user.model';
 import { AddStudentDialogComponent } from './add-student-dialog';
 import { EditStudentDialogComponent } from './edit-student-dialog';
+import { ResetPasswordDialogComponent } from './reset-password-dialog';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
 
 @Component({
@@ -77,6 +78,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
                   matTooltip="Edit student"
                 >
                   <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  (click)="resetPassword(student)"
+                  [attr.aria-label]="'Reset password for ' + student.displayName"
+                  matTooltip="Reset password"
+                >
+                  <mat-icon>lock_reset</mat-icon>
                 </button>
                 <a
                   mat-icon-button
@@ -227,5 +236,26 @@ export class StudentManagementComponent {
 
   protected extractUsername(email: string): string {
     return email.replace(/@exd-lab\.app$/, '');
+  }
+
+  protected resetPassword(student: AppUser): void {
+    const dialogRef = this.dialog.open(ResetPasswordDialogComponent, {
+      width: '400px',
+      data: { studentName: student.displayName },
+    });
+
+    dialogRef.afterClosed().subscribe(async (tempPassword: string | undefined) => {
+      if (!tempPassword) return;
+      try {
+        await this.studentService.resetPassword(student.uid, tempPassword);
+        this.snackBar.open(
+          `Password reset for "${student.displayName}". They will be prompted to change it on next login.`,
+          'OK',
+          { duration: 5000 },
+        );
+      } catch {
+        this.snackBar.open('Failed to reset password. Please try again.', 'OK', { duration: 5000 });
+      }
+    });
   }
 }
