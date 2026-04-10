@@ -107,7 +107,18 @@ import { ApplicationsStepComponent } from './steps/applications';
               <mat-icon>check</mat-icon> Saved
             </span>
           }
-          @if (!isTeamMode()) {
+          @if (isTeamMode()) {
+            <div class="team-timer"
+              [class.warning]="teamTimeRemaining() <= 600 && teamTimeRemaining() > 300"
+              [class.danger]="teamTimeRemaining() > 0 && teamTimeRemaining() <= 300"
+              [class.expired]="teamTimeRemaining() <= 0">
+              <mat-icon>timer</mat-icon>
+              <span class="time-display" role="timer">{{ teamTimerDisplay() }}</span>
+              @if (teamTimeRemaining() <= 0) {
+                <span class="expired-label">Time's up!</span>
+              }
+            </div>
+          } @else {
             <app-countdown-timer #timer [durationMinutes]="50" (expired)="onTimerExpired()" />
           }
           <button
@@ -213,6 +224,7 @@ import { ApplicationsStepComponent } from './steps/applications';
               [controlledVars]="submission()!.controlledVars"
               [ivLevels]="submission()!.ivLevels"
               [showHints]="settingsService.showHints()"
+              [syncVersion]="syncVersion()"
               (changed)="onFieldChange($event)"
             />
           </div>
@@ -342,6 +354,7 @@ import { ApplicationsStepComponent } from './steps/applications';
               [dataTableDvHeader]="submission()!.dataTableDvHeader"
               [showHints]="settingsService.showHints()"
               [allowCheckMyWork]="settingsService.checkMyWork()"
+              [syncVersion]="syncVersion()"
               (changed)="onFieldChange($event)"
             />
           </div>
@@ -386,6 +399,7 @@ import { ApplicationsStepComponent } from './steps/applications';
               [showHints]="settingsService.showHints()"
               [manualCalculations]="submission()!.manualCalculations"
               [allowCheckMyWork]="settingsService.checkMyWork()"
+              [syncVersion]="syncVersion()"
               (changed)="onFieldChange($event)"
             />
           </div>
@@ -429,6 +443,7 @@ import { ApplicationsStepComponent } from './steps/applications';
               [manualCalculations]="submission()!.manualCalculations"
               [showHints]="settingsService.showHints()"
               [allowCheckMyWork]="settingsService.checkMyWork()"
+              [syncVersion]="syncVersion()"
               (changed)="onFieldChange($event)"
             />
           </div>
@@ -468,6 +483,7 @@ import { ApplicationsStepComponent } from './steps/applications';
             <app-step-errors
               [errors]="submission()!.errors"
               [showHints]="settingsService.showHints()"
+              [syncVersion]="syncVersion()"
               (changed)="onFieldChange($event)"
             />
           </div>
@@ -627,6 +643,23 @@ import { ApplicationsStepComponent } from './steps/applications';
     .save-status.saved {
       color: #2e7d32;
     }
+
+    .team-timer {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px;
+      border-radius: 24px;
+      background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      color: var(--primary-color);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    .team-timer .time-display { font-size: 18px; min-width: 56px; }
+    .team-timer.warning { background: #fff3e0; color: #e65100; }
+    .team-timer.danger { background: #ffebee; color: #c62828; }
+    .team-timer.expired { background: #ffcdd2; color: #b71c1c; }
+    .team-timer .expired-label { font-size: 13px; font-weight: 600; }
 
     .save-status mat-icon {
       font-size: 16px;
@@ -793,6 +826,19 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
   private pendingChanges: Partial<ReportSubmission> = {};
   private part2Warned = false;
   private readonly PART2_FIRST_STEP = 6; // Graph step index (0-based)
+  protected readonly syncVersion = signal(0);
+
+  // Team timer
+  protected readonly teamTimeRemaining = signal(50 * 60);
+  protected readonly teamTimerDisplay = computed(() => {
+    const total = Math.max(0, this.teamTimeRemaining());
+    const min = Math.floor(total / 60);
+    const sec = total % 60;
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+  });
+  private teamTimerInterval: ReturnType<typeof setInterval> | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private teamTimerExpired = false;
 
   async ngOnInit(): Promise<void> {
     try {
@@ -800,10 +846,33 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
 
       // Try to find a team draft first, fall back to solo draft
       let draft = await this.submissionService.getTeamDraft(eventId);
+
+      // Retry once after a short delay — handles race condition when coach just assigned the team
+      if (!draft) {
+        await new Promise((r) => setTimeout(r, 1500));
+        draft = await this.submissionService.getTeamDraft(eventId);
+      }
+
+      // If no draft found, check if team submission was already submitted
+      if (!draft) {
+        const teamSub = await this.submissionService.getTeamSubmission(eventId);
+        if (teamSub && teamSub.status !== 'draft') {
+          this.snackBar.open('This report has already been submitted.', 'OK', { duration: 5000 });
+          this.router.navigate(['/practice-events']);
+          return;
+        }
+      }
+
       if (draft) {
         this.submission.set(draft);
         // Set up real-time listener for team mode
         this.startRealtimeSync(draft.id!);
+        // Disable hints and check-my-work by default for team events
+        this.settingsService.update({ showHints: false, checkMyWork: false });
+        // Register as active editor and initialize team timer
+        await this.registerActiveEditor(draft);
+        this.initTeamTimer(draft);
+        this.startTeamIntervals();
       } else {
         draft = await this.submissionService.getOrCreateDraft(eventId);
         this.submission.set(draft);
@@ -821,10 +890,17 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
     // Release any sections we hold
     this.releaseMyLocks();
 
-    // Persist timer state and flush any pending saves
-    if (this.timerRef && !this.isTeamMode()) {
+    if (this.isTeamMode()) {
+      // Stop team intervals
+      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+      if (this.teamTimerInterval) clearInterval(this.teamTimerInterval);
+      // Deregister and potentially pause team timer
+      this.deregisterActiveEditor();
+    } else if (this.timerRef) {
+      // Solo: persist timer state
       this.pendingChanges.timerRemaining = this.timerRef.remaining();
     }
+
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
     }
@@ -851,8 +927,8 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
     const sub = this.submission();
     if (!sub?.id || Object.keys(this.pendingChanges).length === 0) return;
 
-    // Always persist timer state with each save
-    if (this.timerRef) {
+    // Always persist timer state with each save (solo mode only)
+    if (this.timerRef && !this.isTeamMode()) {
       this.pendingChanges.timerRemaining = this.timerRef.remaining();
     }
 
@@ -965,6 +1041,13 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
   private startRealtimeSync(submissionId: string): void {
     const myUid = this.authService.user()?.uid;
     this.unsubSnapshot = this.submissionService.listenToSubmission(submissionId, (updated) => {
+      // If a teammate submitted the report, redirect out
+      if (updated.status !== 'draft') {
+        this.snackBar.open('This report has been submitted by a teammate.', 'OK', { duration: 5000 });
+        this.router.navigate(['/practice-events']);
+        return;
+      }
+
       // Merge remote changes but preserve local pending changes for fields we're editing
       const current = this.submission();
       if (!current) {
@@ -985,6 +1068,7 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
       }
 
       this.submission.set(merged);
+      this.syncVersion.update((v) => v + 1);
     });
   }
 
@@ -998,6 +1082,111 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
         this.submissionService.checkinSection(sub.id, section);
       }
     }
+  }
+
+  // ── Team timer & presence ──────────────────────────────────────────
+
+  private async registerActiveEditor(draft: ReportSubmission): Promise<void> {
+    const uid = this.authService.user()?.uid;
+    if (!uid || !draft.id) return;
+    const editors = { ...(draft.activeEditors ?? {}), [uid]: Date.now() };
+    this.submission.update((s) => (s ? { ...s, activeEditors: editors } : s));
+    this.pendingChanges.activeEditors = editors;
+    this.scheduleSave();
+  }
+
+  private initTeamTimer(draft: ReportSubmission): void {
+    const now = Date.now();
+
+    if (!draft.timerDuration) {
+      // First time: start fresh
+      this.submission.update((s) => (s ? { ...s, timerStartedAt: now, timerDuration: 50 * 60 } : s));
+      this.pendingChanges.timerStartedAt = now;
+      this.pendingChanges.timerDuration = 50 * 60;
+      this.scheduleSave();
+    } else if (!draft.timerStartedAt) {
+      // Paused: resume
+      this.submission.update((s) => (s ? { ...s, timerStartedAt: now } : s));
+      this.pendingChanges.timerStartedAt = now;
+      this.scheduleSave();
+    } else {
+      // Timer appears running — check if anyone was actually here
+      const editors = draft.activeEditors ?? {};
+      const myUid = this.authService.user()?.uid;
+      const othersActive = Object.entries(editors).some(
+        ([uid, lastSeen]) => uid !== myUid && now - lastSeen < 90000
+      );
+
+      if (!othersActive) {
+        // Retroactively pause to last heartbeat, then resume
+        const lastHeartbeat = Math.max(0, ...Object.values(editors));
+        const pausePoint = lastHeartbeat > 0 ? lastHeartbeat : now;
+        const elapsed = (pausePoint - draft.timerStartedAt) / 1000;
+        const remaining = Math.max(0, Math.round(draft.timerDuration - elapsed));
+        this.submission.update((s) => (s ? { ...s, timerStartedAt: now, timerDuration: remaining } : s));
+        this.pendingChanges.timerStartedAt = now;
+        this.pendingChanges.timerDuration = remaining;
+        this.scheduleSave();
+      }
+    }
+
+    this.updateTeamTimerDisplay();
+  }
+
+  private startTeamIntervals(): void {
+    // Update timer display every second
+    this.teamTimerInterval = setInterval(() => this.updateTeamTimerDisplay(), 1000);
+
+    // Heartbeat every 30 seconds
+    this.heartbeatInterval = setInterval(() => {
+      const uid = this.authService.user()?.uid;
+      if (!uid) return;
+      const editors = { ...(this.submission()?.activeEditors ?? {}), [uid]: Date.now() };
+      this.pendingChanges.activeEditors = editors;
+      this.scheduleSave();
+    }, 30000);
+  }
+
+  private updateTeamTimerDisplay(): void {
+    const sub = this.submission();
+    if (!sub?.timerStartedAt || !sub.timerDuration) {
+      this.teamTimeRemaining.set(sub?.timerDuration ?? 50 * 60);
+      return;
+    }
+    const elapsed = (Date.now() - sub.timerStartedAt) / 1000;
+    const remaining = Math.max(0, Math.round(sub.timerDuration - elapsed));
+    this.teamTimeRemaining.set(remaining);
+
+    if (remaining <= 0 && !this.teamTimerExpired) {
+      this.teamTimerExpired = true;
+      this.onTimerExpired();
+    }
+  }
+
+  private deregisterActiveEditor(): void {
+    const sub = this.submission();
+    if (!sub?.id) return;
+    const uid = this.authService.user()?.uid;
+    if (!uid) return;
+
+    const editors = { ...(sub.activeEditors ?? {}) };
+    delete editors[uid];
+
+    // Check if anyone else is still active
+    const now = Date.now();
+    const othersActive = Object.entries(editors).some(
+      ([, lastSeen]) => now - lastSeen < 90000
+    );
+
+    if (!othersActive && sub.timerStartedAt && sub.timerStartedAt > 0) {
+      // Pause the timer
+      const elapsed = (now - sub.timerStartedAt) / 1000;
+      const remaining = Math.max(0, Math.round((sub.timerDuration ?? 50 * 60) - elapsed));
+      this.pendingChanges.timerDuration = remaining;
+      this.pendingChanges.timerStartedAt = 0;
+    }
+
+    this.pendingChanges.activeEditors = editors;
   }
 
   protected discardReport(): void {

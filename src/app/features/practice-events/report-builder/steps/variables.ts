@@ -133,12 +133,19 @@ export class VariablesStepComponent {
   readonly controlledVars = input<string[]>(['', '', '']);
   readonly ivLevels = input<string[]>(['', '', '']);
   readonly showHints = input(true);
+  readonly syncVersion = input(0);
   readonly changed = output<Partial<ReportSubmission>>();
 
-  protected readonly localCVs = linkedSignal(() => [...this.controlledVars()]);
-  protected readonly localLevels = linkedSignal(() => {
-    const levels = this.ivLevels();
-    return levels.length > 0 ? [...levels] : ['', '', ''];
+  protected readonly localCVs = linkedSignal({
+    source: this.syncVersion,
+    computation: () => [...this.controlledVars()],
+  });
+  protected readonly localLevels = linkedSignal({
+    source: this.syncVersion,
+    computation: () => {
+      const levels = this.ivLevels();
+      return levels.length > 0 ? [...levels] : ['', '', ''];
+    },
   });
 
   protected updateCV(index: number, value: string): void {

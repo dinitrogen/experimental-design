@@ -43,6 +43,7 @@ export class GraphCanvasComponent {
   readonly graphData = input.required<GraphData>();
   readonly isReadonly = input(false);
   readonly lobfPending = input<GraphPoint | null>(null);
+  readonly fineGrid = input(false);
   readonly canvasClicked = output<GraphPoint>();
 
   protected readonly cW = W;
@@ -56,6 +57,7 @@ export class GraphCanvasComponent {
     effect(() => {
       const data = this.graphData();
       this.lobfPending();
+      this.fineGrid();
       const el = this.canvasRef();
       if (el) this.draw(el.nativeElement, data);
     });
@@ -109,8 +111,9 @@ export class GraphCanvasComponent {
       const yRange = data.yMax - data.yMin;
       if (xRange <= 0 || yRange <= 0) return;
 
-      this.tickX = niceInterval(xRange);
-      this.tickY = niceInterval(yRange);
+      const targetTicks = this.fineGrid() ? 16 : 8;
+      this.tickX = niceInterval(xRange, targetTicks);
+      this.tickY = niceInterval(yRange, targetTicks);
 
       this.drawGrid(ctx, data);
       this.drawAxes(ctx, data);

@@ -67,6 +67,9 @@ export interface ReportSubmission {
   teamMemberUids?: string[];
   teamMemberNames?: string[];
   sectionLocks?: Record<string, SectionLock>;
+  timerStartedAt?: number;
+  timerDuration?: number;
+  activeEditors?: Record<string, number>;
 
   // Meta
   sectionScores: SectionScores;

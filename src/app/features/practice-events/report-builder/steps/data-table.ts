@@ -369,22 +369,33 @@ export class DataTableStepComponent {
   readonly dataTableDvHeader = input('');
   readonly showHints = input(true);
   readonly allowCheckMyWork = input(true);
+  readonly syncVersion = input(0);
   readonly changed = output<Partial<ReportSubmission>>();
 
   private readonly aiDataService = inject(AiDataService);
 
-  protected readonly localRows = linkedSignal(() =>
-    this.dataTable().map((r) => ({ ...r }))
-  );
-  protected readonly activeTrialCount = linkedSignal(() => {
-    const n = this.numTrials();
-    return n >= 3 && n <= 5 ? n : 5;
+  protected readonly localRows = linkedSignal({
+    source: this.syncVersion,
+    computation: () => this.dataTable().map((r) => ({ ...r })),
+  });
+  protected readonly activeTrialCount = linkedSignal({
+    source: this.syncVersion,
+    computation: () => {
+      const n = this.numTrials();
+      return n >= 3 && n <= 5 ? n : 5;
+    },
   });
   protected readonly showMeanValidation = signal(false);
   protected readonly generating = signal(false);
   protected readonly aiNotes = signal('');
-  protected readonly localIvHeader = linkedSignal(() => this.dataTableIvHeader());
-  protected readonly localDvHeader = linkedSignal(() => this.dataTableDvHeader());
+  protected readonly localIvHeader = linkedSignal({
+    source: this.syncVersion,
+    computation: () => this.dataTableIvHeader(),
+  });
+  protected readonly localDvHeader = linkedSignal({
+    source: this.syncVersion,
+    computation: () => this.dataTableDvHeader(),
+  });
 
   protected readonly activeTrialNums = computed(() =>
     Array.from({ length: this.activeTrialCount() }, (_, i) => i + 1)

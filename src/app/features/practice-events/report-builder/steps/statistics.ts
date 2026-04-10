@@ -43,6 +43,38 @@ import * as stats from '../../../../core/utils/statistics';
         </mat-card-content></mat-card>
       } @else {
 
+        <!-- Data Reference Panel -->
+        <details class="data-ref-panel">
+          <summary>
+            <mat-icon>table_chart</mat-icon>
+            Your Data Table (for reference)
+          </summary>
+          <div class="table-wrapper ref-table-wrapper">
+            <table class="summary-table ref-only">
+              <thead>
+                <tr>
+                  <th>IV Level</th>
+                  @for (n of activeTrialNums(); track n) {
+                    <th>Trial {{ n }}</th>
+                  }
+                  <th>Mean</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of dataTable(); track $index) {
+                  <tr>
+                    <td class="iv-cell">{{ row.ivValue || '—' }}</td>
+                    @for (t of activeTrialKeys(); track t) {
+                      <td>{{ row[t] != null ? row[t] : '—' }}</td>
+                    }
+                    <td>{{ row.mean != null ? row.mean : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </details>
+
         <!-- 1. SUMMARY TABLE (student fills in) -->
         <h3><mat-icon>grid_on</mat-icon> Statistics Summary Table</h3>
         @if (showHints()) {
@@ -512,6 +544,27 @@ import * as stats from '../../../../core/utils/statistics';
     .work-table .blank-input { width: 80px; }
 
     .check-section { margin: 24px 0 16px; }
+
+    .data-ref-panel {
+      margin-bottom: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .data-ref-panel summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 14px;
+      color: #1565c0;
+      user-select: none;
+    }
+    .data-ref-panel summary mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .ref-table-wrapper { border: none; border-top: 1px solid #e0e0e0; }
+    .summary-table.ref-only td { font-size: 13px; padding: 6px 8px; }
   `,
 })
 export class StatisticsStepComponent {
@@ -521,19 +574,23 @@ export class StatisticsStepComponent {
   readonly manualCalculations = input<ManualCalculations | undefined>();
   readonly showHints = input(true);
   readonly allowCheckMyWork = input(true);
+  readonly syncVersion = input(0);
   readonly changed = output<Partial<ReportSubmission>>();
 
-  protected readonly localCalcs = linkedSignal(() => {
-    const nRows = this.numRows();
-    const nTrials = this.activeTrials();
-    const calcs = { ...(this.manualCalculations() ?? createBlankManualCalcs(nRows, nTrials)) };
-    if (!calcs.summaryTable) {
-      calcs.summaryTable = [];
-    }
-    while (calcs.summaryTable.length < nRows) {
-      calcs.summaryTable.push({ mean: '', median: '', mode: '', range: '', iqr: '', stddev: '', variance: '' });
-    }
-    return calcs;
+  protected readonly localCalcs = linkedSignal({
+    source: this.syncVersion,
+    computation: () => {
+      const nRows = this.numRows();
+      const nTrials = this.activeTrials();
+      const calcs = { ...(this.manualCalculations() ?? createBlankManualCalcs(nRows, nTrials)) };
+      if (!calcs.summaryTable) {
+        calcs.summaryTable = [];
+      }
+      while (calcs.summaryTable.length < nRows) {
+        calcs.summaryTable.push({ mean: '', median: '', mode: '', range: '', iqr: '', stddev: '', variance: '' });
+      }
+      return calcs;
+    },
   });
   protected readonly showValidation = signal(false);
   protected readonly summaryFields: (keyof StatsSummaryRow)[] = [
@@ -551,6 +608,13 @@ export class StatisticsStepComponent {
     const n = this.numTrials();
     return n >= 3 && n <= 5 ? n : 5;
   });
+
+  protected readonly activeTrialNums = computed(() =>
+    Array.from({ length: this.activeTrials() }, (_, i) => i + 1)
+  );
+  protected readonly activeTrialKeys = computed(() =>
+    StatisticsStepComponent.TRIAL_KEYS.slice(0, this.activeTrials())
+  );
 
   protected readonly exampleIvLabel = computed(() => {
     const row = this.dataTable()[this.localCalcs().exampleIvIndex];

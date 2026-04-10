@@ -147,6 +147,13 @@ function niceInterval(range: number, targetTicks = 8): number {
         <button mat-stroked-button (click)="clearPoints()" [disabled]="itemCount() === 0">
           Clear
         </button>
+        @if (localGraph().chartType !== 'bar') {
+          <button mat-stroked-button (click)="fineGrid.set(!fineGrid())"
+            [class.active-toggle]="fineGrid()"
+            matTooltip="Toggle finer grid for more precise point placement">
+            <mat-icon>grid_on</mat-icon> {{ fineGrid() ? 'Fine Grid' : 'Grid' }}
+          </button>
+        }
         @if (localGraph().chartType !== 'bar' && localGraph().lobfStart) {
           <button mat-stroked-button (click)="removeLobf()">Remove LOBF</button>
         }
@@ -165,6 +172,7 @@ function niceInterval(range: number, targetTicks = 8): number {
       <app-graph-canvas
         [graphData]="localGraph()"
         [lobfPending]="lobfFirstPoint()"
+        [fineGrid]="fineGrid()"
         (canvasClicked)="onCanvasClick($event)"
       />
 
@@ -329,6 +337,8 @@ function niceInterval(range: number, targetTicks = 8): number {
       margin-bottom: 12px;
     }
 
+    .active-toggle { background: #e3f2fd; border-color: #1565c0; color: #1565c0; }
+
     .mode-hint { font-size: 13px; color: #e65100; margin: 0 0 8px; }
 
     .ref-card { margin-top: 16px; background: #f5f5f5; }
@@ -430,12 +440,14 @@ export class GraphStepComponent {
   readonly showHints = input(true);
   readonly manualCalculations = input<ManualCalculations | undefined>();
   readonly allowCheckMyWork = input(true);
+  readonly syncVersion = input(0);
 
   readonly changed = output<Partial<ReportSubmission>>();
 
   protected readonly localGraph = linkedSignal({
-    source: this.graphData,
-    computation: (gd) => {
+    source: this.syncVersion,
+    computation: () => {
+      const gd = this.graphData();
       if (gd) {
         return {
           ...gd,
@@ -451,10 +463,14 @@ export class GraphStepComponent {
     },
   });
   protected readonly localCalcs = linkedSignal({
-    source: this.manualCalculations,
-    computation: (calcs) => calcs ? { ...calcs } : createBlankManualCalcs(0),
+    source: this.syncVersion,
+    computation: () => {
+      const calcs = this.manualCalculations();
+      return calcs ? { ...calcs } : createBlankManualCalcs(0);
+    },
   });
   protected readonly plotMode = signal<'plot' | 'lobf'>('plot');
+  protected readonly fineGrid = signal(false);
   protected readonly lobfFirstPoint = signal<GraphPoint | null>(null);
   protected readonly showLobfCheck = signal(false);
   protected readonly itemCount = computed(() => {

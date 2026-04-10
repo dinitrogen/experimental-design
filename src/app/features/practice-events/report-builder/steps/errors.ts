@@ -113,11 +113,13 @@ import { ReportSubmission, ExperimentalError } from '../../../../core/models/sub
 export class ErrorsStepComponent {
   readonly errors = input<ExperimentalError[]>([]);
   readonly showHints = input(true);
+  readonly syncVersion = input(0);
   readonly changed = output<Partial<ReportSubmission>>();
 
-  protected readonly localErrors = linkedSignal(() =>
-    this.errors().map((e) => ({ ...e }))
-  );
+  protected readonly localErrors = linkedSignal({
+    source: this.syncVersion,
+    computation: () => this.errors().map((e) => ({ ...e })),
+  });
 
   protected updateError(index: number, field: 'type' | 'specificError' | 'resultImpact', value: string): void {
     this.localErrors.update((errs) => {

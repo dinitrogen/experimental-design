@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -100,17 +100,40 @@ import { ManageLocksDialogComponent } from '../../shared/components/manage-locks
                 </div>
                 <p class="draft-note">You have an in-progress draft for this event.</p>
               } @else if (teamDraft()) {
-                <div class="draft-actions">
-                  <button
-                    mat-flat-button
-                    class="start-button"
-                    (click)="startReport()"
-                  >
-                    <mat-icon>group</mat-icon>
-                    Continue Team Report
-                  </button>
-                </div>
-                <p class="draft-note">Your team has an in-progress report for this event.</p>
+                @if (teamDraftSubmitted()) {
+                  <mat-icon class="submitted-icon">check_circle</mat-icon>
+                  <p class="submitted-note">Your team's report has been submitted.</p>
+                } @else {
+                  <div class="draft-actions">
+                    <button
+                      mat-flat-button
+                      class="start-button"
+                      (click)="startReport()"
+                    >
+                      <mat-icon>group</mat-icon>
+                      {{ teamDraftStarted() ? 'Join Team Event' : 'Begin Team Event' }}
+                    </button>
+                  </div>
+                  @if (liveTimerStarted()) {
+                    <div class="team-live-info">
+                      <div class="live-timer-badge"
+                        [class.warning]="liveTimerRemaining() <= 600 && liveTimerRemaining() > 300"
+                        [class.danger]="liveTimerRemaining() > 0 && liveTimerRemaining() <= 300">
+                        <mat-icon>timer</mat-icon>
+                        <span>{{ liveTimerDisplay() }}</span>
+                      </div>
+                      @if (liveActiveEditorNames().length > 0) {
+                        <div class="active-editors-badge">
+                          <mat-icon>person</mat-icon>
+                          <span>{{ liveActiveEditorNames().join(', ') }} currently editing</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                  <p class="draft-note">
+                    {{ teamDraftStarted() ? 'Your team has an in-progress report for this event.' : 'Your team has been assigned this event.' }}
+                  </p>
+                }
               } @else {
                 <button
                   mat-flat-button
@@ -242,6 +265,47 @@ import { ManageLocksDialogComponent } from '../../shared/components/manage-locks
       font-style: italic;
     }
 
+    .submitted-icon {
+      font-size: 48px; width: 48px; height: 48px; color: #2e7d32;
+      margin-bottom: 8px;
+    }
+    .submitted-note {
+      color: #2e7d32; font-size: 15px; font-weight: 500;
+    }
+
+    .team-live-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .live-timer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 14px;
+      border-radius: 24px;
+      background: color-mix(in srgb, var(--primary-color, #1565c0) 12%, transparent);
+      color: var(--primary-color, #1565c0);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      font-size: 16px;
+    }
+    .live-timer-badge.warning { background: #fff3e0; color: #e65100; }
+    .live-timer-badge.danger { background: #ffebee; color: #c62828; }
+    .active-editors-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #2e7d32;
+      font-weight: 500;
+    }
+    .active-editors-badge mat-icon {
+      font-size: 18px; width: 18px; height: 18px;
+    }
+
     .not-found { text-align: center; padding: 48px 16px; color: #666; }
     .not-found mat-icon { font-size: 48px; width: 48px; height: 48px; color: #bbb; }
 
@@ -266,7 +330,7 @@ import { ManageLocksDialogComponent } from '../../shared/components/manage-locks
     }
   `,
 })
-export class EventDetailComponent implements OnInit {
+export class EventDetailComponent implements OnInit, OnDestroy {
   readonly slug = input.required<string>();
 
   private readonly router = inject(Router);
@@ -283,20 +347,108 @@ export class EventDetailComponent implements OnInit {
   protected readonly teamDraft = signal<ReportSubmission | null>(null);
   protected readonly teamDrafts = signal<ReportSubmission[]>([]);
 
+  // Live team info
+  protected readonly liveTimerRemaining = signal(0);
+  protected readonly liveActiveEditorNames = signal<string[]>([]);
+
+  private unsubSnapshot?: () => void;
+  private timerInterval: ReturnType<typeof setInterval> | null = null;
+
+  /** Whether the team draft has been submitted */
+  protected readonly teamDraftSubmitted = computed(() => {
+    const td = this.teamDraft();
+    return !!td && td.status !== 'draft';
+  });
+
+  /** Whether the team draft has been started (timer running or data entered) */
+  protected readonly teamDraftStarted = computed(() => {
+    const td = this.teamDraft();
+    return !!td && (td.timerStartedAt != null || td.timerDuration != null || td.timerRemaining != null || !!td.independentVar || !!td.dependentVar);
+  });
+
+  /** Whether the live timer has started at all */
+  protected readonly liveTimerStarted = computed(() => {
+    const td = this.teamDraft();
+    return !!td && (!!td.timerStartedAt || !!td.timerDuration);
+  });
+
+  protected readonly liveTimerDisplay = computed(() => {
+    const total = Math.max(0, this.liveTimerRemaining());
+    const min = Math.floor(total / 60);
+    const sec = total % 60;
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+  });
+
   async ngOnInit(): Promise<void> {
     const found = this.resourceService.getGuideBySlug(this.slug());
     this.event.set(found ?? null);
     if (found) {
       this.hasDraft.set(await this.submissionService.hasDraft(this.slug()));
-      // Check for team draft (for students)
-      const td = await this.submissionService.getTeamDraft(this.slug());
-      this.teamDraft.set(td);
+
+      // Check for team draft — try draft first, then any status
+      let td = await this.submissionService.getTeamDraft(this.slug());
+      if (!td) {
+        td = await this.submissionService.getTeamSubmission(this.slug());
+      }
+      if (td) {
+        this.teamDraft.set(td);
+        // Set up live listener for real-time updates
+        this.startLiveListener(td.id!);
+      }
+
       // Coach: load all team drafts for this event
       if (this.isCoach()) {
         this.teamDrafts.set(await this.submissionService.getTeamDraftsForEvent(this.slug()));
       }
     }
     this.loading.set(false);
+  }
+
+  ngOnDestroy(): void {
+    this.unsubSnapshot?.();
+    if (this.timerInterval) clearInterval(this.timerInterval);
+  }
+
+  private startLiveListener(submissionId: string): void {
+    this.unsubSnapshot = this.submissionService.listenToSubmission(submissionId, (updated) => {
+      this.teamDraft.set(updated);
+      this.updateLiveInfo();
+    });
+
+    // Update timer display every second
+    this.timerInterval = setInterval(() => this.updateLiveInfo(), 1000);
+    this.updateLiveInfo();
+  }
+
+  private updateLiveInfo(): void {
+    const td = this.teamDraft();
+    if (!td) return;
+
+    // Timer
+    if (td.timerStartedAt && td.timerDuration) {
+      const elapsed = (Date.now() - td.timerStartedAt) / 1000;
+      this.liveTimerRemaining.set(Math.max(0, Math.round(td.timerDuration - elapsed)));
+    } else if (td.timerDuration) {
+      // Paused
+      this.liveTimerRemaining.set(Math.round(td.timerDuration));
+    }
+
+    // Active editors
+    if (td.activeEditors) {
+      const now = Date.now();
+      const uids = td.teamMemberUids ?? [];
+      const names = td.teamMemberNames ?? [];
+      this.liveActiveEditorNames.set(
+        Object.entries(td.activeEditors)
+          .filter(([, lastSeen]) => now - lastSeen < 90000)
+          .map(([uid]) => {
+            const idx = uids.indexOf(uid);
+            return idx >= 0 && names[idx] ? names[idx].split(' ')[0] : 'Teammate';
+          })
+      );
+    } else {
+      this.liveActiveEditorNames.set([]);
+    }
   }
 
   protected startReport(): void {

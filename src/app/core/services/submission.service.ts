@@ -217,6 +217,24 @@ export class SubmissionService {
     return { id: docSnap.id, ...docSnap.data() } as ReportSubmission;
   }
 
+  /** Find any team submission (including submitted/reviewed) for the current user + event */
+  async getTeamSubmission(practiceEventId: string): Promise<ReportSubmission | null> {
+    const user = this.authService.user();
+    if (!user) return null;
+
+    const submissionsCol = collection(this.firestore, 'submissions');
+    const q = query(
+      submissionsCol,
+      where('teamMemberUids', 'array-contains', user.uid),
+      where('practiceEventId', '==', practiceEventId),
+      limit(1)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    const docSnap = snapshot.docs[0];
+    return { id: docSnap.id, ...docSnap.data() } as ReportSubmission;
+  }
+
   /** Coach: find a team draft for a specific event (any team) */
   async getTeamDraftsForEvent(practiceEventId: string): Promise<ReportSubmission[]> {
     const submissionsCol = collection(this.firestore, 'submissions');
