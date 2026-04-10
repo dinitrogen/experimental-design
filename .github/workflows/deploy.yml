@@ -64,11 +64,13 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Write Angular environment file
+      - name: Write Angular environment files
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
         run: |
+          mkdir -p src/environments
           printf 'export const environment = {\n  production: true,\n  useEmulators: false,\n  firebase: %s,\n};\n' "$FIREBASE_CONFIG" > src/environments/environment.prod.ts
+          cp src/environments/environment.prod.ts src/environments/environment.ts
 
       - name: Build Angular app
         run: npm run build
