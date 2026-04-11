@@ -73,6 +73,7 @@ export interface ReportSubmission {
 
   // Meta
   sectionScores: SectionScores;
+  sectionFeedback?: SectionFeedback;
   coachFeedback: string;
   score: number | null;
   isStateNational?: boolean;
@@ -161,6 +162,34 @@ export function createBlankSectionScores(): SectionScores {
     cer: null,
     conclusion: null,
     applicationsRecommendations: null,
+  };
+}
+
+export interface SectionFeedback {
+  problemHypothesis: string;
+  variables: string;
+  materialsProcedure: string;
+  dataTable: string;
+  qualitativeObs: string;
+  graph: string;
+  statistics: string;
+  experimentalErrors: string;
+  cer: string;
+  applicationsRecommendations: string;
+}
+
+export function createBlankSectionFeedback(): SectionFeedback {
+  return {
+    problemHypothesis: '',
+    variables: '',
+    materialsProcedure: '',
+    dataTable: '',
+    qualitativeObs: '',
+    graph: '',
+    statistics: '',
+    experimentalErrors: '',
+    cer: '',
+    applicationsRecommendations: '',
   };
 }
 

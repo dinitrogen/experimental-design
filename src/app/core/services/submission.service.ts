@@ -19,6 +19,7 @@ import { AuthService } from './auth.service';
 import {
   ReportSubmission,
   SectionScores,
+  SectionFeedback,
   SectionLock,
   createBlankSubmission,
   createBlankTeamSubmission,
@@ -168,13 +169,14 @@ export class SubmissionService {
   }
 
   /** Coach: save feedback and score for a submission */
-  async saveReview(submissionId: string, feedback: string, score: number | null, sectionScores?: SectionScores, isStateNational?: boolean): Promise<void> {
+  async saveReview(submissionId: string, feedback: string, score: number | null, sectionScores?: SectionScores, isStateNational?: boolean, sectionFeedback?: SectionFeedback): Promise<void> {
     const submissionDoc = doc(this.firestore, `submissions/${submissionId}`);
     await updateDoc(submissionDoc, {
       coachFeedback: feedback,
       score,
       isStateNational: isStateNational ?? false,
       ...(sectionScores ? { sectionScores } : {}),
+      ...(sectionFeedback ? { sectionFeedback } : {}),
       status: 'reviewed',
       reviewedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),

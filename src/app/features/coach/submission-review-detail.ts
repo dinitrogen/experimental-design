@@ -16,7 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { SubmissionService } from '../../core/services/submission.service';
 import { ResourceService } from '../../core/services/resource.service';
-import { ReportSubmission, CerSection, DataTableEntry, SectionScores, createBlankSectionScores, ManualCalculations } from '../../core/models/submission.model';
+import { ReportSubmission, CerSection, DataTableEntry, SectionScores, SectionFeedback, createBlankSectionScores, createBlankSectionFeedback, ManualCalculations } from '../../core/models/submission.model';
 import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
 
@@ -104,6 +104,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
               <label class="field-label">Hypothesis</label>
               <p class="field-value">{{ submission()!.hypothesis || '(empty)' }}</p>
             </div>
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().problemHypothesis"
+                (input)="updateSectionFeedback('problemHypothesis', $event)"
+                placeholder="Feedback for problem & hypothesis..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -132,6 +140,16 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
                 <p class="field-value">{{ submission()!.ivOperationalDef }}</p>
               </div>
             }
+            @if (submission()!.ivLevels.length) {
+              <div class="field-group">
+                <label class="field-label">IV Levels</label>
+                @for (level of submission()!.ivLevels; track $index) {
+                  @if (level) {
+                    <p class="field-value list-item">{{ $index + 1 }}. {{ level }}</p>
+                  }
+                }
+              </div>
+            }
             <div class="field-group">
               <label class="field-label">Dependent Variable</label>
               <p class="field-value">{{ submission()!.dependentVar || '(empty)' }}</p>
@@ -150,6 +168,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
                 }
               }
             </div>
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().variables"
+                (input)="updateSectionFeedback('variables', $event)"
+                placeholder="Feedback for variables..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -187,6 +213,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
               <label class="field-label">Procedure</label>
               <p class="field-value pre-wrap">{{ submission()!.procedure || '(empty)' }}</p>
             </div>
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().materialsProcedure"
+                (input)="updateSectionFeedback('materialsProcedure', $event)"
+                placeholder="Feedback for materials & procedure..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -210,11 +244,11 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
                 <table class="data-table" aria-label="Student data table">
                   <thead>
                     <tr>
-                      <th>IV Level</th>
+                      <th>{{ submission()!.dataTableIvHeader || submission()!.independentVar || 'IV Level' }}</th>
                       @for (i of trialColumns(); track i) {
-                        <th>Trial {{ i }}</th>
+                        <th>Trial {{ i }} ({{ submission()!.dataTableDvHeader || submission()!.dependentVar || 'DV' }})</th>
                       }
-                      <th>Mean</th>
+                      <th>Mean ({{ submission()!.dataTableDvHeader || submission()!.dependentVar || 'DV' }})</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -233,6 +267,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
             } @else {
               <p class="field-value">(no data entered)</p>
             }
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().dataTable"
+                (input)="updateSectionFeedback('dataTable', $event)"
+                placeholder="Feedback for data table..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -263,6 +305,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
               <label class="field-label">Results Observations</label>
               <p class="field-value pre-wrap">{{ submission()!.qualitativeObsResults || '(empty)' }}</p>
             </div>
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().qualitativeObs"
+                (input)="updateSectionFeedback('qualitativeObs', $event)"
+                placeholder="Feedback for observations..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -283,9 +333,34 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
           <mat-card-content>
             @if (submission()!.graphData) {
               <app-graph-canvas [graphData]="submission()!.graphData!" [isReadonly]="true" />
+              @if (submission()!.graphData!.lobfStart && submission()!.graphData!.lobfEnd) {
+                <div class="field-group lobf-info">
+                  <label class="field-label">Line of Best Fit</label>
+                  <p class="field-value">
+                    Point 1: ({{ submission()!.graphData!.lobfStart!.x }}, {{ submission()!.graphData!.lobfStart!.y }})
+                    &nbsp;→&nbsp;
+                    Point 2: ({{ submission()!.graphData!.lobfEnd!.x }}, {{ submission()!.graphData!.lobfEnd!.y }})
+                  </p>
+                  @if (statsCalcs(); as calcs) {
+                    @if (calcs.lobfSlope) {
+                      <p class="field-value">Equation: y = {{ calcs.lobfSlope }}x + {{ calcs.lobfIntercept }}</p>
+                    }
+                  }
+                </div>
+              } @else {
+                <p class="field-value" style="margin-top: 8px; color: #999">(no line of best fit placed)</p>
+              }
             } @else {
               <p class="field-value">{{ submission()!.graphUrl || '(no graph provided)' }}</p>
             }
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().graph"
+                (input)="updateSectionFeedback('graph', $event)"
+                placeholder="Feedback for graph..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -375,6 +450,12 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
                         <span>√({{ calcs.stddevSum }} / {{ calcs.stddevDivisor }}) = √{{ calcs.stddevVariance }} = <strong>{{ calcs.stddevResult }}</strong></span>
                       </div>
                     }
+                    @if (calcs.stddevVariance) {
+                      <div class="calc-row">
+                        <span class="calc-label">Variance:</span>
+                        <span>{{ calcs.stddevSum }} / {{ calcs.stddevDivisor }} = <strong>{{ calcs.stddevVariance }}</strong></span>
+                      </div>
+                    }
                     @if (calcs.iqrResult) {
                       <div class="calc-row">
                         <span class="calc-label">IQR:</span>
@@ -400,6 +481,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
                 <p class="field-value pre-wrap">{{ submission()!.statisticsNotes }}</p>
               </div>
             }
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().statistics"
+                (input)="updateSectionFeedback('statistics', $event)"
+                placeholder="Feedback for statistics..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -434,6 +523,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
             @if (noErrors()) {
               <p class="field-value">(no errors described)</p>
             }
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().experimentalErrors"
+                (input)="updateSectionFeedback('experimentalErrors', $event)"
+                placeholder="Feedback for experimental errors..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -490,6 +587,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
                 </mat-expansion-panel>
               }
             </mat-accordion>
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().cer"
+                (input)="updateSectionFeedback('cer', $event)"
+                placeholder="Feedback for CER analysis..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -520,6 +625,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
               <label class="field-label">Future Experiments</label>
               <p class="field-value pre-wrap">{{ submission()!.futureExperiments || '(empty)' }}</p>
             </div>
+            <mat-form-field appearance="outline" class="full-width section-feedback">
+              <mat-label>Section Feedback</mat-label>
+              <textarea matInput rows="2"
+                [value]="sectionFeedback().applicationsRecommendations"
+                (input)="updateSectionFeedback('applicationsRecommendations', $event)"
+                placeholder="Feedback for applications & improvements..."
+              ></textarea>
+            </mat-form-field>
           </mat-card-content>
         </mat-card>
 
@@ -757,6 +870,14 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
       white-space: nowrap;
       color: #666;
     }
+
+    .section-feedback {
+      margin-top: 12px;
+    }
+
+    .lobf-info {
+      margin-top: 8px;
+    }
   `,
 })
 export class SubmissionReviewDetailComponent {
@@ -778,6 +899,8 @@ export class SubmissionReviewDetailComponent {
   });
 
   protected readonly sectionScores = signal<SectionScores>(createBlankSectionScores());
+
+  protected readonly sectionFeedback = signal<SectionFeedback>(createBlankSectionFeedback());
 
   protected readonly stateNational = signal(false);
 
@@ -871,6 +994,7 @@ export class SubmissionReviewDetailComponent {
           feedback: sub.coachFeedback,
         });
         this.sectionScores.set(sub.sectionScores ?? createBlankSectionScores());
+        this.sectionFeedback.set(sub.sectionFeedback ?? createBlankSectionFeedback());
         this.stateNational.set(sub.isStateNational ?? false);
       }
     } finally {
@@ -887,6 +1011,11 @@ export class SubmissionReviewDetailComponent {
     this.sectionScores.update((s) => ({ ...s, [key]: isNaN(value) ? null : value }));
   }
 
+  protected updateSectionFeedback(key: keyof SectionFeedback, event: Event): void {
+    const value = (event.target as HTMLTextAreaElement).value;
+    this.sectionFeedback.update((f) => ({ ...f, [key]: value }));
+  }
+
   protected async saveReview(): Promise<void> {
     const sub = this.submission();
     if (!sub?.id) return;
@@ -896,7 +1025,8 @@ export class SubmissionReviewDetailComponent {
       const { feedback } = this.feedbackForm.value;
       const scores = this.sectionScores();
       const total = this.totalScore();
-      await this.submissionService.saveReview(sub.id, feedback ?? '', total, scores, this.stateNational());
+      const secFeedback = this.sectionFeedback();
+      await this.submissionService.saveReview(sub.id, feedback ?? '', total, scores, this.stateNational(), secFeedback);
       this.submission.update((s) => s ? { ...s, status: 'reviewed' as const } : s);
       this.snackBar.open('Review saved!', 'OK', { duration: 3000 });
     } catch (err: unknown) {
