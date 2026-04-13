@@ -43,4 +43,4 @@ where $x$ = Water Temperature (°C) and $y$ = Dissolving Time (s).
 
 ## Your Task
 
-Using the experiment summary, raw data, statistics, and line of best fit above, write all **four CERs** for this experiment. Refer to your [CER Quick Reference Guide](/study-guides/cer-guide) for the required format.
+Using the experiment summary, raw data, statistics, and line of best fit above, write all **four CERs** for this experiment. Try to do this from memory — but if you get stuck, you can refer to the [CER Quick Reference Guide](/study-guides/cer-guide).

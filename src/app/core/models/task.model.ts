@@ -100,7 +100,6 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'IV Level 1 — Deviations Table',
         type: 'table',
-        subLabel: 'Deviation = data value − mean. Squared deviation = deviation².',
         columns: ['Data Value (s)', 'Deviation (s)', 'Squared Deviation (s²)'],
         rows: 3,
         prefilled: [
@@ -112,14 +111,12 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'IV Level 1 — Variance',
         type: 'number',
-        subLabel: 'Sum of squared deviations ÷ (n − 1)',
         expectedAnswer: 65.3,
         tolerance: 0.2,
       },
       {
         label: 'IV Level 1 — Standard Deviation',
         type: 'number',
-        subLabel: 'Square root of the variance',
         expectedAnswer: 8.1,
         tolerance: 0.1,
       },
@@ -171,7 +168,6 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'IV Level 2 — Deviations Table',
         type: 'table',
-        subLabel: 'Deviation = data value − mean. Squared deviation = deviation².',
         columns: ['Data Value (s)', 'Deviation (s)', 'Squared Deviation (s²)'],
         rows: 3,
         prefilled: [
@@ -183,14 +179,12 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'IV Level 2 — Variance',
         type: 'number',
-        subLabel: 'Sum of squared deviations ÷ (n − 1)',
         expectedAnswer: 21.3,
         tolerance: 0.2,
       },
       {
         label: 'IV Level 2 — Standard Deviation',
         type: 'number',
-        subLabel: 'Square root of the variance',
         expectedAnswer: 4.6,
         tolerance: 0.1,
       },
@@ -242,7 +236,6 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'IV Level 3 — Deviations Table',
         type: 'table',
-        subLabel: 'Deviation = data value − mean. Squared deviation = deviation².',
         columns: ['Data Value (s)', 'Deviation (s)', 'Squared Deviation (s²)'],
         rows: 3,
         prefilled: [
@@ -259,14 +252,12 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'IV Level 3 — Variance',
         type: 'number',
-        subLabel: 'Sum of squared deviations ÷ (n − 1)',
         expectedAnswer: 12.0,
         tolerance: 0.1,
       },
       {
         label: 'IV Level 3 — Standard Deviation',
         type: 'number',
-        subLabel: 'Square root of the variance',
         expectedAnswer: 3.5,
         tolerance: 0.1,
       },

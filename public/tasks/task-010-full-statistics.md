@@ -22,9 +22,7 @@ Calculate all seven statistics for each IV level below. Report answers to **one 
 
 **Data:** 98, 98, 112 (seconds)
 
-**Central Tendency:** Calculate the mean, median, and mode.
-
-**Variation:** Calculate the range, then fill in the deviations table and use it to find the variance and standard deviation. Finally, determine Q1, Q3, and IQR.
+Calculate all seven statistics for this IV level.
 
 ---
 
