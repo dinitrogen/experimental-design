@@ -5,6 +5,7 @@ import {
   input,
   signal,
   OnInit,
+  OnDestroy,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -20,6 +21,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MarkdownComponent } from 'ngx-markdown';
 import { TaskService } from '../../core/services/task.service';
 import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../core/models/task.model';
+import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
 
 @Component({
   selector: 'app-task-detail',
@@ -308,13 +310,13 @@ import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../c
 
         @if (!isSubmitted() && !isReviewed()) {
           <div class="actions">
-            <button
-              mat-button
-              (click)="saveDraft()"
-              [disabled]="saving()"
-            >
-              <mat-icon>save</mat-icon> Save Draft
-            </button>
+            <span class="save-status" aria-live="polite">
+              @if (saving()) {
+                <mat-icon>sync</mat-icon> Saving...
+              } @else if (lastSaved()) {
+                <mat-icon>check</mat-icon> Saved
+              }
+            </span>
             <button
               mat-flat-button
               color="primary"
@@ -421,8 +423,24 @@ import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../c
       display: flex;
       gap: 12px;
       justify-content: flex-end;
+      align-items: center;
       margin-top: 16px;
       margin-bottom: 32px;
+    }
+
+    .save-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: #666;
+      margin-right: auto;
+    }
+
+    .save-status mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
     }
 
     mat-divider {
@@ -570,7 +588,7 @@ import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../c
     }
   `,
 })
-export class TaskDetailComponent implements OnInit {
+export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask {
   readonly taskId = input.required<string>();
 
   private readonly taskService = inject(TaskService);
@@ -580,10 +598,21 @@ export class TaskDetailComponent implements OnInit {
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
+  protected readonly lastSaved = signal(false);
   protected readonly task = signal<TaskDefinition | null>(null);
   protected readonly submission = signal<TaskSubmission | null>(null);
   protected readonly markdownContent = signal('');
   protected readonly responses = signal<string[]>([]);
+
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private autoSaveInterval: ReturnType<typeof setInterval> | null = null;
+  private isDirty = false;
+  private isSubmittedLocally = false;
+
+  /** Returns true if navigation is safe (submitted, reviewed, or no unsaved changes) */
+  canDeactivate(): boolean {
+    return this.isSubmittedLocally || this.isSubmitted() || this.isReviewed() || !this.isDirty;
+  }
 
   protected isSubmitted(): boolean {
     return this.submission()?.status === 'submitted';
@@ -660,6 +689,22 @@ export class TaskDetailComponent implements OnInit {
       this.responses.set([...sub.responses]);
     }
     this.loading.set(false);
+
+    // Start periodic auto-save every 30 seconds as a safety net
+    if (sub.status === 'in-progress') {
+      this.autoSaveInterval = setInterval(() => {
+        if (this.isDirty) {
+          this.flushSave();
+        }
+      }, 30_000);
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
+    // Flush any pending save on destroy
+    this.flushSave();
   }
 
   protected onResponseChange(index: number, event: Event): void {
@@ -669,6 +714,7 @@ export class TaskDetailComponent implements OnInit {
       copy[index] = el.value;
       return copy;
     });
+    this.markDirtyAndScheduleSave();
   }
 
   protected getTableData(promptIndex: number): string[][] {
@@ -696,6 +742,7 @@ export class TaskDetailComponent implements OnInit {
       copy[promptIndex] = JSON.stringify(table);
       return copy;
     });
+    this.markDirtyAndScheduleSave();
   }
 
   protected isNumberCorrect(promptIndex: number): boolean {
@@ -711,14 +758,26 @@ export class TaskDetailComponent implements OnInit {
     return this.submission()?.promptGrades?.[index] ?? null;
   }
 
-  protected async saveDraft(): Promise<void> {
+  private markDirtyAndScheduleSave(): void {
+    this.isDirty = true;
+    this.lastSaved.set(false);
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.flushSave(), 3000);
+  }
+
+  private async flushSave(): Promise<void> {
     const sub = this.submission();
-    if (!sub?.id) return;
+    if (!sub?.id || !this.isDirty) return;
 
     this.saving.set(true);
     try {
       await this.taskService.saveDraft(sub.id, this.responses());
-      this.snackBar.open('Draft saved!', '', { duration: 2000 });
+      this.isDirty = false;
+      this.lastSaved.set(true);
+    } catch {
+      this.snackBar.open('Auto-save failed. Your work may not be saved.', 'OK', {
+        duration: 3000,
+      });
     } finally {
       this.saving.set(false);
     }
@@ -731,6 +790,8 @@ export class TaskDetailComponent implements OnInit {
     this.saving.set(true);
     try {
       await this.taskService.submit(sub.id, this.responses());
+      this.isDirty = false;
+      this.isSubmittedLocally = true;
       this.snackBar.open('Task submitted!', '', { duration: 3000 });
       this.router.navigate(['/tasks']);
     } finally {

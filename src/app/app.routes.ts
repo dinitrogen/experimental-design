@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { coachGuard } from './core/guards/coach.guard';
+import { taskDeactivateGuard } from './core/guards/task-deactivate.guard';
 
 export const routes: Routes = [
   {
@@ -76,6 +77,7 @@ export const routes: Routes = [
           import('./features/tasks/task-detail').then(
             (m) => m.TaskDetailComponent
           ),
+        canDeactivate: [taskDeactivateGuard],
       },
       {
         path: 'team',
