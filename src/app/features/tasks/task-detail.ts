@@ -767,7 +767,7 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
 
   private async flushSave(): Promise<void> {
     const sub = this.submission();
-    if (!sub?.id || !this.isDirty) return;
+    if (!sub?.id || !this.isDirty || this.saving()) return;
 
     this.saving.set(true);
     try {

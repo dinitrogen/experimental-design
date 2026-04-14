@@ -19,7 +19,7 @@ export const taskDeactivateGuard: CanDeactivateFn<CanDeactivateTask> = (componen
     data: {
       title: 'Leave Task?',
       message:
-        'Your responses have been auto-saved, but you have not submitted this task yet. Are you sure you want to leave?',
+        'You have unsaved changes and have not submitted this task yet. Are you sure you want to leave?',
       confirmText: 'Leave',
       cancelText: 'Stay',
       confirmColor: 'warn',
