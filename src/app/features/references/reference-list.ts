@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { Subscription } from 'rxjs';
 import { ResourceService } from '../../core/services/resource.service';
 
 @Component({
@@ -26,13 +28,15 @@ import { ResourceService } from '../../core/services/resource.service';
               <p>{{ ref.summary }}</p>
             </mat-card-content>
             <mat-card-actions>
-              <a mat-button [routerLink]="['/references', ref.slug]">
-                <mat-icon>visibility</mat-icon>
-                View
-              </a>
+              @if (!isMobile()) {
+                <a mat-button [routerLink]="['/references', ref.slug]">
+                  <mat-icon>visibility</mat-icon>
+                  View
+                </a>
+              }
               <a mat-button [href]="ref.fileName" target="_blank" rel="noopener">
                 <mat-icon>open_in_new</mat-icon>
-                Open in New Tab
+                {{ isMobile() ? 'Open PDF' : 'Open in New Tab' }}
               </a>
             </mat-card-actions>
           </mat-card>
@@ -59,12 +63,26 @@ import { ResourceService } from '../../core/services/resource.service';
     }
   `,
 })
-export class ReferenceListComponent {
+export class ReferenceListComponent implements OnInit, OnDestroy {
   private readonly resourceService = inject(ResourceService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private breakpointSub?: Subscription;
+
+  protected readonly isMobile = signal(false);
 
   protected readonly references = computed(() =>
     this.resourceService
       .getGuidesByCategory('references')
       .sort((a, b) => a.order - b.order)
   );
+
+  ngOnInit(): void {
+    this.breakpointSub = this.breakpointObserver
+      .observe([Breakpoints.Handset, Breakpoints.TabletPortrait])
+      .subscribe((result) => this.isMobile.set(result.matches));
+  }
+
+  ngOnDestroy(): void {
+    this.breakpointSub?.unsubscribe();
+  }
 }
