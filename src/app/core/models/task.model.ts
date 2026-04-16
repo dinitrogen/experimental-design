@@ -130,7 +130,7 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
         label: 'Error 1 — Type',
         type: 'short-answer',
         sectionHeader: 'Scenario 1 — Candle Burn Time Under Different Jar Sizes',
-        subLabel: 'Is this error systematic or random?',
+        subLabel: 'Is this error systematic, procedural, or random?',
       },
       {
         label: 'Error 1 — Description',
@@ -145,7 +145,7 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'Error 2 — Type',
         type: 'short-answer',
-        subLabel: 'Is this error systematic or random?',
+        subLabel: 'Is this error systematic, procedural, or random?',
       },
       {
         label: 'Error 2 — Description',
@@ -162,7 +162,7 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
         label: 'Error 1 — Type',
         type: 'short-answer',
         sectionHeader: 'Scenario 2 — Paper Airplane Distance by Number of Wing Folds',
-        subLabel: 'Is this error systematic or random?',
+        subLabel: 'Is this error systematic, procedural, or random?',
       },
       {
         label: 'Error 1 — Description',
@@ -177,7 +177,7 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'Error 2 — Type',
         type: 'short-answer',
-        subLabel: 'Is this error systematic or random?',
+        subLabel: 'Is this error systematic, procedural, or random?',
       },
       {
         label: 'Error 2 — Description',
@@ -194,7 +194,7 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
         label: 'Error 1 — Type',
         type: 'short-answer',
         sectionHeader: 'Scenario 3 — Tea Steeping Color Intensity',
-        subLabel: 'Is this error systematic or random?',
+        subLabel: 'Is this error systematic, procedural, or random?',
       },
       {
         label: 'Error 1 — Description',
@@ -209,7 +209,7 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'Error 2 — Type',
         type: 'short-answer',
-        subLabel: 'Is this error systematic or random?',
+        subLabel: 'Is this error systematic, procedural, or random?',
       },
       {
         label: 'Error 2 — Description',

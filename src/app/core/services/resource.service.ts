@@ -188,6 +188,26 @@ const STUDY_GUIDES: Resource[] = [
     fileName: 'practice-events/practice-event-heat-retention.md',
     coachOnly: false,
   },
+  {
+    id: 'student-report-form',
+    title: '2026 Division B Student Report Form',
+    slug: 'student-report-form',
+    category: 'references',
+    order: 1,
+    summary: 'The official blank report form used during competition. Familiarize yourself with the layout before the event.',
+    fileName: 'references/student-report-form.pdf',
+    coachOnly: false,
+  },
+  {
+    id: 'scoring-checklist',
+    title: '2026 Division B Scoring Checklist',
+    slug: 'scoring-checklist',
+    category: 'references',
+    order: 2,
+    summary: 'The official scoring rubric used by event supervisors. Know exactly how each section is graded.',
+    fileName: 'references/scoring-checklist.pdf',
+    coachOnly: false,
+  },
 ];
 
 export interface CategoryInfo {
@@ -256,7 +276,7 @@ export class ResourceService {
     await setDoc(doc(this.firestore, 'settings/hiddenGuides'), { ids: [...current] });
   }
   getCategories(): CategoryInfo[] {
-    return CATEGORIES.filter((c) => c.id !== 'practice-events');
+    return CATEGORIES.filter((c) => c.id !== 'practice-events' && c.id !== 'references');
   }
 
   getGuidesByCategory(category: ResourceCategory): Resource[] {
@@ -264,7 +284,9 @@ export class ResourceService {
   }
 
   getAllGuides(includeCoachOnly: boolean): Resource[] {
-    const guides = STUDY_GUIDES.filter((g) => g.category !== 'practice-events');
+    const guides = STUDY_GUIDES.filter(
+      (g) => g.category !== 'practice-events' && g.category !== 'references'
+    );
     if (includeCoachOnly) {
       return guides;
     }

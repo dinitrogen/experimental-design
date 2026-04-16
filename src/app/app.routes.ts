@@ -80,6 +80,20 @@ export const routes: Routes = [
         canDeactivate: [taskDeactivateGuard],
       },
       {
+        path: 'references',
+        loadComponent: () =>
+          import('./features/references/reference-list').then(
+            (m) => m.ReferenceListComponent
+          ),
+      },
+      {
+        path: 'references/:slug',
+        loadComponent: () =>
+          import('./features/references/reference-viewer').then(
+            (m) => m.ReferenceViewerComponent
+          ),
+      },
+      {
         path: 'team',
         loadComponent: () =>
           import('./features/team/team').then(

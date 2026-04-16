@@ -5,7 +5,8 @@ export type ResourceCategory =
   | 'statistics'
   | 'team-strategy'
   | 'applications'
-  | 'practice-events';
+  | 'practice-events'
+  | 'references';
 
 export interface Resource {
   id: string;

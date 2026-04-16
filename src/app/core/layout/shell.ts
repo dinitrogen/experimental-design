@@ -233,6 +233,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Tasks', route: '/tasks', icon: 'task_alt' },
     { label: 'Study Guides', route: '/study-guides', icon: 'menu_book' },
     { label: 'Practice Events', route: '/practice-events', icon: 'assignment' },
+    { label: 'References', route: '/references', icon: 'description' },
     { label: 'Team', route: '/team', icon: 'groups' },
   ];
 
@@ -243,6 +244,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Reviews', route: '/coach/submissions', icon: 'rate_review' },
     { label: 'Study Guides', route: '/study-guides', icon: 'menu_book' },
     { label: 'Practice Events', route: '/practice-events', icon: 'assignment' },
+    { label: 'References', route: '/references', icon: 'description' },
     { label: 'Team', route: '/team', icon: 'groups' },
   ];
 
