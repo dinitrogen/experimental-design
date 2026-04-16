@@ -67,6 +67,581 @@ export interface TaskSubmission {
  */
 export const TASK_DEFINITIONS: TaskDefinition[] = [
   {
+    id: 'task-016-improvements-salt-ice',
+    title: 'Improvements, Applications & Recommendations: Salt and Ice Melting',
+    promptFile: 'tasks/task-016-improvements-salt-ice.md',
+    prompts: [
+      {
+        label: 'Improvements',
+        type: 'text',
+        subLabel:
+          'What specific changes could make this experiment more accurate or reliable? List at least 3–4.',
+      },
+      {
+        label: 'Applications',
+        type: 'text',
+        subLabel:
+          'How could these findings be useful in the real world? List at least 3–4.',
+      },
+      {
+        label: 'Recommendations for Future Experiments',
+        type: 'text',
+        subLabel:
+          'What follow-up experiments could extend these findings? Suggest at least 3–4.',
+      },
+    ],
+    dueDate: '',
+    createdAt: '2026-04-16',
+  },
+  {
+    id: 'task-015-qual-obs-baking-soda',
+    title: 'Qualitative Observations Practice: Baking Soda Reactions',
+    promptFile: 'tasks/task-015-qual-obs-baking-soda.md',
+    prompts: [
+      {
+        label: 'Setup Observations',
+        type: 'text',
+        subLabel:
+          'Describe what you observed about the physical setup before the experiment began (equipment, materials, environment).',
+      },
+      {
+        label: 'Procedure Observations',
+        type: 'text',
+        subLabel:
+          'Describe what you noticed during the experiment while carrying out the procedure (how things were done, any difficulties).',
+      },
+      {
+        label: 'Results Observations',
+        type: 'text',
+        subLabel:
+          'Describe what you observed about the outcomes — appearance, smell, sound, texture, or behavior of the reactions.',
+      },
+    ],
+    dueDate: '',
+    createdAt: '2026-04-16',
+  },
+  {
+    id: 'task-014-error-analysis',
+    title: 'Error Analysis Practice',
+    promptFile: 'tasks/task-014-error-analysis.md',
+    prompts: [
+      // ── Scenario 1: Candle Burn Time ──
+      {
+        label: 'Error 1 — Type',
+        type: 'short-answer',
+        sectionHeader: 'Scenario 1 — Candle Burn Time Under Different Jar Sizes',
+        subLabel: 'Is this error systematic or random?',
+      },
+      {
+        label: 'Error 1 — Description',
+        type: 'text',
+        subLabel: 'Describe the specific error in the experiment.',
+      },
+      {
+        label: 'Error 1 — Effect on Results',
+        type: 'text',
+        subLabel: 'How does this error specifically affect the data?',
+      },
+      {
+        label: 'Error 2 — Type',
+        type: 'short-answer',
+        subLabel: 'Is this error systematic or random?',
+      },
+      {
+        label: 'Error 2 — Description',
+        type: 'text',
+        subLabel: 'Describe the specific error in the experiment.',
+      },
+      {
+        label: 'Error 2 — Effect on Results',
+        type: 'text',
+        subLabel: 'How does this error specifically affect the data?',
+      },
+      // ── Scenario 2: Paper Airplane Distance ──
+      {
+        label: 'Error 1 — Type',
+        type: 'short-answer',
+        sectionHeader: 'Scenario 2 — Paper Airplane Distance by Number of Wing Folds',
+        subLabel: 'Is this error systematic or random?',
+      },
+      {
+        label: 'Error 1 — Description',
+        type: 'text',
+        subLabel: 'Describe the specific error in the experiment.',
+      },
+      {
+        label: 'Error 1 — Effect on Results',
+        type: 'text',
+        subLabel: 'How does this error specifically affect the data?',
+      },
+      {
+        label: 'Error 2 — Type',
+        type: 'short-answer',
+        subLabel: 'Is this error systematic or random?',
+      },
+      {
+        label: 'Error 2 — Description',
+        type: 'text',
+        subLabel: 'Describe the specific error in the experiment.',
+      },
+      {
+        label: 'Error 2 — Effect on Results',
+        type: 'text',
+        subLabel: 'How does this error specifically affect the data?',
+      },
+      // ── Scenario 3: Tea Steeping Color ──
+      {
+        label: 'Error 1 — Type',
+        type: 'short-answer',
+        sectionHeader: 'Scenario 3 — Tea Steeping Color Intensity',
+        subLabel: 'Is this error systematic or random?',
+      },
+      {
+        label: 'Error 1 — Description',
+        type: 'text',
+        subLabel: 'Describe the specific error in the experiment.',
+      },
+      {
+        label: 'Error 1 — Effect on Results',
+        type: 'text',
+        subLabel: 'How does this error specifically affect the data?',
+      },
+      {
+        label: 'Error 2 — Type',
+        type: 'short-answer',
+        subLabel: 'Is this error systematic or random?',
+      },
+      {
+        label: 'Error 2 — Description',
+        type: 'text',
+        subLabel: 'Describe the specific error in the experiment.',
+      },
+      {
+        label: 'Error 2 — Effect on Results',
+        type: 'text',
+        subLabel: 'How does this error specifically affect the data?',
+      },
+    ],
+    dueDate: '',
+    createdAt: '2026-04-16',
+  },
+  {
+    id: 'task-013-stats-catapult',
+    title: 'Full Statistics Practice: Catapult Projectile Distance',
+    promptFile: 'tasks/task-013-stats-catapult.md',
+    prompts: [
+      // ── IV Level 1 (20°): 84, 78, 84 → mean=82.0 ──
+      {
+        label: 'IV Level 1 — Mean (20°)',
+        type: 'number',
+        sectionHeader: 'IV Level 1 — 20°',
+        expectedAnswer: 82.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 1 — Median',
+        type: 'number',
+        expectedAnswer: 84,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 1 — Mode',
+        type: 'number',
+        expectedAnswer: 84,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 1 — Range',
+        type: 'number',
+        expectedAnswer: 6,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 1 — Deviations Table',
+        type: 'table',
+        columns: ['Data Value (cm)', 'Deviation (cm)', 'Squared Deviation (cm²)'],
+        rows: 3,
+        prefilled: [
+          ['84', null, null],
+          ['78', null, null],
+          ['84', null, null],
+        ],
+        expectedTableValues: [
+          ['84', '2', '4'],
+          ['78', '-4', '16'],
+          ['84', '2', '4'],
+        ],
+      },
+      {
+        label: 'IV Level 1 — Variance',
+        type: 'number',
+        expectedAnswer: 12.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 1 — Standard Deviation',
+        type: 'number',
+        expectedAnswer: 3.5,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 1 — Q1',
+        type: 'number',
+        expectedAnswer: 78.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 1 — Q3',
+        type: 'number',
+        expectedAnswer: 84.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 1 — IQR',
+        type: 'number',
+        expectedAnswer: 6.0,
+        tolerance: 0.1,
+      },
+
+      // ── IV Level 2 (45°): 126, 138, 126 → mean=130.0 ──
+      {
+        label: 'IV Level 2 — Mean (45°)',
+        type: 'number',
+        sectionHeader: 'IV Level 2 — 45°',
+        expectedAnswer: 130.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 2 — Median',
+        type: 'number',
+        expectedAnswer: 126,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 2 — Mode',
+        type: 'number',
+        expectedAnswer: 126,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 2 — Range',
+        type: 'number',
+        expectedAnswer: 12,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 2 — Deviations Table',
+        type: 'table',
+        columns: ['Data Value (cm)', 'Deviation (cm)', 'Squared Deviation (cm²)'],
+        rows: 3,
+        prefilled: [
+          ['126', null, null],
+          ['138', null, null],
+          ['126', null, null],
+        ],
+        expectedTableValues: [
+          ['126', '-4', '16'],
+          ['138', '8', '64'],
+          ['126', '-4', '16'],
+        ],
+      },
+      {
+        label: 'IV Level 2 — Variance',
+        type: 'number',
+        expectedAnswer: 48.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 2 — Standard Deviation',
+        type: 'number',
+        expectedAnswer: 6.9,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 2 — Q1',
+        type: 'number',
+        expectedAnswer: 126.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 2 — Q3',
+        type: 'number',
+        expectedAnswer: 138.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 2 — IQR',
+        type: 'number',
+        expectedAnswer: 12.0,
+        tolerance: 0.1,
+      },
+
+      // ── IV Level 3 (70°): 63, 57, 63 → mean=61.0 ──
+      {
+        label: 'IV Level 3 — Mean (70°)',
+        type: 'number',
+        sectionHeader: 'IV Level 3 — 70°',
+        expectedAnswer: 61.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 3 — Median',
+        type: 'number',
+        expectedAnswer: 63,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 3 — Mode',
+        type: 'number',
+        expectedAnswer: 63,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 3 — Range',
+        type: 'number',
+        expectedAnswer: 6,
+        tolerance: 0.5,
+      },
+      {
+        label: 'IV Level 3 — Deviations Table',
+        type: 'table',
+        columns: ['Data Value (cm)', 'Deviation (cm)', 'Squared Deviation (cm²)'],
+        rows: 3,
+        prefilled: [
+          ['63', null, null],
+          ['57', null, null],
+          ['63', null, null],
+        ],
+        expectedTableValues: [
+          ['63', '2', '4'],
+          ['57', '-4', '16'],
+          ['63', '2', '4'],
+        ],
+      },
+      {
+        label: 'IV Level 3 — Variance',
+        type: 'number',
+        expectedAnswer: 12.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 3 — Standard Deviation',
+        type: 'number',
+        expectedAnswer: 3.5,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 3 — Q1',
+        type: 'number',
+        expectedAnswer: 57.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 3 — Q3',
+        type: 'number',
+        expectedAnswer: 63.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IV Level 3 — IQR',
+        type: 'number',
+        expectedAnswer: 6.0,
+        tolerance: 0.1,
+      },
+    ],
+    dueDate: '',
+    createdAt: '2026-04-16',
+  },
+  {
+    id: 'task-012-cer-helicopter',
+    title: 'Full CER Practice: Paper Helicopter Experiment',
+    promptFile: 'tasks/task-012-cer-helicopter.md',
+    prompts: [
+      // ── Data Trend CER ──
+      {
+        label: 'Claim',
+        type: 'text',
+        sectionHeader: 'Data Trend CER',
+      },
+      {
+        label: 'Evidence',
+        type: 'text',
+      },
+      {
+        label: 'Reasoning',
+        type: 'text',
+      },
+      // ── Variation CER ──
+      {
+        label: 'Claim',
+        type: 'text',
+        sectionHeader: 'Variation CER',
+      },
+      {
+        label: 'Evidence',
+        type: 'text',
+      },
+      {
+        label: 'Reasoning',
+        type: 'text',
+      },
+      // ── Outliers CER ──
+      {
+        label: 'Claim',
+        type: 'text',
+        sectionHeader: 'Outliers CER',
+      },
+      {
+        label: 'Evidence',
+        type: 'text',
+      },
+      {
+        label: 'Reasoning',
+        type: 'text',
+      },
+      // ── Conclusion CER ──
+      {
+        label: 'Hypothesis (Restated)',
+        type: 'text',
+        sectionHeader: 'Conclusion CER',
+      },
+      {
+        label: 'Claim',
+        type: 'text',
+      },
+      {
+        label: 'Evidence',
+        type: 'text',
+      },
+      {
+        label: 'Reasoning',
+        type: 'text',
+      },
+    ],
+    dueDate: '',
+    createdAt: '2026-04-16',
+  },
+  {
+    id: 'task-011-quick-design-states',
+    title: 'Quick Design Challenge: States Prep',
+    promptFile: 'tasks/task-011-quick-design-states.md',
+    prompts: [
+      // ── Topic 1: Evaporative Cooling ──
+      {
+        label: 'Statement of Problem',
+        type: 'text',
+        sectionHeader: 'Topic 1 — Evaporative Cooling',
+        subLabel: 'Write a testable question about evaporative cooling using the provided materials.',
+      },
+      {
+        label: 'Hypothesis',
+        type: 'text',
+        subLabel: 'If... then... because...',
+      },
+      {
+        label: 'Independent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you change between trials? Include at least 3 levels and units.',
+      },
+      {
+        label: 'Dependent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you measure? Include units.',
+      },
+      {
+        label: 'Controlled Variable 1',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+      {
+        label: 'Controlled Variable 2',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+      {
+        label: 'Controlled Variable 3',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+      // ── Topic 2: Structural Load-Bearing ──
+      {
+        label: 'Statement of Problem',
+        type: 'text',
+        sectionHeader: 'Topic 2 — Structural Load-Bearing',
+        subLabel: 'Write a testable question about structural load-bearing using the provided materials.',
+      },
+      {
+        label: 'Hypothesis',
+        type: 'text',
+        subLabel: 'If... then... because...',
+      },
+      {
+        label: 'Independent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you change between trials? Include at least 3 levels and units.',
+      },
+      {
+        label: 'Dependent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you measure? Include units.',
+      },
+      {
+        label: 'Controlled Variable 1',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+      {
+        label: 'Controlled Variable 2',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+      {
+        label: 'Controlled Variable 3',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+      // ── Topic 3: Static Electricity ──
+      {
+        label: 'Statement of Problem',
+        type: 'text',
+        sectionHeader: 'Topic 3 — Static Electricity',
+        subLabel: 'Write a testable question about static electricity using the provided materials.',
+      },
+      {
+        label: 'Hypothesis',
+        type: 'text',
+        subLabel: 'If... then... because...',
+      },
+      {
+        label: 'Independent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you change between trials? Include at least 3 levels and units.',
+      },
+      {
+        label: 'Dependent Variable',
+        type: 'short-answer',
+        subLabel: 'What would you measure? Include units.',
+      },
+      {
+        label: 'Controlled Variable 1',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+      {
+        label: 'Controlled Variable 2',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+      {
+        label: 'Controlled Variable 3',
+        type: 'short-answer',
+        subLabel: 'Name the variable and how you would control it.',
+      },
+    ],
+    dueDate: '',
+    createdAt: '2026-04-16',
+  },
+  {
     id: 'task-010-full-statistics',
     title: 'Full Statistics Practice: Sugar Dissolving Experiment',
     promptFile: 'tasks/task-010-full-statistics.md',

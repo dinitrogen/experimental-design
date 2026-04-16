@@ -178,6 +178,16 @@ const STUDY_GUIDES: Resource[] = [
     fileName: 'practice-events/practice-event-surface-tension.md',
     coachOnly: false,
   },
+  {
+    id: 'practice-heat-retention',
+    title: 'Practice Event: Heat Retention',
+    slug: 'practice-heat-retention',
+    category: 'practice-events',
+    order: 9,
+    summary: 'Design an experiment to investigate a factor that affects the heat retention of a liquid. Insulating materials, hot water, and thermometers.',
+    fileName: 'practice-events/practice-event-heat-retention.md',
+    coachOnly: false,
+  },
 ];
 
 export interface CategoryInfo {
