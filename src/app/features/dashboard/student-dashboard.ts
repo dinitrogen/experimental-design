@@ -160,6 +160,7 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
                         @case ('in-progress') { <mat-icon>edit_note</mat-icon> In Progress }
                       }
                     </mat-chip>
+                    @if (task.isOverdue || task.dueFormatted) {
                     <span class="due-label" [class.overdue-text]="task.isOverdue">
                       @if (task.isOverdue) {
                         Overdue
@@ -167,6 +168,7 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
                         Due {{ task.dueFormatted }}
                       }
                     </span>
+                    }
                   </div>
                 </div>
                 <div class="submission-actions">
@@ -427,13 +429,15 @@ export class StudentDashboardComponent implements OnInit {
       })
       .map((def) => {
         const sub = subs.find((s) => s.taskId === def.id);
-        const dueDate = new Date(def.dueDate + 'T00:00:00');
+        const hasDueDate = !!def.dueDate;
         return {
           id: def.id,
           title: def.title,
           status: sub?.status ?? 'not-started' as const,
-          isOverdue: def.dueDate < today,
-          dueFormatted: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          isOverdue: hasDueDate && def.dueDate < today,
+          dueFormatted: hasDueDate
+            ? new Date(def.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : '',
         };
       });
   });

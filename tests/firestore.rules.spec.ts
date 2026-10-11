@@ -180,22 +180,24 @@ describe('Firestore security rules', () => {
     )));
   });
 
-  it('denies client team-submission queries so team lookup must use the callable', async () => {
-    const student = testEnv.authenticatedContext('student-1').firestore();
-    const submissions = collection(student, 'submissions');
+  it('allows team members to list their own team submissions but not another student’s', async () => {
+    const member = testEnv.authenticatedContext('student-1').firestore();
+    const nonMember = testEnv.authenticatedContext('student-3').firestore();
 
-    await assertFails(getDocs(query(
-      submissions,
+    await assertSucceeds(getDocs(query(
+      collection(member, 'submissions'),
       where('teamMemberUids', 'array-contains', 'student-1'),
       where('practiceEventId', '==', 'practice-team'),
       where('status', '==', 'draft'),
       limit(1),
     )));
-    await assertFails(getDocs(query(
-      submissions,
+    await assertSucceeds(getDocs(query(
+      collection(member, 'submissions'),
       where('teamMemberUids', 'array-contains', 'student-1'),
-      where('practiceEventId', '==', 'practice-team'),
-      limit(1),
+    )));
+    await assertFails(getDocs(query(
+      collection(nonMember, 'submissions'),
+      where('teamMemberUids', 'array-contains', 'student-1'),
     )));
   });
 

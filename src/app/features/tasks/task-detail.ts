@@ -60,7 +60,9 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
         </mat-card>
       } @else {
         <h1 class="page-title">{{ task()!.title }}</h1>
-        <p class="due-label">Due {{ formatDate(task()!.dueDate) }}</p>
+        @if (task()!.dueDate) {
+          <p class="due-label">Due {{ formatDate(task()!.dueDate) }}</p>
+        }
 
         @if (isReviewed()) {
           <mat-card class="feedback-card">

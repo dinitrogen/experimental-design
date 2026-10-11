@@ -81,7 +81,9 @@ interface TaskView {
                   <div class="task-info">
                     <div class="task-title">{{ task.definition.title }}</div>
                     <div class="task-meta">
-                      <span class="due-date">Due {{ formatDate(task.definition.dueDate) }}</span>
+                      @if (task.definition.dueDate) {
+                        <span class="due-date">Due {{ formatDate(task.definition.dueDate) }}</span>
+                      }
                       @if (task.assignment) {
                         <mat-chip class="status-chip status-chip-assigned">
                           @if (task.assignment.type === 'all') {
@@ -137,7 +139,7 @@ interface TaskView {
                       <span class="due-date" [class.overdue-text]="task.isOverdue && task.status !== 'submitted' && task.status !== 'reviewed'">
                         @if (task.isOverdue && task.status !== 'submitted' && task.status !== 'reviewed') {
                           <mat-icon class="inline-icon">warning</mat-icon> Overdue
-                        } @else {
+                        } @else if (task.definition.dueDate) {
                           Due {{ formatDate(task.definition.dueDate) }}
                         }
                       </span>
@@ -357,7 +359,7 @@ export class TaskListComponent implements OnInit {
         definition: def,
         submission: sub,
         status: sub?.status ?? 'not-started',
-        isOverdue: def.dueDate < today,
+        isOverdue: !!def.dueDate && def.dueDate < today,
         assignment: assignments[def.id],
       };
     });
