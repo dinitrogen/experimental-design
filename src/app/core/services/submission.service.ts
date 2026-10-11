@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import {
   Firestore,
   Timestamp,
@@ -28,6 +29,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class SubmissionService {
   private readonly firestore = inject(Firestore);
+  private readonly functions = inject(Functions);
   private readonly authService = inject(AuthService);
 
   /**
@@ -59,6 +61,21 @@ export class SubmissionService {
     const blank = createBlankSubmission(user.uid, practiceEventId, user.displayName);
     await setDoc(newDoc, blank);
     return { id: newDoc.id, ...blank };
+  }
+
+  /** Get the current user's submitted (non-draft) report for a practice event, if any */
+  async getSubmittedReport(practiceEventId: string): Promise<ReportSubmission | null> {
+    const user = this.authService.user();
+    if (!user) return null;
+
+    const q = query(
+      collection(this.firestore, 'submissions'),
+      where('studentUid', '==', user.uid),
+      where('practiceEventId', '==', practiceEventId)
+    );
+    const snapshot = await getDocs(q);
+    const submitted = snapshot.docs.find((d) => d.data()['status'] !== 'draft');
+    return submitted ? ({ id: submitted.id, ...submitted.data() } as ReportSubmission) : null;
   }
 
   /** Check if a draft exists for this event (without creating one) */
@@ -205,18 +222,7 @@ export class SubmissionService {
     const user = this.authService.user();
     if (!user) return null;
 
-    const submissionsCol = collection(this.firestore, 'submissions');
-    const q = query(
-      submissionsCol,
-      where('teamMemberUids', 'array-contains', user.uid),
-      where('practiceEventId', '==', practiceEventId),
-      where('status', '==', 'draft'),
-      limit(1)
-    );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return null;
-    const docSnap = snapshot.docs[0];
-    return { id: docSnap.id, ...docSnap.data() } as ReportSubmission;
+    return this.getTeamSubmissionForCurrentUser(practiceEventId, true);
   }
 
   /** Find any team submission (including submitted/reviewed) for the current user + event */
@@ -224,17 +230,24 @@ export class SubmissionService {
     const user = this.authService.user();
     if (!user) return null;
 
-    const submissionsCol = collection(this.firestore, 'submissions');
-    const q = query(
-      submissionsCol,
-      where('teamMemberUids', 'array-contains', user.uid),
-      where('practiceEventId', '==', practiceEventId),
-      limit(1)
-    );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return null;
-    const docSnap = snapshot.docs[0];
-    return { id: docSnap.id, ...docSnap.data() } as ReportSubmission;
+    return this.getTeamSubmissionForCurrentUser(practiceEventId, false);
+  }
+
+  private async getTeamSubmissionForCurrentUser(
+    practiceEventId: string,
+    draftOnly: boolean,
+  ): Promise<ReportSubmission | null> {
+    const lookup = httpsCallable<
+      { practiceEventId: string; draftOnly: boolean },
+      { submissionId: string | null }
+    >(this.functions, 'findMyTeamSubmissionId');
+    const result = await lookup({ practiceEventId, draftOnly });
+    const submissionId = result.data.submissionId;
+    if (!submissionId) return null;
+
+    const snapshot = await getDoc(doc(this.firestore, `submissions/${submissionId}`));
+    if (!snapshot.exists()) return null;
+    return { id: snapshot.id, ...snapshot.data() } as ReportSubmission;
   }
 
   /** Coach: find a team draft for a specific event (any team) */

@@ -16,6 +16,52 @@ export const REPORT_SECTION_KEYS = [
 
 export type ReportSectionKey = typeof REPORT_SECTION_KEYS[number];
 
+const REPORT_SECTION_LABELS: Record<ReportSectionKey, string> = {
+  problemHypothesis: 'Problem & Hypothesis',
+  variables: 'Variables',
+  materialsProcedure: 'Materials & Procedure',
+  observations: 'Observations',
+  dataTable: 'Data Table',
+  graph: 'Graph',
+  statistics: 'Statistics',
+  errors: 'Experimental Errors',
+  cer: 'CER Analysis',
+  applications: 'Applications & Improvements',
+};
+
+function hasText(value: string | null | undefined): boolean {
+  return !!value?.trim();
+}
+
+function isCerFilled(cer: CerSection | null | undefined): boolean {
+  return hasText(cer?.claim) && hasText(cer?.evidence) && hasText(cer?.reasoning);
+}
+
+/** Labels of report sections that look empty. Used as a pre-submit warning, not a hard block. */
+export function getMissingReportSections(sub: ReportSubmission): string[] {
+  const filled: Record<ReportSectionKey, boolean> = {
+    problemHypothesis: hasText(sub.problemStatement) && hasText(sub.hypothesis),
+    variables: hasText(sub.independentVar) && hasText(sub.dependentVar),
+    materialsProcedure: hasText(sub.materials) && hasText(sub.procedure),
+    observations: hasText(sub.qualitativeObsResults),
+    dataTable: (sub.dataTable ?? []).some((row) =>
+      [row.trial1, row.trial2, row.trial3, row.trial4, row.trial5].some((v) => v != null)
+    ),
+    graph: (sub.graphData?.points?.length ?? 0) > 0 || (sub.graphData?.bars?.length ?? 0) > 0,
+    statistics: hasText(sub.statisticsNotes),
+    errors: (sub.errors ?? []).some(
+      (e) => hasText(e.description) || hasText(e.specificError) || hasText(e.resultImpact)
+    ),
+    cer:
+      isCerFilled(sub.cerTrend) &&
+      isCerFilled(sub.cerVariation) &&
+      isCerFilled(sub.cerOutliers) &&
+      isCerFilled(sub.cerConclusion),
+    applications: hasText(sub.improvements) && hasText(sub.applications) && hasText(sub.futureExperiments),
+  };
+  return REPORT_SECTION_KEYS.filter((key) => !filled[key]).map((key) => REPORT_SECTION_LABELS[key]);
+}
+
 /** Lock entry for a report section in team mode */
 export interface SectionLock {
   lockedByUid: string;

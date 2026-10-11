@@ -21,7 +21,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { Subscription } from 'rxjs';
 import { SubmissionService } from '../../../core/services/submission.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { ReportSubmission, SectionLock, REPORT_SECTION_KEYS, ReportSectionKey } from '../../../core/models/submission.model';
+import { ReportSubmission, SectionLock, REPORT_SECTION_KEYS, ReportSectionKey, getMissingReportSections } from '../../../core/models/submission.model';
 import { PracticeSettingsService } from '../../../core/services/practice-settings.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog';
 import { PracticeSettingsDialogComponent } from '../../../shared/components/practice-settings-dialog';
@@ -874,7 +874,10 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
         this.initTeamTimer(draft);
         this.startTeamIntervals();
       } else {
-        draft = await this.submissionService.getOrCreateDraft(eventId);
+        // A solo report that was already submitted opens read-only instead of creating a new draft
+        draft =
+          (await this.submissionService.getSubmittedReport(eventId)) ??
+          (await this.submissionService.getOrCreateDraft(eventId));
         this.submission.set(draft);
       }
     } catch (e) {
@@ -1224,14 +1227,17 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
     const sub = this.submission();
     if (!sub?.id) return;
 
+    const missing = getMissingReportSections(sub);
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '440px',
       data: {
-        title: 'Submit Report',
-        message: 'Are you sure you want to submit this report for coach review? You will not be able to edit it after submission.',
-        confirmText: 'Submit Report',
+        title: missing.length ? 'Some Sections Look Empty' : 'Submit Report',
+        message: missing.length
+          ? `These sections look empty: ${missing.join(', ')}. You will not be able to edit the report after submission.`
+          : 'Are you sure you want to submit this report for coach review? You will not be able to edit it after submission.',
+        confirmText: missing.length ? 'Submit Anyway' : 'Submit Report',
         confirmColor: 'primary',
-        icon: 'send',
+        icon: missing.length ? 'warning' : 'send',
       },
     });
 
@@ -1242,7 +1248,7 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
         await this.flushSave();
         await this.submissionService.submit(sub.id!);
         this.snackBar.open('Report submitted successfully!', 'OK', { duration: 3000 });
-        this.router.navigate(['/practice-events']);
+        this.router.navigate(['/practice-events', this.slug()]);
       } catch {
         this.snackBar.open('Failed to submit report. Please try again.', 'OK', { duration: 5000 });
       } finally {

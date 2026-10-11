@@ -37,6 +37,13 @@ import { ManageLocksDialogComponent } from '../../shared/components/manage-locks
         <div class="loading-container">
           <mat-spinner diameter="40"></mat-spinner>
         </div>
+      } @else if (loadError()) {
+        <div class="not-found" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <h2>Unable to load event</h2>
+          <p>{{ loadError() }}</p>
+          <a mat-button routerLink="/practice-events">Return to Practice Events</a>
+        </div>
       } @else if (event()) {
         <h1 class="page-title">{{ event()!.title }}</h1>
         <p class="event-summary">{{ event()!.summary }}</p>
@@ -79,7 +86,10 @@ import { ManageLocksDialogComponent } from '../../shared/components/manage-locks
                 the event prompt. Work through each section of the report within
                 the time limit.
               </p>
-              @if (hasDraft()) {
+              @if (submittedReport()) {
+                <mat-icon class="submitted-icon">check_circle</mat-icon>
+                <p class="submitted-note">Your report has been submitted for coach review.</p>
+              } @else if (hasDraft()) {
                 <div class="draft-actions">
                   <button
                     mat-flat-button
@@ -342,10 +352,12 @@ export class EventDetailComponent implements OnInit, OnDestroy {
 
   protected readonly isCoach = this.authService.isCoach;
   protected readonly loading = signal(true);
+  protected readonly loadError = signal('');
   protected readonly event = signal<Resource | null>(null);
   protected readonly hasDraft = signal(false);
   protected readonly teamDraft = signal<ReportSubmission | null>(null);
   protected readonly teamDrafts = signal<ReportSubmission[]>([]);
+  protected readonly submittedReport = signal<ReportSubmission | null>(null);
 
   // Live team info
   protected readonly liveTimerRemaining = signal(0);
@@ -382,26 +394,32 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     const found = this.resourceService.getGuideBySlug(this.slug());
     this.event.set(found ?? null);
-    if (found) {
-      this.hasDraft.set(await this.submissionService.hasDraft(this.slug()));
+    try {
+      if (found) {
+        this.hasDraft.set(await this.submissionService.hasDraft(this.slug()));
 
-      // Check for team draft — try draft first, then any status
-      let td = await this.submissionService.getTeamDraft(this.slug());
-      if (!td) {
-        td = await this.submissionService.getTeamSubmission(this.slug());
-      }
-      if (td) {
-        this.teamDraft.set(td);
-        // Set up live listener for real-time updates
-        this.startLiveListener(td.id!);
-      }
+        // Check for team draft — try draft first, then any status
+        let td = await this.submissionService.getTeamDraft(this.slug());
+        if (!td) {
+          td = await this.submissionService.getTeamSubmission(this.slug());
+        }
+        if (td) {
+          this.teamDraft.set(td);
+          this.startLiveListener(td.id!);
+        } else {
+          this.submittedReport.set(await this.submissionService.getSubmittedReport(this.slug()));
+        }
 
-      // Coach: load all team drafts for this event
-      if (this.isCoach()) {
-        this.teamDrafts.set(await this.submissionService.getTeamDraftsForEvent(this.slug()));
+        if (this.isCoach()) {
+          this.teamDrafts.set(await this.submissionService.getTeamDraftsForEvent(this.slug()));
+        }
       }
+    } catch (error: unknown) {
+      console.error('Failed to load practice event details.', error);
+      this.loadError.set('Your report access could not be verified. Please try again later.');
+    } finally {
+      this.loading.set(false);
     }
-    this.loading.set(false);
   }
 
   ngOnDestroy(): void {
