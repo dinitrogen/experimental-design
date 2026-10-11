@@ -21,7 +21,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { Subscription } from 'rxjs';
 import { SubmissionService } from '../../../core/services/submission.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { ReportSubmission, SectionLock, REPORT_SECTION_KEYS, ReportSectionKey, getMissingReportSections } from '../../../core/models/submission.model';
+import { ReportSubmission, SectionLock, REPORT_SECTION_KEYS, REPORT_SECTION_LABELS, ReportSectionKey, getMissingReportSections } from '../../../core/models/submission.model';
 import { PracticeSettingsService } from '../../../core/services/practice-settings.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog';
 import { PracticeSettingsDialogComponent } from '../../../shared/components/practice-settings-dialog';
@@ -583,7 +583,7 @@ import { ApplicationsStepComponent } from './steps/applications';
               Submit Report
             </button>
             @if (hasActiveLocks()) {
-              <span class="lock-warning">All sections must be checked in before submitting</span>
+              <span class="lock-warning">Submit is disabled until every section is checked in. Still checked out: {{ lockedSectionsSummary() }}</span>
             }
           </div>
         </mat-step>
@@ -1007,6 +1007,13 @@ export class ReportBuilderComponent implements OnInit, OnDestroy {
   protected hasActiveLocks(): boolean {
     if (!this.isTeamMode()) return false;
     return Object.keys(this.sectionLocks()).length > 0;
+  }
+
+  /** Names each checked-out section and who holds it, e.g. "Data Table (Ana)" */
+  protected lockedSectionsSummary(): string {
+    return Object.entries(this.sectionLocks())
+      .map(([key, lock]) => `${REPORT_SECTION_LABELS[key as ReportSectionKey]} (${lock.lockedByName})`)
+      .join(', ');
   }
 
   /** Returns an icon name for the step label, or empty string if no lock / not team mode */

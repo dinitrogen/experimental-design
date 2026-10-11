@@ -16,7 +16,7 @@ export const REPORT_SECTION_KEYS = [
 
 export type ReportSectionKey = typeof REPORT_SECTION_KEYS[number];
 
-const REPORT_SECTION_LABELS: Record<ReportSectionKey, string> = {
+export const REPORT_SECTION_LABELS: Record<ReportSectionKey, string> = {
   problemHypothesis: 'Problem & Hypothesis',
   variables: 'Variables',
   materialsProcedure: 'Materials & Procedure',

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +7,9 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
 import { ResourceService } from '../../core/services/resource.service';
+import { SubmissionService } from '../../core/services/submission.service';
+
+type EventProgress = 'in-progress' | 'submitted';
 
 @Component({
   selector: 'app-practice-event-list',
@@ -30,7 +33,15 @@ import { ResourceService } from '../../core/services/resource.service';
             </mat-card-header>
             <mat-card-content>
               <p>{{ event.summary }}</p>
+              @let progress = progressFor(event.slug);
+              @if (progress) {
+                <span class="progress-badge" [class.progress-submitted]="progress === 'submitted'">
+                  <mat-icon>{{ progress === 'submitted' ? 'check_circle' : 'edit_note' }}</mat-icon>
+                  {{ progress === 'submitted' ? 'Submitted' : 'In progress' }}
+                </span>
+              }
             </mat-card-content>
+
             <mat-card-actions>
               <a mat-button [routerLink]="['/practice-events', event.slug]">
                 View Event
@@ -73,14 +84,29 @@ import { ResourceService } from '../../core/services/resource.service';
     .hidden-guide {
       opacity: 0.5;
     }
+
+    .progress-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #6d4c00;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    .progress-badge.progress-submitted {
+      color: #2e7d32;
+    }
   `,
 })
 export class PracticeEventListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly resourceService = inject(ResourceService);
+  private readonly submissionService = inject(SubmissionService);
 
   protected readonly isCoach = this.authService.isCoach;
   protected readonly loaded = this.resourceService.hiddenGuidesLoaded;
+  private readonly progressByEvent = signal<Map<string, EventProgress>>(new Map());
 
   protected readonly practiceEvents = computed(() => {
     const all = this.resourceService.getGuidesByCategory('practice-events');
@@ -93,6 +119,31 @@ export class PracticeEventListComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.resourceService.loadHiddenGuides();
+    if (!this.isCoach()) {
+      await this.loadProgress();
+    }
+  }
+
+  protected progressFor(slug: string): EventProgress | undefined {
+    return this.progressByEvent().get(slug);
+  }
+
+  /** Each event's practiceEventId is its slug. A submitted report outranks a draft. */
+  private async loadProgress(): Promise<void> {
+    try {
+      const submissions = await this.submissionService.getMySubmissions();
+      const map = new Map<string, EventProgress>();
+      for (const s of submissions) {
+        if (s.status === 'draft') {
+          if (!map.has(s.practiceEventId)) map.set(s.practiceEventId, 'in-progress');
+        } else {
+          map.set(s.practiceEventId, 'submitted');
+        }
+      }
+      this.progressByEvent.set(map);
+    } catch (error) {
+      console.error('Failed to load practice event progress', error);
+    }
   }
 
   protected isHidden(guideId: string): boolean {
