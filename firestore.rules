@@ -14,16 +14,22 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    function isSubmissionParticipant(data) {
+    function isSoloSubmissionParticipant(data) {
       return signedIn()
-        && (
-          data.studentUid == request.auth.uid
-          || (
-            'teamMemberUids' in data
-            && data.teamMemberUids is list
-            && request.auth.uid in data.teamMemberUids
-          )
-        );
+        && 'studentUid' in data
+        && data.studentUid == request.auth.uid;
+    }
+
+    function isTeamSubmissionParticipant(data) {
+      return signedIn()
+        && 'teamMemberUids' in data
+        && data.teamMemberUids is list
+        && request.auth.uid in data.teamMemberUids;
+    }
+
+    function isSubmissionParticipant(data) {
+      return isSoloSubmissionParticipant(data)
+        || isTeamSubmissionParticipant(data);
     }
 
     function sameSubmissionMembers() {
@@ -221,7 +227,8 @@ service cloud.firestore {
     }
 
     match /submissions/{submissionId} {
-      allow read: if isCoach() || isSubmissionParticipant(resource.data);
+      allow get: if isCoach() || isSubmissionParticipant(resource.data);
+      allow list: if isCoach() || isSoloSubmissionParticipant(resource.data);
 
       allow create: if isCoach()
         || (

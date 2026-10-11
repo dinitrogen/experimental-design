@@ -12,6 +12,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   setDoc,
   updateDoc,
@@ -164,6 +165,38 @@ describe('Firestore security rules', () => {
     await assertFails(getDocs(collection(student, 'submissions')));
     await assertFails(getDoc(doc(outsider, 'submissions/submission-1')));
     await assertSucceeds(getDoc(doc(otherStudent, 'submissions/team-submission')));
+  });
+
+  it('allows the event-detail query for the current student’s solo draft', async () => {
+    const student = testEnv.authenticatedContext('student-1').firestore();
+    const submissions = collection(student, 'submissions');
+
+    await assertSucceeds(getDocs(query(
+      submissions,
+      where('studentUid', '==', 'student-1'),
+      where('practiceEventId', '==', 'practice-one'),
+      where('status', '==', 'draft'),
+      limit(1),
+    )));
+  });
+
+  it('denies client team-submission queries so team lookup must use the callable', async () => {
+    const student = testEnv.authenticatedContext('student-1').firestore();
+    const submissions = collection(student, 'submissions');
+
+    await assertFails(getDocs(query(
+      submissions,
+      where('teamMemberUids', 'array-contains', 'student-1'),
+      where('practiceEventId', '==', 'practice-team'),
+      where('status', '==', 'draft'),
+      limit(1),
+    )));
+    await assertFails(getDocs(query(
+      submissions,
+      where('teamMemberUids', 'array-contains', 'student-1'),
+      where('practiceEventId', '==', 'practice-team'),
+      limit(1),
+    )));
   });
 
   it('allows a student to create their own solo draft but not a team draft', async () => {

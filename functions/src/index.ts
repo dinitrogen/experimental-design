@@ -179,6 +179,37 @@ Return exactly one row for each IV level, in the same order, using the exact IV 
   },
 );
 
+export const findMyTeamSubmissionId = onCall(
+  { cors: true, invoker: "public" },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "Must be signed in.");
+    }
+
+    const data: unknown = request.data;
+    if (
+      !isRecord(data)
+      || typeof data["practiceEventId"] !== "string"
+      || data["practiceEventId"].trim().length === 0
+      || data["practiceEventId"].length > 120
+      || typeof data["draftOnly"] !== "boolean"
+    ) {
+      throw new HttpsError("invalid-argument", "Invalid team submission lookup request.");
+    }
+
+    let query = db.collection("submissions")
+      .where("teamMemberUids", "array-contains", uid)
+      .where("practiceEventId", "==", data["practiceEventId"].trim());
+    if (data["draftOnly"]) {
+      query = query.where("status", "==", "draft");
+    }
+
+    const snapshot = await query.limit(1).get();
+    return { submissionId: snapshot.empty ? null : snapshot.docs[0].id };
+  },
+);
+
 export const updateTeamRoleAssignments = onCall(
   { cors: true, invoker: "public" },
   async (request) => {
