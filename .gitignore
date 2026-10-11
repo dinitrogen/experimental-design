@@ -38,6 +38,7 @@ yarn-error.log
 testem.log
 /typings
 __screenshots__/
+src/app/build-info.generated.ts
 
 # System files
 .DS_Store
@@ -45,6 +46,7 @@ Thumbs.db
 
 # Environment secrets
 functions/.env
+functions/.secret.local
 src/environments/environment.ts
 src/environments/environment.prod.ts
 
@@ -54,6 +56,7 @@ src/environments/environment.prod.ts
 
 # Firebase debug logs
 firebase-debug.log
+firestore-debug.log
 functions/firebase-debug.log
 ui-debug.log
 

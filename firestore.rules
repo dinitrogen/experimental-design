@@ -1,0 +1,296 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isCoach() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coach';
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isSubmissionParticipant(data) {
+      return signedIn()
+        && (
+          data.studentUid == request.auth.uid
+          || (
+            'teamMemberUids' in data
+            && data.teamMemberUids is list
+            && request.auth.uid in data.teamMemberUids
+          )
+        );
+    }
+
+    function sameSubmissionMembers() {
+        return (
+          !('teamMemberUids' in resource.data)
+          && !('teamMemberUids' in request.resource.data)
+        ) || (
+          'teamMemberUids' in resource.data
+          && 'teamMemberUids' in request.resource.data
+          && request.resource.data.teamMemberUids == resource.data.teamMemberUids
+        );
+    }
+
+    function canUpdateDraftSubmission() {
+        return isSubmissionParticipant(resource.data)
+          && resource.data.status == 'draft'
+          && request.resource.data.studentUid == resource.data.studentUid
+          && request.resource.data.practiceEventId == resource.data.practiceEventId
+          && sameSubmissionMembers()
+        && request.resource.data.status in ['draft', 'submitted']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'problemStatement',
+          'hypothesis',
+          'independentVar',
+          'ivOperationalDef',
+          'dependentVar',
+          'dvOperationalDef',
+          'ivLevels',
+          'controlledVars',
+          'materials',
+          'procedure',
+          'numTrials',
+          'dataTableIvHeader',
+          'dataTableDvHeader',
+          'dataTable',
+          'qualitativeObsSetup',
+          'qualitativeObsProcedure',
+          'qualitativeObsResults',
+          'graphUrl',
+          'graphData',
+          'statisticsNotes',
+          'errors',
+          'cerTrend',
+          'cerVariation',
+          'cerOutliers',
+          'cerConclusion',
+          'cerConclusionHypothesisRestated',
+          'improvements',
+          'applications',
+          'futureExperiments',
+          'manualCalculations',
+          'timerRemaining',
+          'timerStartedAt',
+          'timerDuration',
+          'sectionLocks',
+          'activeEditors',
+          'updatedAt',
+          'submittedAt',
+          'status'
+        ])
+        && (
+          (
+            request.resource.data.status == resource.data.status
+            && request.resource.data.submittedAt == resource.data.submittedAt
+          )
+          || (
+            resource.data.status == 'draft'
+            && request.resource.data.status == 'submitted'
+            && request.resource.data.submittedAt is timestamp
+          )
+        );
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+
+      allow create: if isCoach()
+        && request.resource.data.role == 'student'
+        && request.resource.data.keys().hasAll([
+          'email',
+          'displayName',
+          'role',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'email',
+          'displayName',
+          'role',
+          'createdAt',
+          'middleSchool',
+          'grade'
+        ])
+        && request.resource.data.email is string
+        && request.resource.data.displayName is string
+        && request.resource.data.createdAt is timestamp;
+
+      allow update: if (
+        isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'lastLogin',
+          'passwordChanged'
+        ])
+        && request.resource.data.role == resource.data.role
+        && (
+          !('lastLogin' in request.resource.data)
+          || request.resource.data.lastLogin is timestamp
+        )
+        && (
+          !('passwordChanged' in request.resource.data)
+          || request.resource.data.passwordChanged is bool
+        )
+      ) || (
+        isCoach()
+        && resource.data.role == 'student'
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName',
+          'middleSchool',
+          'grade',
+          'excludeFromRoster'
+        ])
+      );
+
+      allow delete: if isCoach() && resource.data.role == 'student';
+    }
+
+    match /progress/{userId}/items/{resourceId} {
+      allow read: if isOwner(userId) || isCoach();
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'resourceId',
+          'status',
+          'completedAt'
+        ])
+        && request.resource.data.resourceId == resourceId
+        && request.resource.data.status == 'completed'
+        && request.resource.data.completedAt is timestamp;
+      allow delete: if isCoach();
+    }
+
+    match /loginHistory/{userId} {
+      allow read: if isOwner(userId) || isCoach();
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['dates'])
+        && request.resource.data.dates is list
+        && request.resource.data.dates.size() <= 30;
+      allow delete: if isCoach();
+    }
+
+    match /achievements/{achievementId} {
+      allow read: if signedIn();
+
+      allow create: if isCoach()
+        && request.resource.data.keys().hasOnly([
+          'studentUid',
+          'templateId',
+          'assignedBy',
+          'assignedAt',
+          'completed',
+          'completedAt'
+        ])
+        && request.resource.data.studentUid is string
+        && request.resource.data.templateId is string
+        && request.resource.data.assignedBy == request.auth.uid
+        && request.resource.data.assignedAt is timestamp
+        && request.resource.data.completed == false
+        && request.resource.data.completedAt == null;
+
+      allow update: if isCoach()
+        || (
+          signedIn()
+          && resource.data.studentUid == request.auth.uid
+          && resource.data.completed == false
+          && request.resource.data.completed == true
+          && request.resource.data.completedAt is timestamp
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'completed',
+            'completedAt'
+          ])
+        );
+
+      allow delete: if isCoach();
+    }
+
+    match /settings/{settingId} {
+      allow read: if signedIn()
+        && settingId in ['hiddenGuides', 'taskAssignments'];
+      allow write: if isCoach()
+        && settingId in ['hiddenGuides', 'taskAssignments'];
+    }
+
+    match /teamEvents/{eventId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isCoach();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isCoach() || isSubmissionParticipant(resource.data);
+
+      allow create: if isCoach()
+        || (
+          signedIn()
+          && request.resource.data.studentUid == request.auth.uid
+          && request.resource.data.status == 'draft'
+          && request.resource.data.score == null
+          && request.resource.data.coachFeedback == ''
+          && (
+            !('teamMemberUids' in request.resource.data)
+            || request.resource.data.teamMemberUids.size() == 0
+          )
+        );
+
+      allow update: if isCoach() || canUpdateDraftSubmission();
+      allow delete: if isCoach();
+    }
+
+    match /taskSubmissions/{submissionId} {
+      allow read: if isCoach()
+        || (signedIn() && resource.data.studentUid == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.studentUid == request.auth.uid
+        && request.resource.data.status == 'in-progress'
+        && request.resource.data.coachFeedback == ''
+        && request.resource.data.submittedAt == null
+        && request.resource.data.reviewedAt == null
+        && request.resource.data.keys().hasOnly([
+          'taskId',
+          'studentUid',
+          'studentDisplayName',
+          'status',
+          'responses',
+          'coachFeedback',
+          'createdAt',
+          'updatedAt',
+          'submittedAt',
+          'reviewedAt'
+        ]);
+
+      allow update: if isCoach()
+        || (
+          signedIn()
+          && resource.data.studentUid == request.auth.uid
+          && resource.data.status == 'in-progress'
+          && request.resource.data.studentUid == resource.data.studentUid
+          && request.resource.data.taskId == resource.data.taskId
+          && request.resource.data.status in ['in-progress', 'submitted']
+          && (
+            (
+              request.resource.data.status == resource.data.status
+              && request.resource.data.submittedAt == resource.data.submittedAt
+            )
+            || (
+              resource.data.status == 'in-progress'
+              && request.resource.data.status == 'submitted'
+              && request.resource.data.submittedAt is timestamp
+            )
+          )
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'responses',
+            'updatedAt',
+            'status',
+            'submittedAt'
+          ])
+        );
+
+      allow delete: if isCoach();
+    }
+  }
+}

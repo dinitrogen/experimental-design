@@ -533,8 +533,12 @@ export class DataTableStepComponent {
       this.localRows.set(updated);
       this.aiNotes.set(result.notes);
       this.emitChange();
-    } catch {
-      this.aiNotes.set('Failed to generate data. Make sure you have filled in your variables and procedure first.');
+    } catch (error: unknown) {
+      this.aiNotes.set(
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : 'Failed to generate data. Check the experiment details and try again.',
+      );
     } finally {
       this.generating.set(false);
     }

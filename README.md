@@ -6,7 +6,7 @@ A web application for Science Olympiad teams to practice the Experimental Design
 
 - **Frontend:** Angular 21, Angular Material, Signals, standalone components
 - **Backend:** Firebase (Authentication, Firestore, Hosting, Cloud Functions)
-- **AI Feedback:** Google Generative AI (Gemini) via Cloud Functions
+- **AI Feedback:** Google GenAI SDK (Gemini) via Cloud Functions
 - **PDF Export:** html2pdf.js
 - **Markdown/Math:** ngx-markdown, KaTeX
 
@@ -14,6 +14,7 @@ A web application for Science Olympiad teams to practice the Experimental Design
 
 - [Node.js](https://nodejs.org/) v22+
 - npm v10+
+- Java v21+ (required by the Firebase Emulator Suite)
 - [Firebase CLI](https://firebase.google.com/docs/cli): `npm install -g firebase-tools`
 - A [Firebase project](https://console.firebase.google.com/) with Authentication (Email/Password) and Firestore enabled
 
@@ -73,10 +74,7 @@ export const environment = {
 
 You can find these values in the [Firebase Console](https://console.firebase.google.com/) under **Project Settings > General > Your apps > Web app**.
 
-**`functions/.env`** (Cloud Functions secrets):
-```
-GOOGLE_GENAI_API_KEY=YOUR_GOOGLE_GENAI_API_KEY
-```
+The Gemini API key is managed as a Firebase Secret; see **AI secret setup** below.
 
 ### 4. Firebase Configuration
 
@@ -93,13 +91,46 @@ Create **`.firebaserc`** in the project root:
 
 ### Development Server
 
+Start the local Firebase emulators in one terminal:
+
+```bash
+npm run emulators
+```
+
+Then start Angular in a second terminal:
+
 ```bash
 npm start
 ```
 
 Open [http://localhost:4200](http://localhost:4200). The app reloads on file changes.
 
-Set `useEmulators: true` in `environment.ts` to use local Firebase emulators instead of production.
+With `useEmulators: true` in `environment.ts`, Authentication, Firestore, and Cloud Functions use local emulators.
+For an intentional smoke test against the live Firebase project, set it to `false`; all three services, including direct student-account creation, will use the configured project.
+Live-mode testing is not isolated: writes, password resets, account creation, and AI requests affect or use production services. Use a dedicated test account and test data, and avoid destructive actions.
+
+The Functions emulator suppresses Discord notifications. AI generation is disabled there by default to avoid billable external calls. To intentionally test AI locally, put `GOOGLE_GENAI_API_KEY=YOUR_GOOGLE_GENAI_API_KEY` in `functions/.secret.local`, then set `ALLOW_LIVE_AI_IN_EMULATOR=true` before starting the emulators. Both the key file and the opt-in flag are required for a live Gemini request.
+
+### AI Secret Setup
+
+For production, provision the key through Firebase Secret Manager (the CLI prompts for the value; do not put the key in source control or a deploy command):
+
+```bash
+firebase functions:secrets:set GOOGLE_GENAI_API_KEY --project YOUR_FIREBASE_PROJECT_ID
+```
+
+The secret is bound only to the `generateExperimentData` function. Provision it before deploying that function:
+
+```bash
+firebase deploy --only functions:generateExperimentData --project YOUR_FIREBASE_PROJECT_ID
+```
+
+For local AI testing, Firebase Functions emulator reads secrets from `functions/.secret.local`. Keep AI disabled unless a billable live API call is specifically intended.
+If you previously stored this key in `functions/.env`, move it to the secret location needed for your workflow and remove the obsolete copy; this callable no longer reads the key from `.env`.
+
+The AI callable allows up to 10 accepted generations per authenticated account per UTC day. Accepted attempts count toward the limit even if Gemini later fails. Production usage is tracked in a server-only Firestore collection; emulator usage is held in memory and does not affect production quota records.
+
+The AI callable currently uses the stable `gemini-3.1-flash-lite` model. Check Google's [model deprecation schedule](https://ai.google.dev/gemini-api/docs/deprecations) before changing model IDs.
 
 ### Cloud Functions (Emulator)
 
@@ -125,6 +156,7 @@ npm run build
 ```
 
 Build output goes to `dist/experimental-design/browser/`.
+The login screen shows the short Git commit and UTC build time. Local builds append `-dirty` when the working tree has uncommitted changes.
 
 ## Testing
 
@@ -133,6 +165,26 @@ npm test
 ```
 
 Uses Vitest as the test runner.
+
+Firestore rules are tested against the local emulator; this does not connect to or deploy to a Firebase project:
+
+```bash
+npm run test:rules
+```
+
+The command starts the Firestore emulator, runs the rules tests against a demo project, and then shuts the emulator down.
+After reviewing the rules and validating them against staging, deploy rules explicitly to that project:
+
+```bash
+firebase deploy --only firestore:rules --project YOUR_STAGING_PROJECT_ID
+```
+
+Cloud Function input/output validation has unit tests that do not call Gemini:
+
+```bash
+cd functions
+npm test
+```
 
 ## Deploying
 
@@ -177,11 +229,13 @@ src/
 │   └── shared/            # Shared components, pipes, dialogs
 ├── styles.scss            # Global styles & Material theme
 └── index.html
+scripts/
+└── write-build-info.mjs   # Generates the build identifier before Angular commands
 public/
 ├── guides/                # Markdown study guide content
 └── tasks/                 # Markdown task content
 functions/
-└── src/index.ts           # Cloud Functions (AI feedback via Gemini)
+└── src/index.ts           # Cloud Functions (AI data generation via Gemini)
 ```
 
 ## License

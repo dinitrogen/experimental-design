@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../core/services/auth.service';
 import { ChangePasswordDialogComponent } from '../../shared/components/change-password-dialog';
+import { BUILD_INFO } from '../../build-info.generated';
 
 @Component({
   selector: 'app-login',
@@ -89,6 +90,9 @@ import { ChangePasswordDialogComponent } from '../../shared/components/change-pa
             </button>
           </form>
         </mat-card-content>
+        <p class="build-version">
+          Build {{ buildInfo.commit }} · {{ buildInfo.builtAt }}
+        </p>
       </mat-card>
     </div>
   `,
@@ -130,6 +134,13 @@ import { ChangePasswordDialogComponent } from '../../shared/components/change-pa
       margin: 0 0 8px;
     }
 
+    .build-version {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 12px;
+      margin: 0;
+      text-align: center;
+    }
+
     form {
       display: flex;
       flex-direction: column;
@@ -146,6 +157,7 @@ export class LoginComponent {
   protected readonly hidePassword = signal(true);
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly buildInfo = BUILD_INFO;
 
   protected readonly loginForm = this.fb.nonNullable.group({
     username: ['', [Validators.required]],

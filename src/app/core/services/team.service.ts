@@ -4,17 +4,17 @@ import {
   Timestamp,
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
-  updateDoc,
   deleteDoc,
 } from '@angular/fire/firestore';
-import { TeamEvent, EventTeam, RoleAssignments } from '../models/team-event.model';
+import { Functions, httpsCallable } from '@angular/fire/functions';
+import { TeamEvent, RoleAssignments } from '../models/team-event.model';
 
 @Injectable({ providedIn: 'root' })
 export class TeamService {
   private readonly firestore = inject(Firestore);
+  private readonly functions = inject(Functions);
 
   async getTeamEvents(): Promise<TeamEvent[]> {
     const col = collection(this.firestore, 'teamEvents');
@@ -47,16 +47,11 @@ export class TeamService {
     teamIndex: number,
     assignments: RoleAssignments,
   ): Promise<void> {
-    // Read the specific event document, update the team, write back
-    const eventRef = doc(this.firestore, `teamEvents/${eventId}`);
-    const snapshot = await getDoc(eventRef);
-    if (!snapshot.exists()) return;
-    const data = snapshot.data() as TeamEvent;
-    const teams = [...(data.teams ?? [])];
-    if (teams[teamIndex]) {
-      teams[teamIndex] = { ...teams[teamIndex], roleAssignments: assignments };
-    }
-    await updateDoc(eventRef, { teams });
+    const callable = httpsCallable<
+      { eventId: string; teamIndex: number; assignments: RoleAssignments },
+      { success: boolean }
+    >(this.functions, 'updateTeamRoleAssignments');
+    await callable({ eventId, teamIndex, assignments });
   }
 
   async removeTeamEvent(id: string): Promise<void> {

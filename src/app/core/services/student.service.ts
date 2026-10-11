@@ -94,7 +94,10 @@ export class StudentService {
     middleSchool?: string,
     grade?: number,
   ): Promise<AppUser> {
-    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${environment.firebase.apiKey}`;
+    const authApiBase = environment.useEmulators
+      ? 'http://localhost:9099/identitytoolkit.googleapis.com/v1'
+      : 'https://identitytoolkit.googleapis.com/v1';
+    const url = `${authApiBase}/accounts:signUp?key=${environment.firebase.apiKey}`;
     const result = await firstValueFrom(
       this.http.post<{ localId: string; email: string }>(url, {
         email,

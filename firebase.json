@@ -1,4 +1,7 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "hosting": {
     "public": "dist/experimental-design/browser",
     "ignore": [
@@ -32,6 +35,12 @@
     "runtime": "nodejs22"
   },
   "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
     "functions": {
       "port": 5001
     },
