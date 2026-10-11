@@ -446,17 +446,23 @@ export class StudentDashboardComponent implements OnInit {
     // Record today's login for streak tracking
     this.achievementService.recordLogin();
 
-    const [count, submissions, rawAchievements, taskSubs] = await Promise.all([
+    // Load each section independently so one failing query doesn't blank the whole dashboard
+    const [countRes, subsRes, achRes, taskSubsRes, assignRes, guidesRes] = await Promise.allSettled([
       this.progressService.getCompletedCount(),
       this.submissionService.getMySubmissions(),
       this.achievementService.getMyAchievements(),
       this.taskService.getMyTaskSubmissions(),
       this.taskService.loadAssignments(),
       this.resourceService.loadHiddenGuides(),
-    ] as const);
-    this.completedCount.set(count);
-    this.submissions.set(submissions);
-    this.taskSubmissions.set(taskSubs);
+    ]);
+    for (const result of [countRes, subsRes, achRes, taskSubsRes, assignRes, guidesRes]) {
+      if (result.status === 'rejected') console.error('Dashboard section failed to load:', result.reason);
+    }
+    if (countRes.status === 'fulfilled') this.completedCount.set(countRes.value);
+    if (subsRes.status === 'fulfilled') this.submissions.set(subsRes.value);
+    if (taskSubsRes.status === 'fulfilled') this.taskSubmissions.set(taskSubsRes.value);
+    if (achRes.status !== 'fulfilled') return;
+    const rawAchievements = achRes.value;
 
     // Check auto-completions and update
     const refreshed = await this.achievementService.refreshAutoCompletions(rawAchievements);

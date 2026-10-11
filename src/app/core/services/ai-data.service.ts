@@ -24,6 +24,26 @@ export interface GenerateDataResponse {
   notes: string;
 }
 
+const AI_GENERIC_ERROR = 'The AI service had a problem generating data. Try again in a moment, or enter the data manually.';
+
+/** Converts Firebase callable errors into messages students can act on. */
+function toFriendlyAiError(error: unknown): Error {
+  const code = (error as { code?: unknown } | null)?.code;
+  const message = (error as { message?: unknown } | null)?.message;
+  switch (code) {
+    case 'functions/unauthenticated':
+      return new Error('Please sign in again to use AI generation.');
+    case 'functions/failed-precondition':
+      return new Error('AI generation is not turned on yet. Enter the data manually.');
+    case 'functions/resource-exhausted':
+    case 'functions/invalid-argument':
+    case 'functions/unavailable':
+      return new Error(typeof message === 'string' && message ? message : AI_GENERIC_ERROR);
+    default:
+      return new Error(AI_GENERIC_ERROR);
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class AiDataService {
   private readonly functions = inject(Functions);
@@ -34,8 +54,12 @@ export class AiDataService {
       'generateExperimentData'
     );
 
-    const result = await callable(request);
-    const response = result.data;
+    let response: GenerateDataResponse;
+    try {
+      response = (await callable(request)).data;
+    } catch (error) {
+      throw toFriendlyAiError(error);
+    }
 
     const dataTable: DataTableEntry[] = response.rows.map((row) => ({
       ivValue: row.ivValue,
