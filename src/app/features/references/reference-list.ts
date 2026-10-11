@@ -34,7 +34,7 @@ import { ResourceService } from '../../core/services/resource.service';
                   View
                 </a>
               }
-              <a mat-button [href]="ref.fileName" target="_blank" rel="noopener">
+              <a mat-button [href]="'/' + ref.fileName" target="_blank" rel="noopener">
                 <mat-icon>open_in_new</mat-icon>
                 {{ isMobile() ? 'Open PDF' : 'Open in New Tab' }}
               </a>

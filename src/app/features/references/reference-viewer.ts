@@ -21,7 +21,7 @@ import { ResourceService } from '../../core/services/resource.service';
             Back to References
           </a>
           <h1 class="page-title">{{ ref.title }}</h1>
-          <a mat-stroked-button [href]="ref.fileName" target="_blank" rel="noopener">
+          <a mat-stroked-button [href]="'/' + ref.fileName" target="_blank" rel="noopener">
             <mat-icon>open_in_new</mat-icon>
             Open in New Tab
           </a>
@@ -31,7 +31,7 @@ import { ResourceService } from '../../core/services/resource.service';
           <div class="mobile-message">
             <mat-icon>phone_android</mat-icon>
             <p>Embedded PDF viewing is not available on mobile browsers.</p>
-            <a mat-flat-button [href]="ref.fileName" target="_blank" rel="noopener">
+            <a mat-flat-button [href]="'/' + ref.fileName" target="_blank" rel="noopener">
               <mat-icon>open_in_new</mat-icon>
               Open PDF
             </a>
@@ -53,7 +53,7 @@ import { ResourceService } from '../../core/services/resource.service';
             >
               <p>
                 Your browser does not support embedded PDF viewing.
-                <a [href]="ref.fileName" target="_blank" rel="noopener">Download the PDF</a> instead.
+                <a [href]="'/' + ref.fileName" target="_blank" rel="noopener">Download the PDF</a> instead.
               </p>
             </object>
           </div>
@@ -163,6 +163,6 @@ export class ReferenceViewerComponent implements OnInit, OnDestroy {
   protected readonly pdfUrl = computed(() => {
     const ref = this.reference();
     if (!ref) return '';
-    return this.sanitizer.bypassSecurityTrustResourceUrl(ref.fileName);
+    return this.sanitizer.bypassSecurityTrustResourceUrl('/' + ref.fileName);
   });
 }
