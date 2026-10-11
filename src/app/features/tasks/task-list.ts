@@ -353,16 +353,25 @@ export class TaskListComponent implements OnInit {
       ? allDefs
       : allDefs.filter((def) => uid && this.taskService.isAssignedTo(def.id, uid));
 
-    return definitions.map((def) => {
-      const sub = subs.find((s) => s.taskId === def.id);
-      return {
-        definition: def,
-        submission: sub,
-        status: sub?.status ?? 'not-started',
-        isOverdue: !!def.dueDate && def.dueDate < today,
-        assignment: assignments[def.id],
-      };
-    });
+    return definitions
+      .map((def) => {
+        const sub = subs.find((s) => s.taskId === def.id);
+        return {
+          definition: def,
+          submission: sub,
+          status: sub?.status ?? 'not-started',
+          isOverdue: !!def.dueDate && def.dueDate < today,
+          assignment: assignments[def.id],
+        };
+      })
+      .sort((a, b) => {
+        if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+        const aDue = a.definition.dueDate;
+        const bDue = b.definition.dueDate;
+        if (aDue && bDue) return aDue.localeCompare(bDue);
+        if (aDue || bDue) return aDue ? -1 : 1;
+        return 0;
+      });
   });
 
   async ngOnInit(): Promise<void> {
