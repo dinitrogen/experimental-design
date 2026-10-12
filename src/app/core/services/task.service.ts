@@ -25,6 +25,8 @@ import {
 export interface TaskAssignment {
   type: 'all' | 'individual';
   studentUids: string[];
+  /** YYYY-MM-DD. When absent, the task definition's default due date is used. */
+  dueDate?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -61,6 +63,11 @@ export class TaskService {
     return assignment.type === 'all' || assignment.studentUids.includes(studentUid);
   }
 
+  /** Effective due date: the assignment's date if set, otherwise the definition's default */
+  getDueDate(taskId: string): string | undefined {
+    return this.assignments()[taskId]?.dueDate || getTaskDefinition(taskId)?.dueDate || undefined;
+  }
+
   /** Get task definitions assigned to the current student */
   getAssignedTasks(): TaskDefinition[] {
     const uid = this.authService.user()?.uid;
@@ -68,20 +75,28 @@ export class TaskService {
     return this.getAllTasks().filter((t) => this.isAssignedTo(t.id, uid));
   }
 
-  /** Coach: assign a task to all students */
-  async assignToAll(taskId: string): Promise<void> {
+  /** Coach: assign a task to all students, optionally with a due date (YYYY-MM-DD) */
+  async assignToAll(taskId: string, dueDate?: string): Promise<void> {
     const current = { ...this.assignments() };
-    current[taskId] = { type: 'all', studentUids: [] };
+    current[taskId] = this.buildAssignment({ type: 'all', studentUids: [] }, dueDate);
     this.assignments.set(current);
     await setDoc(doc(this.firestore, 'settings/taskAssignments'), current);
   }
 
-  /** Coach: assign a task to specific students */
-  async assignToStudents(taskId: string, studentUids: string[]): Promise<void> {
+  /** Coach: assign a task to specific students, optionally with a due date (YYYY-MM-DD) */
+  async assignToStudents(taskId: string, studentUids: string[], dueDate?: string): Promise<void> {
     const current = { ...this.assignments() };
-    current[taskId] = { type: 'individual', studentUids };
+    current[taskId] = this.buildAssignment({ type: 'individual', studentUids }, dueDate);
     this.assignments.set(current);
     await setDoc(doc(this.firestore, 'settings/taskAssignments'), current);
+  }
+
+  /** Omits dueDate entirely when unset, since Firestore rejects undefined values */
+  private buildAssignment(
+    base: Omit<TaskAssignment, 'dueDate'>,
+    dueDate: string | undefined
+  ): TaskAssignment {
+    return dueDate ? { ...base, dueDate } : base;
   }
 
   /** Coach: unassign a task (remove from everyone) */

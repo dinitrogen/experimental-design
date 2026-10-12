@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   signal,
@@ -60,8 +61,8 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
         </mat-card>
       } @else {
         <h1 class="page-title">{{ task()!.title }}</h1>
-        @if (task()!.dueDate) {
-          <p class="due-label">Due {{ formatDate(task()!.dueDate) }}</p>
+        @if (dueDate()) {
+          <p class="due-label">Due {{ formatDate(dueDate()!) }}</p>
         }
 
         @if (isReviewed()) {
@@ -602,6 +603,10 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
   protected readonly saving = signal(false);
   protected readonly lastSaved = signal(false);
   protected readonly task = signal<TaskDefinition | null>(null);
+  protected readonly dueDate = computed(() => {
+    const t = this.task();
+    return t ? this.taskService.getDueDate(t.id) : undefined;
+  });
   protected readonly submission = signal<TaskSubmission | null>(null);
   protected readonly markdownContent = signal('');
   protected readonly responses = signal<string[]>([]);
@@ -654,6 +659,13 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
     if (!taskDef) {
       this.loading.set(false);
       return;
+    }
+
+    // Assignments carry the coach-set due date, so load them before showing it
+    try {
+      await this.taskService.loadAssignments();
+    } catch (err) {
+      console.error('Failed to load task assignments:', err);
     }
 
     this.task.set(taskDef);

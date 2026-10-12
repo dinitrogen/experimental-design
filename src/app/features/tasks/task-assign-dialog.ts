@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { StudentService } from '../../core/services/student.service';
@@ -9,56 +12,80 @@ import { AppUser } from '../../core/models/user.model';
 
 export interface TaskAssignDialogData {
   taskTitle: string;
+  mode: 'all' | 'individual';
+  /** Only used in individual mode */
   currentUids: string[];
+  /** Pre-filled due date (YYYY-MM-DD) */
+  currentDueDate?: string;
 }
 
 export interface TaskAssignDialogResult {
+  /** Empty when mode is 'all' */
   selectedUids: string[];
+  /** YYYY-MM-DD, or undefined to use the task's default due date */
+  dueDate?: string;
 }
 
 @Component({
   selector: 'app-task-assign-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    ReactiveFormsModule,
     MatDialogModule,
     MatButtonModule,
     MatCheckboxModule,
+    MatFormFieldModule,
+    MatInputModule,
     MatProgressSpinnerModule,
     MatIconModule,
   ],
   template: `
-    <h2 mat-dialog-title>Assign Students</h2>
+    <h2 mat-dialog-title>{{ data.mode === 'all' ? 'Assign to All Students' : 'Assign Students' }}</h2>
 
     <mat-dialog-content>
-      <p class="dialog-subtitle">Select students for <strong>{{ data.taskTitle }}</strong></p>
+      <p class="dialog-subtitle">
+        @if (data.mode === 'all') {
+          Assign <strong>{{ data.taskTitle }}</strong> to every student.
+        } @else {
+          Select students for <strong>{{ data.taskTitle }}</strong>
+        }
+      </p>
 
-      @if (loading()) {
-        <div class="loading-container">
-          <mat-spinner diameter="32" />
-        </div>
-      } @else if (students().length === 0) {
-        <p class="empty-text">No students found.</p>
-      } @else {
-        <div class="select-all">
-          <mat-checkbox
-            [checked]="allSelected()"
-            [indeterminate]="someSelected() && !allSelected()"
-            (change)="toggleAll($event.checked)"
-            aria-label="Select all students"
-          >
-            Select All ({{ students().length }})
-          </mat-checkbox>
-        </div>
-        <div class="student-list" role="group" aria-label="Student selection">
-          @for (student of students(); track student.uid) {
+      <mat-form-field class="due-date-field">
+        <mat-label>Due date</mat-label>
+        <input matInput type="date" [formControl]="dueDateControl" />
+        <mat-hint>Leave blank to use the task's default due date</mat-hint>
+      </mat-form-field>
+
+      @if (data.mode === 'individual') {
+        @if (loading()) {
+          <div class="loading-container">
+            <mat-spinner diameter="32" />
+          </div>
+        } @else if (students().length === 0) {
+          <p class="empty-text">No students found.</p>
+        } @else {
+          <div class="select-all">
             <mat-checkbox
-              [checked]="selectedUids().has(student.uid)"
-              (change)="toggle(student.uid, $event.checked)"
+              [checked]="allSelected()"
+              [indeterminate]="someSelected() && !allSelected()"
+              (change)="toggleAll($event.checked)"
+              aria-label="Select all students"
             >
-              {{ student.displayName }}
+              Select All ({{ students().length }})
             </mat-checkbox>
-          }
-        </div>
+          </div>
+          <div class="student-list" role="group" aria-label="Student selection">
+            @for (student of students(); track student.uid) {
+              <mat-checkbox
+                [checked]="selectedUids().has(student.uid)"
+                (change)="toggle(student.uid, $event.checked)"
+              >
+                {{ student.displayName }}
+              </mat-checkbox>
+            }
+          </div>
+        }
       }
     </mat-dialog-content>
 
@@ -67,10 +94,14 @@ export interface TaskAssignDialogResult {
       <button
         mat-flat-button
         color="primary"
-        [disabled]="loading() || selectedUids().size === 0"
+        [disabled]="!canConfirm()"
         (click)="confirm()"
       >
-        Assign ({{ selectedUids().size }})
+        @if (data.mode === 'all') {
+          Assign to All
+        } @else {
+          Assign ({{ selectedUids().size }})
+        }
       </button>
     </mat-dialog-actions>
   `,
@@ -78,6 +109,10 @@ export interface TaskAssignDialogResult {
     .dialog-subtitle {
       margin: 0 0 16px;
       color: #666;
+    }
+
+    .due-date-field {
+      width: 100%;
     }
 
     .loading-container {
@@ -112,9 +147,15 @@ export class TaskAssignDialog implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<TaskAssignDialog, TaskAssignDialogResult>);
   private readonly studentService = inject(StudentService);
 
+  protected readonly dueDateControl = new FormControl(this.data.currentDueDate ?? '', { nonNullable: true });
   protected readonly loading = signal(true);
   protected readonly students = signal<AppUser[]>([]);
   protected readonly selectedUids = signal(new Set<string>(this.data.currentUids));
+
+  protected canConfirm(): boolean {
+    if (this.data.mode === 'all') return true;
+    return !this.loading() && this.selectedUids().size > 0;
+  }
 
   protected allSelected(): boolean {
     return this.students().length > 0 && this.selectedUids().size === this.students().length;
@@ -125,6 +166,10 @@ export class TaskAssignDialog implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    if (this.data.mode === 'all') {
+      this.loading.set(false);
+      return;
+    }
     try {
       const students = await this.studentService.getAllStudents();
       this.students.set(students);
@@ -152,6 +197,9 @@ export class TaskAssignDialog implements OnInit {
   }
 
   protected confirm(): void {
-    this.dialogRef.close({ selectedUids: [...this.selectedUids()] });
+    this.dialogRef.close({
+      selectedUids: [...this.selectedUids()],
+      dueDate: this.dueDateControl.value || undefined,
+    });
   }
 }

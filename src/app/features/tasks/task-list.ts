@@ -14,12 +14,14 @@ import { StudentService } from '../../core/services/student.service';
 import { TaskService, TaskAssignment } from '../../core/services/task.service';
 import { TaskDefinition, TaskSubmission } from '../../core/models/task.model';
 import { AppUser } from '../../core/models/user.model';
-import { TaskAssignDialog } from './task-assign-dialog';
+import { TaskAssignDialog, TaskAssignDialogData } from './task-assign-dialog';
 
 interface TaskView {
   definition: TaskDefinition;
   submission: TaskSubmission | undefined;
   status: 'not-started' | 'in-progress' | 'submitted' | 'reviewed';
+  /** Effective due date (assignment date, or the definition default) */
+  dueDate: string | undefined;
   isOverdue: boolean;
   assignment: TaskAssignment | undefined;
 }
@@ -81,8 +83,8 @@ interface TaskView {
                   <div class="task-info">
                     <div class="task-title">{{ task.definition.title }}</div>
                     <div class="task-meta">
-                      @if (task.definition.dueDate) {
-                        <span class="due-date">Due {{ formatDate(task.definition.dueDate) }}</span>
+                      @if (task.dueDate) {
+                        <span class="due-date">Due {{ formatDate(task.dueDate) }}</span>
                       }
                       @if (task.assignment) {
                         <mat-chip class="status-chip status-chip-assigned">
@@ -139,8 +141,8 @@ interface TaskView {
                       <span class="due-date" [class.overdue-text]="task.isOverdue && task.status !== 'submitted' && task.status !== 'reviewed'">
                         @if (task.isOverdue && task.status !== 'submitted' && task.status !== 'reviewed') {
                           <mat-icon class="inline-icon">warning</mat-icon> Overdue
-                        } @else if (task.definition.dueDate) {
-                          Due {{ formatDate(task.definition.dueDate) }}
+                        } @else if (task.dueDate) {
+                          Due {{ formatDate(task.dueDate) }}
                         }
                       </span>
                       <mat-chip [class]="'status-chip status-chip-' + task.status">
@@ -356,18 +358,20 @@ export class TaskListComponent implements OnInit {
     return definitions
       .map((def) => {
         const sub = subs.find((s) => s.taskId === def.id);
+        const dueDate = this.taskService.getDueDate(def.id);
         return {
           definition: def,
           submission: sub,
           status: sub?.status ?? 'not-started',
-          isOverdue: !!def.dueDate && def.dueDate < today,
+          dueDate,
+          isOverdue: !!dueDate && dueDate < today,
           assignment: assignments[def.id],
         };
       })
       .sort((a, b) => {
         if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
-        const aDue = a.definition.dueDate;
-        const bDue = b.definition.dueDate;
+        const aDue = a.dueDate;
+        const bDue = b.dueDate;
         if (aDue && bDue) return aDue.localeCompare(bDue);
         if (aDue || bDue) return aDue ? -1 : 1;
         return 0;
@@ -387,8 +391,21 @@ export class TaskListComponent implements OnInit {
   }
 
   protected async assignToAll(task: TaskDefinition): Promise<void> {
-    await this.taskService.assignToAll(task.id);
-    this.snackBar.open(`"${task.title}" assigned to all students`, 'OK', { duration: 3000 });
+    const ref = this.dialog.open(TaskAssignDialog, {
+      width: '400px',
+      data: {
+        taskTitle: task.title,
+        mode: 'all',
+        currentUids: [],
+        currentDueDate: this.taskService.getDueDate(task.id),
+      } satisfies TaskAssignDialogData,
+    });
+
+    const result = await ref.afterClosed().toPromise();
+    if (result) {
+      await this.taskService.assignToAll(task.id, result.dueDate);
+      this.snackBar.open(`"${task.title}" assigned to all students`, 'OK', { duration: 3000 });
+    }
   }
 
   protected async assignIndividually(task: TaskDefinition): Promise<void> {
@@ -397,12 +414,17 @@ export class TaskListComponent implements OnInit {
 
     const ref = this.dialog.open(TaskAssignDialog, {
       width: '400px',
-      data: { taskTitle: task.title, currentUids },
+      data: {
+        taskTitle: task.title,
+        mode: 'individual',
+        currentUids,
+        currentDueDate: this.taskService.getDueDate(task.id),
+      } satisfies TaskAssignDialogData,
     });
 
     const result = await ref.afterClosed().toPromise();
     if (result?.selectedUids) {
-      await this.taskService.assignToStudents(task.id, result.selectedUids);
+      await this.taskService.assignToStudents(task.id, result.selectedUids, result.dueDate);
       this.snackBar.open(
         `"${task.title}" assigned to ${result.selectedUids.length} student${result.selectedUids.length === 1 ? '' : 's'}`,
         'OK',

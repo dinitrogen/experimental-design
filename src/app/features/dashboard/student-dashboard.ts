@@ -459,14 +459,15 @@ export class StudentDashboardComponent implements OnInit {
       })
       .map((def) => {
         const sub = subs.find((s) => s.taskId === def.id);
-        const hasDueDate = !!def.dueDate;
+        const dueDate = this.taskService.getDueDate(def.id);
+        const hasDueDate = !!dueDate;
         return {
           id: def.id,
           title: def.title,
           status: sub?.status ?? 'not-started' as const,
-          isOverdue: hasDueDate && def.dueDate < today,
+          isOverdue: hasDueDate && dueDate < today,
           dueFormatted: hasDueDate
-            ? new Date(def.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            ? new Date(dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             : '',
         };
       });
