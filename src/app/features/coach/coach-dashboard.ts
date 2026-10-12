@@ -79,6 +79,17 @@ import { AppUser } from '../../core/models/user.model';
 
           <mat-card>
             <mat-card-header>
+              <mat-icon mat-card-avatar>group_add</mat-icon>
+              <mat-card-title>Season Roster</mat-card-title>
+              <mat-card-subtitle>Enroll students in the current season</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-actions>
+              <a mat-button routerLink="/coach/seasons">Manage Roster</a>
+            </mat-card-actions>
+          </mat-card>
+
+          <mat-card>
+            <mat-card-header>
               <mat-icon mat-card-avatar>rate_review</mat-icon>
               <mat-card-title>Review Submissions</mat-card-title>
               <mat-card-subtitle>

@@ -154,8 +154,13 @@ service cloud.firestore {
           'displayName',
           'middleSchool',
           'grade',
-          'excludeFromRoster'
+          'excludeFromRoster',
+          'enrolledSeasons'
         ])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['enrolledSeasons'])
+          || resource.data.get('status', 'active') != 'archived'
+        )
       );
 
       allow delete: if isCoach() && resource.data.role == 'student';

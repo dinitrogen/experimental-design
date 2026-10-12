@@ -133,6 +133,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'seasons',
+            loadComponent: () =>
+              import('./features/coach/season-roster').then(
+                (m) => m.SeasonRosterComponent
+              ),
+          },
+          {
             path: 'submissions',
             loadComponent: () =>
               import('./features/coach/submission-review-list').then(

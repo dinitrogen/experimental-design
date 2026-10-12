@@ -57,6 +57,13 @@ beforeEach(async () => {
         role: 'student',
         createdAt: Timestamp.fromMillis(1),
       }),
+      setDoc(doc(firestore, 'users/student-archived'), {
+        email: 'student-archived@example.test',
+        displayName: 'Student Archived',
+        role: 'student',
+        status: 'archived',
+        createdAt: Timestamp.fromMillis(1),
+      }),
       setDoc(doc(firestore, 'submissions/submission-1'), {
         studentUid: 'student-1',
         practiceEventId: 'practice-one',
@@ -148,6 +155,21 @@ describe('Firestore security rules', () => {
         role: 'student',
         createdAt: Timestamp.fromMillis(3),
       }),
+    );
+  });
+
+  it('lets coaches enroll active students in a season, but not archived students or students themselves', async () => {
+    const coach = testEnv.authenticatedContext('coach-1').firestore();
+    const student = testEnv.authenticatedContext('student-1').firestore();
+
+    await assertSucceeds(
+      updateDoc(doc(coach, 'users/student-1'), { enrolledSeasons: ['2026-2027'] }),
+    );
+    await assertFails(
+      updateDoc(doc(coach, 'users/student-archived'), { enrolledSeasons: ['2026-2027'] }),
+    );
+    await assertFails(
+      updateDoc(doc(student, 'users/student-1'), { enrolledSeasons: ['2025-2026'] }),
     );
   });
 

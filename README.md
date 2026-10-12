@@ -227,6 +227,8 @@ Each archive batch copies and deletes documents together, so an interrupted run 
 
 Note: as with archiving, a student who is signed in during the rollover keeps access until their token expires.
 
+**Season Roster** (coach dashboard) enrolls students in any season after the fact. New accounts are enrolled in the newest season automatically. Archived students can't be enrolled until they are restored in Student Management.
+
 ## Deploying
 
 ### Hosting (Frontend)

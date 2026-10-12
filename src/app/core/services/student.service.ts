@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import {
   Firestore,
   Timestamp,
+  arrayRemove,
+  arrayUnion,
   collection,
   doc,
   getDocs,
@@ -151,6 +153,13 @@ export class StudentService {
   /** Restore an archived student's login and make them active again. */
   async reactivateStudent(uid: string): Promise<void> {
     await this.setStudentArchived(uid, false);
+  }
+
+  /** Add or remove a student from a season's roster. Archived students must be restored first. */
+  async setSeasonEnrollment(uid: string, seasonId: string, enrolled: boolean): Promise<void> {
+    await updateDoc(doc(this.firestore, `users/${uid}`), {
+      enrolledSeasons: enrolled ? arrayUnion(seasonId) : arrayRemove(seasonId),
+    });
   }
 
   private async setStudentArchived(uid: string, archived: boolean): Promise<void> {
