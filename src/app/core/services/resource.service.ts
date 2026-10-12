@@ -9,6 +9,16 @@ import { Resource, ResourceCategory } from '../models/resource.model';
 
 const STUDY_GUIDES: Resource[] = [
   {
+    id: 'report-sections-guide',
+    title: 'Report Sections Guide',
+    slug: 'report-sections-guide',
+    category: 'report-writing',
+    order: 1,
+    summary: 'What every section of the report form (A–M) means, what judges look for, and a strong worked example of each.',
+    fileName: 'guides/exd-report-sections-guide.md',
+    coachOnly: false,
+  },
+  {
     id: 'cer-guide',
     title: 'CER Quick Reference Guide',
     slug: 'cer-guide',
@@ -218,6 +228,12 @@ export interface CategoryInfo {
 }
 
 const CATEGORIES: CategoryInfo[] = [
+  {
+    id: 'report-writing',
+    label: 'Report Writing',
+    icon: 'description',
+    description: 'What each section of the report form is, with strong examples',
+  },
   {
     id: 'cer-writing',
     label: 'CER Writing',

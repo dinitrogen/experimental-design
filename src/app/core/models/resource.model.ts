@@ -1,6 +1,7 @@
 import { Timestamp } from '@angular/fire/firestore';
 
 export type ResourceCategory =
+  | 'report-writing'
   | 'cer-writing'
   | 'statistics'
   | 'team-strategy'
