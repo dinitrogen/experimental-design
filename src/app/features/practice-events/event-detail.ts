@@ -224,6 +224,7 @@ import { ManageLocksDialogComponent } from '../../shared/components/manage-locks
     }
 
     .info-item mat-icon {
+      flex-shrink: 0;
       color: #1565c0;
       font-size: 28px;
       width: 28px;
