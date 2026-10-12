@@ -208,6 +208,25 @@ Coaches archive students from **Student Management** instead of deleting them. A
 
 Note: a student who is already signed in can keep working until their current session token expires (up to about an hour).
 
+## Season Rollover
+
+Coaches start a new season from **Season Rollover** on the coach dashboard. The page runs a preview first, and nothing changes until the coach types the new season ID and confirms a fresh backup.
+
+- **Archived to `archives/{seasonId}/...`:** study guide progress, login streaks, practice reports, task submissions, and task assignments. Each archived document keeps its original path in `sourcePath`.
+- **Kept:** student accounts, achievements, guide visibility settings, AI usage, and practice event definitions.
+- **Returning students** (checked on the page) are re-enrolled. If they were archived, their sign-in is restored.
+- **Other active students** are archived, which blocks their sign-in.
+
+Before the real run, ask students to sign out and take a backup:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup-firestore.ps1 -Label pre-rollover
+```
+
+Each archive batch copies and deletes documents together, so an interrupted run can be resumed by running it again for the same season. A season marked `complete` cannot be rolled over again.
+
+Note: as with archiving, a student who is signed in during the rollover keeps access until their token expires.
+
 ## Deploying
 
 ### Hosting (Frontend)

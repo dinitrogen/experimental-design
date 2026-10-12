@@ -126,6 +126,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'season',
+            loadComponent: () =>
+              import('./features/coach/season-rollover').then(
+                (m) => m.SeasonRolloverComponent
+              ),
+          },
+          {
             path: 'submissions',
             loadComponent: () =>
               import('./features/coach/submission-review-list').then(

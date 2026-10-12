@@ -467,6 +467,26 @@ export const notifyAchievementUnlocked = onDocumentUpdated(
 
 // ── Coach: Archive / Reactivate Student ──
 
+// Shared by setStudentArchived and rolloverSeason. Login is disabled first so a
+// failure leaves the student blocked rather than half-restored.
+async function applyArchiveState(
+  uid: string,
+  archived: boolean,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  await getAuth().updateUser(uid, { disabled: archived });
+  if (archived) {
+    // Invalidate refresh tokens so an open session ends at its next token refresh.
+    await getAuth().revokeRefreshTokens(uid);
+  }
+  await db.doc(`users/${uid}`).update({
+    ...(archived
+      ? { status: "archived", archivedAt: FieldValue.serverTimestamp() }
+      : { status: "active", archivedAt: FieldValue.delete() }),
+    ...extra,
+  });
+}
+
 export const setStudentArchived = onCall(
   { cors: true, invoker: "public" },
   async (request) => {
@@ -484,26 +504,271 @@ export const setStudentArchived = onCall(
       throw new HttpsError("invalid-argument", "Missing uid or archived flag.");
     }
 
-    const userRef = db.doc(`users/${uid}`);
-    const userSnap = await userRef.get();
+    const userSnap = await db.doc(`users/${uid}`).get();
     if (!userSnap.exists || userSnap.data()?.role !== "student") {
       throw new HttpsError("not-found", "Student not found.");
     }
 
-    // Disable login first so a failure leaves the student blocked, not half-restored.
-    await getAuth().updateUser(uid, { disabled: archived });
-    if (archived) {
-      // Invalidate refresh tokens so an open session ends at its next token refresh.
-      await getAuth().revokeRefreshTokens(uid);
-    }
-
-    await userRef.update(
-      archived
-        ? { status: "archived", archivedAt: FieldValue.serverTimestamp() }
-        : { status: "active", archivedAt: FieldValue.delete() },
-    );
+    await applyArchiveState(uid, archived);
 
     return { success: true };
+  },
+);
+
+// ── Coach: Season Rollover ──
+
+const SEASON_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{2,39}$/;
+// Each archived doc costs one set plus one delete. 200 docs = 400 writes, under the 500-write batch limit.
+const ROLLOVER_BATCH_SIZE = 200;
+const ROLLOVER_KINDS = [
+  "progress",
+  "loginHistory",
+  "submissions",
+  "taskSubmissions",
+  "taskAssignments",
+] as const;
+type RolloverKind = (typeof ROLLOVER_KINDS)[number];
+
+interface RolloverSources {
+  progress: FirebaseFirestore.QueryDocumentSnapshot[];
+  loginHistory: FirebaseFirestore.QueryDocumentSnapshot[];
+  submissions: FirebaseFirestore.QueryDocumentSnapshot[];
+  taskSubmissions: FirebaseFirestore.QueryDocumentSnapshot[];
+  taskAssignments: FirebaseFirestore.DocumentSnapshot[];
+}
+
+interface ArchiveEntry {
+  source: FirebaseFirestore.DocumentSnapshot;
+  destination: FirebaseFirestore.DocumentReference;
+  extra: Record<string, unknown>;
+}
+
+type StudentAction = "enroll" | "reactivate" | "archive" | "none";
+
+interface StudentRecord {
+  uid: string;
+  displayName: string;
+  archived: boolean;
+}
+
+interface StudentPlan extends StudentRecord {
+  returning: boolean;
+  action: StudentAction;
+}
+
+function planStudentChanges(students: StudentRecord[], returning: Set<string>): StudentPlan[] {
+  return students.map((student) => {
+    const isReturning = returning.has(student.uid);
+    let action: StudentAction;
+    if (isReturning) {
+      action = student.archived ? "reactivate" : "enroll";
+    } else {
+      action = student.archived ? "none" : "archive";
+    }
+    return { ...student, returning: isReturning, action };
+  });
+}
+
+async function loadRolloverSources(): Promise<RolloverSources> {
+  const [progressSnap, loginSnap, submissionSnap, taskSubmissionSnap, assignmentsSnap] =
+    await Promise.all([
+      db.collectionGroup("items").get(),
+      db.collection("loginHistory").get(),
+      db.collection("submissions").get(),
+      db.collection("taskSubmissions").get(),
+      db.doc("settings/taskAssignments").get(),
+    ]);
+  return {
+    // Only per-student progress lives under progress/{uid}/items.
+    progress: progressSnap.docs.filter((doc) => doc.ref.path.startsWith("progress/")),
+    loginHistory: loginSnap.docs,
+    submissions: submissionSnap.docs,
+    taskSubmissions: taskSubmissionSnap.docs,
+    taskAssignments: assignmentsSnap.exists ? [assignmentsSnap] : [],
+  };
+}
+
+function buildArchiveEntries(
+  seasonId: string,
+  sources: RolloverSources,
+): Record<RolloverKind, ArchiveEntry[]> {
+  const root = db.collection("archives").doc(seasonId);
+  return {
+    progress: sources.progress.map((snap) => {
+      const uid = snap.ref.parent.parent?.id ?? "";
+      return {
+        source: snap,
+        destination: root.collection("progress").doc(`${uid}__${snap.id}`),
+        extra: { uid, resourceId: snap.id },
+      };
+    }),
+    loginHistory: sources.loginHistory.map((snap) => ({
+      source: snap,
+      destination: root.collection("loginHistory").doc(snap.id),
+      extra: {},
+    })),
+    submissions: sources.submissions.map((snap) => ({
+      source: snap,
+      destination: root.collection("submissions").doc(snap.id),
+      extra: {},
+    })),
+    taskSubmissions: sources.taskSubmissions.map((snap) => ({
+      source: snap,
+      destination: root.collection("taskSubmissions").doc(snap.id),
+      extra: {},
+    })),
+    taskAssignments: sources.taskAssignments.map((snap) => ({
+      source: snap,
+      destination: root.collection("taskAssignments").doc("current"),
+      extra: {},
+    })),
+  };
+}
+
+// Copy and delete in one batch per chunk, so each document moves atomically.
+// A re-run after a partial failure only sees what was not yet moved.
+async function archiveAndClear(entries: ArchiveEntry[]): Promise<void> {
+  for (let start = 0; start < entries.length; start += ROLLOVER_BATCH_SIZE) {
+    const batch = db.batch();
+    for (const entry of entries.slice(start, start + ROLLOVER_BATCH_SIZE)) {
+      batch.set(entry.destination, {
+        ...entry.source.data(),
+        ...entry.extra,
+        sourcePath: entry.source.ref.path,
+        archivedAt: FieldValue.serverTimestamp(),
+      });
+      batch.delete(entry.source.ref);
+    }
+    await batch.commit();
+  }
+}
+
+export const rolloverSeason = onCall(
+  { cors: true, invoker: "public", timeoutSeconds: 540, memory: "512MiB" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in.");
+    }
+
+    const callerDoc = await db.doc(`users/${request.auth.uid}`).get();
+    if (callerDoc.data()?.role !== "coach") {
+      throw new HttpsError("permission-denied", "Only coaches can roll over the season.");
+    }
+
+    const input = (request.data ?? {}) as {
+      seasonId?: unknown;
+      returningUids?: unknown;
+      dryRun?: unknown;
+      confirmSeasonId?: unknown;
+      backupConfirmed?: unknown;
+    };
+
+    const seasonId = input.seasonId;
+    if (typeof seasonId !== "string" || !SEASON_ID_PATTERN.test(seasonId)) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Season ID must be 3-40 letters, numbers, or hyphens.",
+      );
+    }
+    if (
+      !Array.isArray(input.returningUids) ||
+      !input.returningUids.every((uid) => typeof uid === "string")
+    ) {
+      throw new HttpsError("invalid-argument", "returningUids must be a list of student IDs.");
+    }
+    const returningUids = new Set<string>(input.returningUids as string[]);
+    // Dry run is the default. A real run must opt in with dryRun: false.
+    const dryRun = input.dryRun !== false;
+
+    const studentSnap = await db.collection("users").where("role", "==", "student").get();
+    const students: StudentRecord[] = studentSnap.docs.map((doc) => ({
+      uid: doc.id,
+      displayName: String(doc.data().displayName ?? ""),
+      archived: doc.data().status === "archived",
+    }));
+    const knownUids = new Set(students.map((student) => student.uid));
+    const unknownUids = [...returningUids].filter((uid) => !knownUids.has(uid));
+    if (unknownUids.length > 0) {
+      throw new HttpsError("invalid-argument", "returningUids contains unknown students.");
+    }
+
+    const plans = planStudentChanges(students, returningUids);
+    const seasonRef = db.collection("seasons").doc(seasonId);
+    const seasonSnap = await seasonRef.get();
+    const existingStatus: string | null = seasonSnap.data()?.status ?? null;
+
+    const sources = await loadRolloverSources();
+    const entries = buildArchiveEntries(seasonId, sources);
+    const counts = {
+      progress: entries.progress.length,
+      loginHistory: entries.loginHistory.length,
+      submissions: entries.submissions.length,
+      taskSubmissions: entries.taskSubmissions.length,
+      taskAssignments: entries.taskAssignments.length,
+    };
+
+    if (dryRun) {
+      return { dryRun: true, seasonId, existingStatus, counts, students: plans };
+    }
+
+    if (input.confirmSeasonId !== seasonId) {
+      throw new HttpsError("invalid-argument", "Type the season ID to confirm the rollover.");
+    }
+    if (input.backupConfirmed !== true) {
+      throw new HttpsError("invalid-argument", "Confirm that a Firestore backup was taken first.");
+    }
+    if (existingStatus === "complete") {
+      throw new HttpsError(
+        "failed-precondition",
+        `Season ${seasonId} has already been rolled over.`,
+      );
+    }
+
+    await seasonRef.set(
+      {
+        seasonId,
+        status: "in_progress",
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(seasonSnap.exists ? {} : { startedAt: FieldValue.serverTimestamp() }),
+      },
+      { merge: true },
+    );
+
+    for (const plan of plans) {
+      switch (plan.action) {
+        case "archive":
+          await applyArchiveState(plan.uid, true);
+          break;
+        case "reactivate":
+          await applyArchiveState(plan.uid, false, {
+            enrolledSeasons: FieldValue.arrayUnion(seasonId),
+          });
+          break;
+        case "enroll":
+          await db.doc(`users/${plan.uid}`).update({
+            enrolledSeasons: FieldValue.arrayUnion(seasonId),
+          });
+          break;
+        case "none":
+          break;
+      }
+    }
+
+    await archiveAndClear(ROLLOVER_KINDS.flatMap((kind) => entries[kind]));
+
+    await seasonRef.set(
+      {
+        status: "complete",
+        completedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        counts,
+        returningUids: [...returningUids],
+        archivedUids: plans.filter((plan) => plan.action === "archive").map((plan) => plan.uid),
+      },
+      { merge: true },
+    );
+
+    return { success: true, seasonId, status: "complete", counts, students: plans };
   },
 );
 

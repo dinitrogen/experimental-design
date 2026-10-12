@@ -303,4 +303,25 @@ describe('Firestore security rules', () => {
     await assertFails(getDoc(usage));
     await assertFails(setDoc(usage, { date: '2026-10-11', count: 0 }));
   });
+
+  it('lets only coaches read season and archive records, and blocks all client writes', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const firestore = context.firestore();
+      await setDoc(doc(firestore, 'seasons/2026-2027'), { status: 'complete' });
+      await setDoc(doc(firestore, 'archives/2026-2027/submissions/submission-1'), {
+        studentUid: 'student-1',
+      });
+    });
+
+    const coach = testEnv.authenticatedContext('coach-1').firestore();
+    const student = testEnv.authenticatedContext('student-1').firestore();
+
+    await assertSucceeds(getDoc(doc(coach, 'seasons/2026-2027')));
+    await assertFails(getDoc(doc(student, 'seasons/2026-2027')));
+    await assertSucceeds(getDoc(doc(coach, 'archives/2026-2027/submissions/submission-1')));
+    await assertFails(getDoc(doc(student, 'archives/2026-2027/submissions/submission-1')));
+
+    await assertFails(setDoc(doc(coach, 'seasons/2026-2027'), { status: 'in_progress' }));
+    await assertFails(setDoc(doc(coach, 'archives/2026-2027/submissions/new'), { studentUid: 'x' }));
+  });
 });

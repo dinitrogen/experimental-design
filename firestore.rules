@@ -300,5 +300,17 @@ service cloud.firestore {
 
       allow delete: if isCoach();
     }
+
+    // Season rollover bookkeeping and archived snapshots. Written only by the
+    // rolloverSeason Cloud Function (Admin SDK bypasses rules).
+    match /seasons/{seasonId} {
+      allow read: if isCoach();
+      allow write: if false;
+    }
+
+    match /archives/{document=**} {
+      allow read: if isCoach();
+      allow write: if false;
+    }
   }
 }
