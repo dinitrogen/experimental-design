@@ -45,3 +45,9 @@ export interface TeamEvent {
   alternateUids?: string[];
   createdAt: Timestamp;
 }
+
+/** Read-only copy kept under archives/{seasonId}/teamEvents when a season rolls over */
+export interface ArchivedTeamEvent extends TeamEvent {
+  /** Display names captured at rollover, so past events stay readable after a student is deleted */
+  memberNames: Record<string, string>;
+}

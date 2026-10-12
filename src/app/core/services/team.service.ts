@@ -9,7 +9,7 @@ import {
   deleteDoc,
 } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
-import { TeamEvent, RoleAssignments } from '../models/team-event.model';
+import { TeamEvent, RoleAssignments, ArchivedTeamEvent } from '../models/team-event.model';
 
 @Injectable({ providedIn: 'root' })
 export class TeamService {
@@ -21,6 +21,15 @@ export class TeamService {
     const snapshot = await getDocs(col);
     return snapshot.docs
       .map((d) => ({ id: d.id, ...d.data() }) as TeamEvent)
+      .sort((a, b) => (a.eventDate ?? '').localeCompare(b.eventDate ?? ''));
+  }
+
+  /** Read-only events from a completed season's archive. */
+  async getArchivedEvents(seasonId: string): Promise<ArchivedTeamEvent[]> {
+    const col = collection(this.firestore, `archives/${seasonId}/teamEvents`);
+    const snapshot = await getDocs(col);
+    return snapshot.docs
+      .map((d) => ({ id: d.id, ...d.data() }) as ArchivedTeamEvent)
       .sort((a, b) => (a.eventDate ?? '').localeCompare(b.eventDate ?? ''));
   }
 

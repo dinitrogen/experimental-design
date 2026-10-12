@@ -212,10 +212,11 @@ Note: a student who is already signed in can keep working until their current se
 
 Coaches start a new season from **Season Rollover** on the coach dashboard. The page runs a preview first, and nothing changes until the coach types the new season ID and confirms a fresh backup.
 
-- **Archived to `archives/{seasonId}/...`:** study guide progress, login streaks, practice reports, task submissions, and task assignments. Each archived document keeps its original path in `sourcePath`.
+- **Archived to `archives/{seasonId}/...`:** study guide progress, login streaks, practice reports, task submissions, task assignments, and team planner events. Each archived document keeps its original path in `sourcePath`. Archived team events also store `memberNames`, so past events still show names after a student is deleted.
 - **Kept:** student accounts, achievements, guide visibility settings, AI usage, and practice event definitions.
-- **Returning students** (checked on the page) are re-enrolled. If they were archived, their sign-in is restored.
+- **Returning students** (checked on the page) are re-enrolled. If they were archived, their sign-in is restored. Each returning student also receives the **Returning Member** achievement once per season. It is awarded by the server, so coaches can't assign it by hand.
 - **Other active students** are archived, which blocks their sign-in.
+- **Season summary:** the lists of returning and archived UIDs are stored in `archives/{seasonId}/summary/rollover`. They are not on the season document, which students can read to show the season chip.
 
 Before the real run, ask students to sign out and take a backup:
 
@@ -228,6 +229,10 @@ Each archive batch copies and deletes documents together, so an interrupted run 
 Note: as with archiving, a student who is signed in during the rollover keeps access until their token expires.
 
 **Season Roster** (coach dashboard) enrolls students in any season after the fact. New accounts are enrolled in the newest season automatically. Archived students can't be enrolled until they are restored in Student Management.
+
+**Team → Past Events** shows every completed season's planner events read-only, including team members and report role assignments. Students and coaches can both view it. The live **Events** tab only holds the current season, and the rollover clears it.
+
+The current season label appears as a chip on both the coach and student dashboards.
 
 ## Deploying
 

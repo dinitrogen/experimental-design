@@ -37,6 +37,8 @@ const COUNT_LABELS: Record<keyof RolloverPreview['counts'], string> = {
   submissions: 'Practice reports',
   taskSubmissions: 'Task submissions',
   taskAssignments: 'Task assignment settings',
+  teamEvents: 'Team planner events (archived copies)',
+  returningMemberAwards: 'Returning Member awards',
 };
 
 interface StudentRow {
@@ -236,6 +238,18 @@ interface PreviewState {
     </div>
   `,
   styles: `
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .page-header .page-title {
+      margin: 0;
+    }
     .section { margin-bottom: 16px; }
     .full-width { width: 100%; }
     .student-row { display: flex; align-items: center; gap: 12px; }

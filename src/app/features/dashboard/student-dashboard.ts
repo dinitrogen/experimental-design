@@ -15,6 +15,7 @@ import { TaskService } from '../../core/services/task.service';
 import { ReportSubmission } from '../../core/models/submission.model';
 import { Achievement, getTemplate, sortAchievements } from '../../core/models/achievement.model';
 import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model';
+import { ActiveSeasonChipComponent } from '../../shared/components/active-season-chip';
 
 @Component({
   selector: 'app-student-dashboard',
@@ -27,12 +28,16 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
     MatProgressBarModule,
     MatChipsModule,
     MatSnackBarModule,
+    ActiveSeasonChipComponent,
   ],
   template: `
     <div class="content-container">
-      <h1 class="page-title">
-        Welcome, {{ displayName() }}!
-      </h1>
+      <div class="page-header">
+        <h1 class="page-title">
+          Welcome, {{ displayName() }}!
+        </h1>
+        <app-active-season-chip />
+      </div>
 
       <div class="stats-row">
         @if (guidesLoaded()) {
@@ -208,6 +213,18 @@ import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model'
     </div>
   `,
   styles: `
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .page-header .page-title {
+      margin: 0;
+    }
     .stats-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

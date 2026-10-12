@@ -104,6 +104,18 @@ interface RosterChange {
     </div>
   `,
   styles: `
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .page-header .page-title {
+      margin: 0;
+    }
     .section { margin-bottom: 16px; }
     .student-row { display: flex; align-items: center; gap: 12px; min-height: 40px; }
     .muted { color: var(--mat-sys-on-surface-variant, #5f6368); font-size: 0.875rem; }

@@ -474,7 +474,7 @@ export class StudentDetailComponent {
 
   protected readonly unassignedTemplates = computed(() => {
     const assigned = new Set(this.achievements().map((a) => a.templateId));
-    return ACHIEVEMENT_TEMPLATES.filter((t) => !assigned.has(t.id));
+    return ACHIEVEMENT_TEMPLATES.filter((t) => t.type !== 'system' && !assigned.has(t.id));
   });
 
   protected readonly lastLoginDisplay = computed(() => {

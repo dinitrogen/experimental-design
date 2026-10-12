@@ -10,6 +10,8 @@ export interface RolloverCounts {
   submissions: number;
   taskSubmissions: number;
   taskAssignments: number;
+  teamEvents: number;
+  returningMemberAwards: number;
 }
 
 export interface RolloverStudent {

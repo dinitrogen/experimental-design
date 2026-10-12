@@ -314,7 +314,13 @@ service cloud.firestore {
     // Season rollover bookkeeping and archived snapshots. Written only by the
     // rolloverSeason Cloud Function (Admin SDK bypasses rules).
     match /seasons/{seasonId} {
-      allow read: if isCoach();
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Past team events are read-only for students and coaches alike.
+    match /archives/{seasonId}/teamEvents/{eventId} {
+      allow read: if signedIn();
       allow write: if false;
     }
 

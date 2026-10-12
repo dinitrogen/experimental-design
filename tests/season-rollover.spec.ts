@@ -68,6 +68,23 @@ async function readStringField(path: string, field: string): Promise<string | un
   return body.fields?.[field]?.stringValue;
 }
 
+type RawField = { stringValue?: string; mapValue?: { fields?: Record<string, RawField> } };
+
+async function readDocFields(path: string): Promise<Record<string, RawField> | undefined> {
+  const res = await fetch(`${FIRESTORE}/${path}`, { headers: OWNER_HEADERS });
+  if (res.status !== 200) return undefined;
+  const body = (await res.json()) as { fields?: Record<string, RawField> };
+  return body.fields;
+}
+
+async function listAwardedStudents(templateId: string): Promise<string[]> {
+  const res = await fetch(`${FIRESTORE}/achievements`, { headers: OWNER_HEADERS });
+  const body = (await res.json()) as { documents?: { fields: Record<string, RawField> }[] };
+  return (body.documents ?? [])
+    .filter((doc) => doc.fields['templateId']?.stringValue === templateId)
+    .map((doc) => doc.fields['studentUid']?.stringValue ?? '');
+}
+
 async function clearFirestore(): Promise<void> {
   await fetch(FIRESTORE_CLEAR, { method: 'DELETE', headers: OWNER_HEADERS });
 }
@@ -187,6 +204,8 @@ describe('rolloverSeason callable', () => {
       submissions: 1,
       taskSubmissions: 1,
       taskAssignments: 1,
+      teamEvents: 0,
+      returningMemberAwards: 2,
     });
 
     const actionFor = (uid: string) => result.students.find((s) => s.uid === uid)?.action;
@@ -308,6 +327,59 @@ describe('rolloverSeason callable', () => {
 
     const seasonStatus = await readStringField(`seasons/${SEASON}`, 'status');
     expect(seasonStatus).toBe('complete');
+  });
+
+  it('archives team events with member names and awards Returning Member once per returning student', async () => {
+    await writeDoc('teamEvents/event-1', {
+      title: 'Regionals',
+      location: 'Hall A',
+      eventDate: '2026-11-02',
+      teams: [
+        {
+          schoolName: 'North',
+          memberUids: [uids.s1, uids.s3],
+          roleAssignments: { Hypothesis: uids.s2 },
+        },
+      ],
+      alternateUids: [uids.s4],
+    });
+    // s2 already holds the award, so the rollover must not add a second one.
+    await writeDoc('achievements/returning-existing', {
+      studentUid: uids.s2,
+      templateId: 'returning-member',
+      completed: true,
+    });
+
+    const res = await callFunction('rolloverSeason', coachToken, {
+      seasonId: SEASON,
+      returningUids: returning(),
+      dryRun: false,
+      confirmSeasonId: SEASON,
+      backupConfirmed: true,
+    });
+    expect(res.status).toBe(200);
+    const counts = (res.body as RolloverResponse).result.counts;
+    expect(counts.teamEvents).toBe(1);
+    expect(counts.returningMemberAwards).toBe(1);
+
+    // Live planner is cleared; the archived copy keeps names for archived members too.
+    expect(await docExists('teamEvents/event-1')).toBe(false);
+    const archived = await readDocFields(`archives/${SEASON}/teamEvents/event-1`);
+    expect(archived?.title?.stringValue).toBe('Regionals');
+    const memberNames = archived?.memberNames?.mapValue?.fields ?? {};
+    expect(memberNames[uids.s1]?.stringValue).toBe('S1');
+    expect(memberNames[uids.s3]?.stringValue).toBe('S3');
+    expect(memberNames[uids.s4]?.stringValue).toBe('S4');
+
+    // Only returning students hold the award, and s2 still has exactly one.
+    const awarded = await listAwardedStudents('returning-member');
+    expect(awarded.sort()).toEqual([uids.s1, uids.s2].sort());
+
+    // UID lists live in the coach-only summary, not on the student-readable season doc.
+    expect(await docExists(`archives/${SEASON}/summary/rollover`)).toBe(true);
+    const seasonFields = await readDocFields(`seasons/${SEASON}`);
+    expect(seasonFields?.returningUids).toBeUndefined();
+    expect(seasonFields?.archivedUids).toBeUndefined();
   });
 
   it('refuses to roll over the same season twice', async () => {

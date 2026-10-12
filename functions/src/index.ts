@@ -425,6 +425,7 @@ const ACHIEVEMENT_TITLES: Record<string, string> = {
   'review-all-guides': 'Study Guide Scholar',
   'complete-parachute-drop': 'Parachute Drop',
   'complete-sugar-solubility': 'Sugar Solubility',
+  'returning-member': 'Returning Member',
 };
 
 export const notifyAchievementUnlocked = onDocumentUpdated(
@@ -526,8 +527,11 @@ const ROLLOVER_KINDS = [
   "submissions",
   "taskSubmissions",
   "taskAssignments",
+  "teamEvents",
 ] as const;
 type RolloverKind = (typeof ROLLOVER_KINDS)[number];
+// Awarded to students who return for a new season. Keep in sync with ACHIEVEMENT_TEMPLATES.
+const RETURNING_MEMBER_TEMPLATE_ID = "returning-member";
 
 interface RolloverSources {
   progress: FirebaseFirestore.QueryDocumentSnapshot[];
@@ -535,6 +539,7 @@ interface RolloverSources {
   submissions: FirebaseFirestore.QueryDocumentSnapshot[];
   taskSubmissions: FirebaseFirestore.QueryDocumentSnapshot[];
   taskAssignments: FirebaseFirestore.DocumentSnapshot[];
+  teamEvents: FirebaseFirestore.QueryDocumentSnapshot[];
 }
 
 interface ArchiveEntry {
@@ -570,13 +575,14 @@ function planStudentChanges(students: StudentRecord[], returning: Set<string>): 
 }
 
 async function loadRolloverSources(): Promise<RolloverSources> {
-  const [progressSnap, loginSnap, submissionSnap, taskSubmissionSnap, assignmentsSnap] =
+  const [progressSnap, loginSnap, submissionSnap, taskSubmissionSnap, assignmentsSnap, eventSnap] =
     await Promise.all([
       db.collectionGroup("items").get(),
       db.collection("loginHistory").get(),
       db.collection("submissions").get(),
       db.collection("taskSubmissions").get(),
       db.doc("settings/taskAssignments").get(),
+      db.collection("teamEvents").get(),
     ]);
   return {
     // Only per-student progress lives under progress/{uid}/items.
@@ -585,12 +591,25 @@ async function loadRolloverSources(): Promise<RolloverSources> {
     submissions: submissionSnap.docs,
     taskSubmissions: taskSubmissionSnap.docs,
     taskAssignments: assignmentsSnap.exists ? [assignmentsSnap] : [],
+    teamEvents: eventSnap.docs,
   };
+}
+
+// Every student UID an event refers to, so the archived copy can keep their names.
+function eventMemberUids(data: FirebaseFirestore.DocumentData): string[] {
+  const uids = new Set<string>();
+  for (const uid of data.alternateUids ?? []) uids.add(String(uid));
+  for (const team of data.teams ?? []) {
+    for (const uid of team.memberUids ?? []) uids.add(String(uid));
+    for (const uid of Object.values(team.roleAssignments ?? {})) uids.add(String(uid));
+  }
+  return [...uids];
 }
 
 function buildArchiveEntries(
   seasonId: string,
   sources: RolloverSources,
+  displayNames: Map<string, string>,
 ): Record<RolloverKind, ArchiveEntry[]> {
   const root = db.collection("archives").doc(seasonId);
   return {
@@ -622,8 +641,19 @@ function buildArchiveEntries(
       destination: root.collection("taskAssignments").doc("current"),
       extra: {},
     })),
+    teamEvents: sources.teamEvents.map((snap) => {
+      const memberNames = Object.fromEntries(
+        eventMemberUids(snap.data()).map((uid) => [uid, displayNames.get(uid) ?? ""]),
+      );
+      return {
+        source: snap,
+        destination: root.collection("teamEvents").doc(snap.id),
+        extra: { memberNames },
+      };
+    }),
   };
 }
+
 
 // Copy and delete in one batch per chunk, so each document moves atomically.
 // A re-run after a partial failure only sees what was not yet moved.
@@ -687,6 +717,8 @@ export const rolloverSeason = onCall(
       archived: doc.data().status === "archived",
     }));
     const knownUids = new Set(students.map((student) => student.uid));
+    // Includes archived students, so archived past events can still show names.
+    const displayNames = new Map(students.map((student) => [student.uid, student.displayName]));
     const unknownUids = [...returningUids].filter((uid) => !knownUids.has(uid));
     if (unknownUids.length > 0) {
       throw new HttpsError("invalid-argument", "returningUids contains unknown students.");
@@ -698,13 +730,29 @@ export const rolloverSeason = onCall(
     const existingStatus: string | null = seasonSnap.data()?.status ?? null;
 
     const sources = await loadRolloverSources();
-    const entries = buildArchiveEntries(seasonId, sources);
+    const entries = buildArchiveEntries(seasonId, sources, displayNames);
+
+    // Dedupe against existing awards so a re-run after a partial failure doesn't double-award.
+    const awardedUids = new Set(
+      (
+        await db
+          .collection("achievements")
+          .where("templateId", "==", RETURNING_MEMBER_TEMPLATE_ID)
+          .get()
+      ).docs.map((doc) => String(doc.data().studentUid)),
+    );
+    const returningMemberUids = plans
+      .filter((plan) => plan.returning && !awardedUids.has(plan.uid))
+      .map((plan) => plan.uid);
+
     const counts = {
       progress: entries.progress.length,
       loginHistory: entries.loginHistory.length,
       submissions: entries.submissions.length,
       taskSubmissions: entries.taskSubmissions.length,
       taskAssignments: entries.taskAssignments.length,
+      teamEvents: entries.teamEvents.length,
+      returningMemberAwards: returningMemberUids.length,
     };
 
     if (dryRun) {
@@ -754,7 +802,30 @@ export const rolloverSeason = onCall(
       }
     }
 
+    for (const uid of returningMemberUids) {
+      await db.collection("achievements").add({
+        studentUid: uid,
+        templateId: RETURNING_MEMBER_TEMPLATE_ID,
+        assignedBy: "system",
+        assignedAt: FieldValue.serverTimestamp(),
+        completed: true,
+        completedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
     await archiveAndClear(ROLLOVER_KINDS.flatMap((kind) => entries[kind]));
+
+    // UID lists stay coach-only in archives; the season doc is readable by students.
+    await db
+      .collection("archives")
+      .doc(seasonId)
+      .collection("summary")
+      .doc("rollover")
+      .set({
+        returningUids: [...returningUids],
+        archivedUids: plans.filter((plan) => plan.action === "archive").map((plan) => plan.uid),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
     await seasonRef.set(
       {
@@ -762,8 +833,6 @@ export const rolloverSeason = onCall(
         completedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         counts,
-        returningUids: [...returningUids],
-        archivedUids: plans.filter((plan) => plan.action === "archive").map((plan) => plan.uid),
       },
       { merge: true },
     );

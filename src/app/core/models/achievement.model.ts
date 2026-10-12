@@ -5,8 +5,11 @@ export interface AchievementTemplate {
   title: string;
   description: string;
   icon: string;
-  /** 'auto' achievements are checked against live data; 'manual' require coach to mark complete */
-  type: 'auto' | 'manual';
+  /**
+   * 'auto' achievements are checked against live data; 'manual' require coach to mark complete;
+   * 'system' are awarded by the server (e.g. season rollover) and never assigned by hand.
+   */
+  type: 'auto' | 'manual' | 'system';
 }
 
 export interface Achievement {
@@ -75,6 +78,13 @@ export const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
     description: 'Complete and submit the Sugar Solubility practice event.',
     icon: 'science',
     type: 'auto',
+  },
+  {
+    id: 'returning-member',
+    title: 'Returning Member',
+    description: 'Came back for a new season of Experimental Design.',
+    icon: 'replay',
+    type: 'system',
   },
 ];
 

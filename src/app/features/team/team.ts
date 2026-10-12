@@ -26,6 +26,7 @@ import { TeamEvent, RoleAssignments } from '../../core/models/team-event.model';
 import { EventFormDialogComponent } from './event-form-dialog';
 import { TeamRolesDialogComponent, TeamRolesDialogData } from './team-roles-dialog';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog';
+import { PastEventsComponent } from './past-events';
 
 interface RosterRow {
   user: AppUser;
@@ -47,6 +48,7 @@ interface RosterRow {
     MatDividerModule,
     MatDialogModule,
     MatSnackBarModule,
+    PastEventsComponent,
   ],
   template: `
     <div class="content-container">
@@ -274,6 +276,13 @@ interface RosterRow {
             }
           </div>
         </mat-tab>
+
+        <!-- Past Events Tab (read-only archive of completed seasons) -->
+        <mat-tab label="Past Events">
+          <div class="tab-content">
+            <app-past-events />
+          </div>
+        </mat-tab>
       </mat-tab-group>
     </div>
   `,
@@ -459,7 +468,8 @@ export class TeamComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       const [students, coachList, events, allAchievements] = await Promise.all([
-        this.studentService.getAllStudents(),
+        // Archived students are included so past events and roster lookups still show their names.
+        this.studentService.getAllStudents({ includeArchived: true }),
         this.studentService.getAllCoaches(),
         this.teamService.getTeamEvents(),
         this.achievementService.getAllAchievements(),
@@ -473,8 +483,8 @@ export class TeamComponent implements OnInit {
         this.memberMap.set(c.uid, c);
       }
 
-      // Filter out students excluded from roster
-      const rosterStudents = students.filter((s) => !s.excludeFromRoster);
+      // Roster shows active students only; archived students stay in the member map for names
+      const rosterStudents = students.filter((s) => !s.excludeFromRoster && s.status !== 'archived');
 
       // Group achievements by student
       const achievementsByUid = new Map<string, Achievement[]>();
