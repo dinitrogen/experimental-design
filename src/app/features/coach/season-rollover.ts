@@ -19,6 +19,7 @@ import {
   SeasonService,
 } from '../../core/services/season.service';
 import { StudentService } from '../../core/services/student.service';
+import { ActiveSeasonChipComponent } from '../../shared/components/active-season-chip';
 
 // Mirrors the server-side rule in functions/src/index.ts.
 const SEASON_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{2,39}$/;
@@ -64,11 +65,13 @@ interface PreviewState {
     MatInputModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    ActiveSeasonChipComponent,
   ],
   template: `
     <div class="content-container">
       <div class="page-header">
         <h1 class="page-title">Season Rollover</h1>
+        <app-active-season-chip />
       </div>
 
       @if (loading()) {

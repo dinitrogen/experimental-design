@@ -1,3 +1,4 @@
+import { ActiveSeasonChipComponent } from '../../shared/components/active-season-chip';
 import { ChangeDetectionStrategy, Component, inject, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -15,10 +16,18 @@ import { AppUser } from '../../core/models/user.model';
 @Component({
   selector: 'app-coach-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MatCardModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
+  imports: [
+    RouterLink,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+    ActiveSeasonChipComponent,
+  ],
   template: `
     <div class="content-container">
       <h1 class="page-title">Welcome, {{ coachName() }}</h1>
+      <app-active-season-chip />
 
       @if (loading()) {
         <div class="loading-container">

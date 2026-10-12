@@ -10,7 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AppUser } from '../../core/models/user.model';
 import { SeasonRecord, SeasonService } from '../../core/services/season.service';
 import { StudentService } from '../../core/services/student.service';
-
+import { ActiveSeasonChipComponent } from '../../shared/components/active-season-chip';
 interface RosterChange {
   uid: string;
   enrolled: boolean;
@@ -28,11 +28,13 @@ interface RosterChange {
     MatProgressSpinnerModule,
     MatSelectModule,
     MatSnackBarModule,
+    ActiveSeasonChipComponent,
   ],
   template: `
     <div class="content-container">
       <div class="page-header">
         <h1 class="page-title">Season Roster</h1>
+        <app-active-season-chip />
       </div>
 
       @if (loading()) {
