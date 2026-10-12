@@ -25,8 +25,8 @@ export class StudentService {
   private readonly http = inject(HttpClient);
   private readonly functions = inject(Functions);
 
-  /** Get all students from Firestore */
-  async getAllStudents(): Promise<AppUser[]> {
+  /** Get students from Firestore. Archived students are excluded unless requested. */
+  async getAllStudents(options: { includeArchived?: boolean } = {}): Promise<AppUser[]> {
     const usersCol = collection(this.firestore, 'users');
     const q = query(usersCol, where('role', '==', 'student'));
     const snapshot = await getDocs(q);
@@ -42,9 +42,15 @@ export class StudentService {
         middleSchool: data['middleSchool'] ?? undefined,
         grade: data['grade'] ?? undefined,
         excludeFromRoster: data['excludeFromRoster'] ?? false,
+        status: data['status'] ?? 'active',
+        archivedAt: data['archivedAt'] ?? undefined,
+        enrolledSeasons: data['enrolledSeasons'] ?? undefined,
       } as AppUser;
     });
-    return students.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    const visible = options.includeArchived
+      ? students
+      : students.filter((s) => s.status !== 'archived');
+    return visible.sort((a, b) => a.displayName.localeCompare(b.displayName));
   }
 
   /** Get all coaches from Firestore */
@@ -129,9 +135,22 @@ export class StudentService {
     return newUser;
   }
 
-  /** Delete a student's Firestore user doc (does not delete Auth account) */
-  async removeStudent(uid: string): Promise<void> {
-    await deleteDoc(doc(this.firestore, `users/${uid}`));
+  /**
+   * Archive a student: disables their login and hides them from active lists.
+   * Progress, submissions, and achievements are kept.
+   */
+  async archiveStudent(uid: string): Promise<void> {
+    await this.setStudentArchived(uid, true);
+  }
+
+  /** Restore an archived student's login and make them active again. */
+  async reactivateStudent(uid: string): Promise<void> {
+    await this.setStudentArchived(uid, false);
+  }
+
+  private async setStudentArchived(uid: string, archived: boolean): Promise<void> {
+    const fn = httpsCallable(this.functions, 'setStudentArchived');
+    await fn({ uid, archived });
   }
 
   /** Reset a student's reading progress for a specific guide */

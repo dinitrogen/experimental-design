@@ -191,8 +191,13 @@ export class LoginComponent {
 
       const isCoach = this.authService.isCoach();
       await this.router.navigate([isCoach ? '/coach' : '/dashboard']);
-    } catch {
-      this.errorMessage.set('Invalid username or password. Please try again.');
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      this.errorMessage.set(
+        code === 'auth/user-disabled'
+          ? 'This account is no longer active. Please contact your coach.'
+          : 'Invalid username or password. Please try again.',
+      );
     } finally {
       this.submitting.set(false);
     }

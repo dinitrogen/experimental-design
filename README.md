@@ -186,6 +186,28 @@ cd functions
 npm test
 ```
 
+The student archive callable (`setStudentArchived`) is tested against the Auth, Firestore, and Functions emulators:
+
+```bash
+npm run test:functions
+```
+
+## Backups
+
+Before a season rollover or any bulk data change, export Firestore to a dedicated GCS bucket and verify the export:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup-firestore.ps1 -Label pre-rollover
+```
+
+The script runs `gcloud firestore export` against `exd-lab-663e5`, checks the operation state, and confirms the export metadata exists in `gs://exd-lab-663e5-backups`.
+
+## Student Archive
+
+Coaches archive students from **Student Management** instead of deleting them. Archiving disables the student's sign-in, so they see "This account is no longer active" on login. Restoring re-enables sign-in. Archived students keep their data and can be restored at any time.
+
+Note: a student who is already signed in can keep working until their current session token expires (up to about an hour).
+
 ## Deploying
 
 ### Hosting (Frontend)

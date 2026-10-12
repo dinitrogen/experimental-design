@@ -12,6 +12,7 @@
     "pretest": "node scripts/write-build-info.mjs",
     "test": "ng test",
     "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.ts\"",
+    "test:functions": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project exd-lab-663e5 \"vitest run --config vitest.functions.config.ts\"",
     "emulators": "npm --prefix functions run build && firebase emulators:start --only auth,firestore,functions",
     "deploy": "npm run build && firebase deploy",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",

@@ -520,7 +520,7 @@ export class StudentDetailComponent {
     try {
       this.loading.set(true);
       const [students, subs, progress, achs, taskSubs] = await Promise.all([
-        this.studentService.getAllStudents(),
+        this.studentService.getAllStudents({ includeArchived: true }),
         this.studentService.getStudentSubmissions(uid),
         this.studentService.getStudentProgress(uid),
         this.achievementService.getAchievementsForStudent(uid),

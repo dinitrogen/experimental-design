@@ -465,6 +465,48 @@ export const notifyAchievementUnlocked = onDocumentUpdated(
   },
 );
 
+// ── Coach: Archive / Reactivate Student ──
+
+export const setStudentArchived = onCall(
+  { cors: true, invoker: "public" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in.");
+    }
+
+    const callerDoc = await db.doc(`users/${request.auth.uid}`).get();
+    if (callerDoc.data()?.role !== "coach") {
+      throw new HttpsError("permission-denied", "Only coaches can archive students.");
+    }
+
+    const { uid, archived } = request.data as { uid?: unknown; archived?: unknown };
+    if (typeof uid !== "string" || !uid || typeof archived !== "boolean") {
+      throw new HttpsError("invalid-argument", "Missing uid or archived flag.");
+    }
+
+    const userRef = db.doc(`users/${uid}`);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists || userSnap.data()?.role !== "student") {
+      throw new HttpsError("not-found", "Student not found.");
+    }
+
+    // Disable login first so a failure leaves the student blocked, not half-restored.
+    await getAuth().updateUser(uid, { disabled: archived });
+    if (archived) {
+      // Invalidate refresh tokens so an open session ends at its next token refresh.
+      await getAuth().revokeRefreshTokens(uid);
+    }
+
+    await userRef.update(
+      archived
+        ? { status: "archived", archivedAt: FieldValue.serverTimestamp() }
+        : { status: "active", archivedAt: FieldValue.delete() },
+    );
+
+    return { success: true };
+  },
+);
+
 // ── Coach: Reset Student Password ──
 
 export const resetStudentPassword = onCall(
