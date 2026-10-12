@@ -91,6 +91,12 @@ export class SeasonService {
       .sort((a, b) => b.id.localeCompare(a.id));
   }
 
+  /** Newest season ID (seasons are named like 2026-2027), or null before the first rollover. */
+  async getCurrentSeasonId(): Promise<string | null> {
+    const seasons = await this.getSeasons();
+    return seasons[0]?.id ?? null;
+  }
+
   private async callRollover<T>(request: RolloverRequest): Promise<T> {
     const fn = httpsCallable<RolloverRequest, T>(this.functions, 'rolloverSeason');
     const response = await fn(request);

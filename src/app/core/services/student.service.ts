@@ -18,12 +18,14 @@ import { environment } from '../../../environments/environment';
 import { AppUser } from '../models/user.model';
 import { ReadingProgress } from '../models/resource.model';
 import { ReportSubmission } from '../models/submission.model';
+import { SeasonService } from './season.service';
 
 @Injectable({ providedIn: 'root' })
 export class StudentService {
   private readonly firestore = inject(Firestore);
   private readonly http = inject(HttpClient);
   private readonly functions = inject(Functions);
+  private readonly seasonService = inject(SeasonService);
 
   /** Get students from Firestore. Archived students are excluded unless requested. */
   async getAllStudents(options: { includeArchived?: boolean } = {}): Promise<AppUser[]> {
@@ -130,6 +132,9 @@ export class StudentService {
     };
     if (middleSchool) userData['middleSchool'] = middleSchool;
     if (grade) userData['grade'] = grade;
+    // Enroll new accounts in the newest season so they appear in that season's roster.
+    const currentSeasonId = await this.seasonService.getCurrentSeasonId();
+    if (currentSeasonId) userData['enrolledSeasons'] = [currentSeasonId];
     await setDoc(doc(this.firestore, `users/${newUser.uid}`), userData);
 
     return newUser;

@@ -151,6 +151,29 @@ describe('Firestore security rules', () => {
     );
   });
 
+  it('lets coaches create students enrolled in a season, but only with a list of seasons', async () => {
+    const firestore = testEnv.authenticatedContext('coach-1').firestore();
+
+    await assertSucceeds(
+      setDoc(doc(firestore, 'users/student-4'), {
+        email: 'student-4@example.test',
+        displayName: 'Student Four',
+        role: 'student',
+        createdAt: Timestamp.fromMillis(4),
+        enrolledSeasons: ['2026-2027'],
+      }),
+    );
+    await assertFails(
+      setDoc(doc(firestore, 'users/student-5'), {
+        email: 'student-5@example.test',
+        displayName: 'Student Five',
+        role: 'student',
+        createdAt: Timestamp.fromMillis(5),
+        enrolledSeasons: '2026-2027',
+      }),
+    );
+  });
+
   it('restricts submissions to coaches and their student or team members', async () => {
     const student = testEnv.authenticatedContext('student-1').firestore();
     const outsider = testEnv.unauthenticatedContext().firestore();

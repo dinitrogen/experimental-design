@@ -120,11 +120,16 @@ service cloud.firestore {
           'role',
           'createdAt',
           'middleSchool',
-          'grade'
+          'grade',
+          'enrolledSeasons'
         ])
         && request.resource.data.email is string
         && request.resource.data.displayName is string
-        && request.resource.data.createdAt is timestamp;
+        && request.resource.data.createdAt is timestamp
+        && (
+          !('enrolledSeasons' in request.resource.data)
+          || request.resource.data.enrolledSeasons is list
+        );
 
       allow update: if (
         isOwner(userId)
