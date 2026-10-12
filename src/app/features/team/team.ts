@@ -4,12 +4,14 @@ import {
   inject,
   signal,
   OnInit,
+  ViewChild,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -43,6 +45,7 @@ interface RosterRow {
     MatButtonModule,
     MatTabsModule,
     MatTableModule,
+    MatSortModule,
     MatChipsModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
@@ -77,14 +80,14 @@ interface RosterRow {
                 </mat-card>
               } @else {
                 <mat-card class="roster-card">
-                  <table mat-table [dataSource]="studentRows()" class="roster-table">
+                  <table mat-table matSort matSortActive="school" matSortDirection="asc" matSortDisableClear [dataSource]="rosterSource" class="roster-table">
                     <ng-container matColumnDef="displayName">
-                      <th mat-header-cell *matHeaderCellDef>Name</th>
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
                       <td mat-cell *matCellDef="let row">{{ row.user.displayName }}</td>
                     </ng-container>
 
                     <ng-container matColumnDef="school">
-                      <th mat-header-cell *matHeaderCellDef>School</th>
+                      <th mat-header-cell *matHeaderCellDef mat-sort-header>School</th>
                       <td mat-cell *matCellDef="let row">
                         @if (row.user.middleSchool) {
                           <mat-chip-set>
@@ -464,8 +467,25 @@ export class TeamComponent implements OnInit {
 
   private memberMap = new Map<string, AppUser>();
 
+  protected readonly rosterSource = new MatTableDataSource<RosterRow>([]);
   protected readonly rosterColumns = ['displayName', 'school', 'grade', 'achievements'];
   protected readonly coachColumns = ['displayName', 'email'];
+
+  // The roster table is inside an @else block, so the sort directive appears after loading finishes.
+  @ViewChild(MatSort)
+  protected set rosterSort(sort: MatSort | undefined) {
+    this.rosterSource.sort = sort ?? null;
+  }
+
+  constructor() {
+    this.rosterSource.sortingDataAccessor = (row, sortHeaderId) => {
+      if (sortHeaderId === 'school') {
+        // Students without a school sort last instead of first.
+        return row.user.middleSchool?.toLowerCase() || '\uffff';
+      }
+      return row.user.displayName.toLowerCase();
+    };
+  }
 
   async ngOnInit(): Promise<void> {
     try {
@@ -519,7 +539,11 @@ export class TeamComponent implements OnInit {
         });
       }
 
+      // Pre-sort by name so students within the same school list alphabetically.
+      rows.sort((a, b) => a.user.displayName.localeCompare(b.user.displayName));
+
       this.studentRows.set(rows);
+      this.rosterSource.data = rows;
       this.coaches.set(coachList);
       this.teamEvents.set(events);
     } finally {

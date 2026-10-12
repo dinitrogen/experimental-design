@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { StudentService } from '../../core/services/student.service';
+import { AchievementService } from '../../core/services/achievement.service';
 
 @Component({
   selector: 'app-add-student-dialog',
@@ -114,6 +115,7 @@ import { StudentService } from '../../core/services/student.service';
 })
 export class AddStudentDialogComponent {
   private readonly studentService = inject(StudentService);
+  private readonly achievementService = inject(AchievementService);
   private readonly dialogRef = inject(MatDialogRef<AddStudentDialogComponent>);
   private readonly fb = inject(FormBuilder);
 
@@ -145,6 +147,8 @@ export class AddStudentDialogComponent {
         middleSchool || undefined,
         grade ?? undefined,
       );
+      // New students start with every current-season achievement, same as the assign-all button.
+      await this.achievementService.assignAllForSeason(newStudent.uid);
       this.dialogRef.close(newStudent);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create student account.';

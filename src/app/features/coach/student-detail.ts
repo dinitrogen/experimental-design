@@ -224,10 +224,16 @@ import { TaskSubmission, TASK_DEFINITIONS } from '../../core/models/task.model';
           }
 
           @if (unassignedTemplates().length > 0) {
-            <button mat-stroked-button [matMenuTriggerFor]="achievementMenu" class="assign-btn">
-              <mat-icon>add</mat-icon>
-              Assign Achievement
-            </button>
+            <div class="assign-actions">
+              <button mat-stroked-button [matMenuTriggerFor]="achievementMenu" class="assign-btn">
+                <mat-icon>add</mat-icon>
+                Assign Achievement
+              </button>
+              <button mat-stroked-button class="assign-btn" (click)="assignAllAchievements()">
+                <mat-icon>done_all</mat-icon>
+                Assign All
+              </button>
+            </div>
             <mat-menu #achievementMenu="matMenu">
               @for (tmpl of unassignedTemplates(); track tmpl.id) {
                 <button mat-menu-item (click)="assignAchievement(tmpl.id)">
@@ -440,6 +446,13 @@ import { TaskSubmission, TASK_DEFINITIONS } from '../../core/models/task.model';
       margin-top: 2px;
     }
 
+    .assign-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
     .assign-btn {
       margin-top: 4px;
     }
@@ -599,6 +612,16 @@ export class StudentDetailComponent {
   protected async assignAchievement(templateId: string): Promise<void> {
     const uid = this.id();
     await this.achievementService.assign(uid, templateId);
+    await this.reloadAchievements(uid);
+  }
+
+  protected async assignAllAchievements(): Promise<void> {
+    const uid = this.id();
+    await this.achievementService.assignAllForSeason(uid);
+    await this.reloadAchievements(uid);
+  }
+
+  private async reloadAchievements(uid: string): Promise<void> {
     const achs = await this.achievementService.getAchievementsForStudent(uid);
     this.achievements.set(sortAchievements(achs));
   }

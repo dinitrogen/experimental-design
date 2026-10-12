@@ -11,13 +11,14 @@ import {
   deleteDoc,
   query,
   where,
+  writeBatch,
 } from '@angular/fire/firestore';
 import { AuthService } from './auth.service';
 import { ProgressService } from './progress.service';
 import { SubmissionService } from './submission.service';
 import { TaskService } from './task.service';
 import { ResourceService } from './resource.service';
-import { Achievement, getTemplate, isInSeason } from '../models/achievement.model';
+import { ACHIEVEMENT_TEMPLATES, Achievement, getTemplate, isInSeason } from '../models/achievement.model';
 import { SeasonService } from './season.service';
 
 @Injectable({ providedIn: 'root' })
@@ -87,6 +88,39 @@ export class AchievementService {
   /** Remove an achievement assignment */
   async remove(achievementId: string): Promise<void> {
     await deleteDoc(doc(this.firestore, `achievements/${achievementId}`));
+  }
+
+  /**
+   * Assign every hand-assignable template the student doesn't already have this season.
+   * Returns how many were assigned. System templates (e.g. Returning Member) are never assigned here.
+   */
+  async assignAllForSeason(studentUid: string): Promise<number> {
+    const coach = this.authService.user();
+    if (!coach) return 0;
+    const seasonId = await this.seasonService.getCurrentSeasonId();
+    const existing = await this.getAchievementsForStudent(studentUid);
+    const assigned = new Set(
+      existing.filter((a) => isInSeason(a, seasonId)).map((a) => a.templateId),
+    );
+    const missing = ACHIEVEMENT_TEMPLATES.filter((t) => t.type !== 'system' && !assigned.has(t.id));
+    if (missing.length === 0) return 0;
+
+    const batch = writeBatch(this.firestore);
+    for (const tmpl of missing) {
+      const docRef = doc(collection(this.firestore, 'achievements'));
+      const achievement: Achievement = {
+        studentUid,
+        templateId: tmpl.id,
+        assignedBy: coach.uid,
+        assignedAt: Timestamp.now(),
+        completed: false,
+        completedAt: null,
+        ...(seasonId ? { seasonId } : {}),
+      };
+      batch.set(docRef, achievement);
+    }
+    await batch.commit();
+    return missing.length;
   }
 
   /** Check and update auto-completion status for a student's achievements */
