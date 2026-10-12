@@ -21,7 +21,8 @@ import { AchievementService } from '../../core/services/achievement.service';
 import { TeamService } from '../../core/services/team.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AppUser } from '../../core/models/user.model';
-import { Achievement, ACHIEVEMENT_TEMPLATES, sortAchievements } from '../../core/models/achievement.model';
+import { Achievement, ACHIEVEMENT_TEMPLATES, isInSeason, sortAchievements } from '../../core/models/achievement.model';
+import { SeasonService } from '../../core/services/season.service';
 import { TeamEvent, RoleAssignments } from '../../core/models/team-event.model';
 import { EventFormDialogComponent } from './event-form-dialog';
 import { TeamRolesDialogComponent, TeamRolesDialogData } from './team-roles-dialog';
@@ -453,6 +454,7 @@ export class TeamComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly seasonService = inject(SeasonService);
 
   protected readonly loading = signal(true);
   protected readonly studentRows = signal<RosterRow[]>([]);
@@ -467,12 +469,13 @@ export class TeamComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [students, coachList, events, allAchievements] = await Promise.all([
+      const [students, coachList, events, allAchievements, activeSeasonId] = await Promise.all([
         // Archived students are included so past events and roster lookups still show their names.
         this.studentService.getAllStudents({ includeArchived: true }),
         this.studentService.getAllCoaches(),
         this.teamService.getTeamEvents(),
         this.achievementService.getAllAchievements(),
+        this.seasonService.getCurrentSeasonId(),
       ]);
 
       // Build member map for event member lookup
@@ -499,7 +502,8 @@ export class TeamComponent implements OnInit {
       for (const student of rosterStudents) {
         const rawAchievements = achievementsByUid.get(student.uid) ?? [];
 
-        const achievements = sortAchievements(rawAchievements).map((a) => {
+        // Roster trophies show the active season only; older seasons stay on the student's record.
+        const achievements = sortAchievements(rawAchievements.filter((a) => isInSeason(a, activeSeasonId))).map((a) => {
           const tmpl = ACHIEVEMENT_TEMPLATES.find((t) => t.id === a.templateId);
           return {
             templateId: a.templateId,

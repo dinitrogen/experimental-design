@@ -13,7 +13,7 @@ import { SubmissionService } from '../../core/services/submission.service';
 import { AchievementService } from '../../core/services/achievement.service';
 import { TaskService } from '../../core/services/task.service';
 import { ReportSubmission } from '../../core/models/submission.model';
-import { Achievement, getTemplate, sortAchievements } from '../../core/models/achievement.model';
+import { Achievement, getTemplate, seasonLabel, sortAchievements } from '../../core/models/achievement.model';
 import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model';
 import { ActiveSeasonChipComponent } from '../../shared/components/active-season-chip';
 
@@ -201,6 +201,9 @@ import { ActiveSeasonChipComponent } from '../../shared/components/active-season
                 <div class="achievement-info">
                   <div class="achievement-title">{{ getAchievementTitle(ach) }}</div>
                   <div class="achievement-desc">{{ getAchievementDesc(ach) }}</div>
+                  @if (ach.seasonId) {
+                    <span class="season-tag">{{ seasonLabel(ach.seasonId) }}</span>
+                  }
                 </div>
                 @if (ach.completed) {
                   <mat-icon class="check-icon">check_circle</mat-icon>
@@ -366,6 +369,16 @@ import { ActiveSeasonChipComponent } from '../../shared/components/active-season
       margin-top: 2px;
     }
 
+    .season-tag {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #e8eaf6;
+      color: #1a237e;
+      font-size: 12px;
+    }
+
     .check-icon {
       color: #4caf50;
     }
@@ -511,6 +524,8 @@ export class StudentDashboardComponent implements OnInit {
   protected getTaskName(task: TaskSubmission): string {
     return getTaskDefinition(task.taskId)?.title ?? task.taskId;
   }
+
+  protected readonly seasonLabel = seasonLabel;
 
   protected getAchievementTitle(ach: Achievement): string {
     return getTemplate(ach.templateId)?.title ?? ach.templateId;

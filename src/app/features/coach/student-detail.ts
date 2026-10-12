@@ -18,7 +18,8 @@ import { TaskService } from '../../core/services/task.service';
 import { AppUser } from '../../core/models/user.model';
 import { ReadingProgress } from '../../core/models/resource.model';
 import { ReportSubmission } from '../../core/models/submission.model';
-import { Achievement, ACHIEVEMENT_TEMPLATES, getTemplate, sortAchievements } from '../../core/models/achievement.model';
+import { Achievement, ACHIEVEMENT_TEMPLATES, getTemplate, isInSeason, seasonLabel, sortAchievements } from '../../core/models/achievement.model';
+import { SeasonService } from '../../core/services/season.service';
 import { TaskSubmission, TASK_DEFINITIONS } from '../../core/models/task.model';
 
 @Component({
@@ -206,6 +207,9 @@ import { TaskSubmission, TASK_DEFINITIONS } from '../../core/models/task.model';
                     <div class="achievement-info">
                       <div class="achievement-title">{{ getAchievementTitle(ach) }}</div>
                       <div class="achievement-desc">{{ getAchievementDesc(ach) }}</div>
+                      @if (ach.seasonId) {
+                        <span class="season-tag">{{ seasonLabel(ach.seasonId) }}</span>
+                      }
                       @if (ach.completed && ach.completedAt) {
                         <div class="achievement-date">Completed {{ formatDate(ach.completedAt) }}</div>
                       }
@@ -420,6 +424,16 @@ import { TaskSubmission, TASK_DEFINITIONS } from '../../core/models/task.model';
       color: #666;
     }
 
+    .season-tag {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #e8eaf6;
+      color: #1a237e;
+      font-size: 12px;
+    }
+
     .achievement-date {
       font-size: 12px;
       color: #999;
@@ -446,6 +460,7 @@ export class StudentDetailComponent {
   private readonly resourceService = inject(ResourceService);
   private readonly achievementService = inject(AchievementService);
   private readonly taskService = inject(TaskService);
+  private readonly seasonService = inject(SeasonService);
   private readonly router = inject(Router);
 
   protected readonly loading = signal(true);
@@ -454,6 +469,9 @@ export class StudentDetailComponent {
   protected readonly guideProgress = signal<ReadingProgress[]>([]);
   protected readonly achievements = signal<Achievement[]>([]);
   protected readonly taskSubmissions = signal<TaskSubmission[]>([]);
+  protected readonly activeSeasonId = signal<string | null>(null);
+
+  protected readonly seasonLabel = seasonLabel;
 
   protected readonly subColumns = ['event', 'status', 'score', 'actions'];
   protected readonly progressColumns = ['guide', 'status', 'completedAt', 'actions'];
@@ -473,7 +491,13 @@ export class StudentDetailComponent {
   });
 
   protected readonly unassignedTemplates = computed(() => {
-    const assigned = new Set(this.achievements().map((a) => a.templateId));
+    const season = this.activeSeasonId();
+    // Only current-season assignments block a template; past seasons can be assigned again.
+    const assigned = new Set(
+      this.achievements()
+        .filter((a) => isInSeason(a, season))
+        .map((a) => a.templateId)
+    );
     return ACHIEVEMENT_TEMPLATES.filter((t) => t.type !== 'system' && !assigned.has(t.id));
   });
 
@@ -519,12 +543,13 @@ export class StudentDetailComponent {
   private async loadData(uid: string): Promise<void> {
     try {
       this.loading.set(true);
-      const [students, subs, progress, achs, taskSubs] = await Promise.all([
+      const [students, subs, progress, achs, taskSubs, seasonId] = await Promise.all([
         this.studentService.getAllStudents({ includeArchived: true }),
         this.studentService.getStudentSubmissions(uid),
         this.studentService.getStudentProgress(uid),
         this.achievementService.getAchievementsForStudent(uid),
         this.taskService.getTaskSubmissionsForStudent(uid),
+        this.seasonService.getCurrentSeasonId(),
       ]);
       // Ensure task assignments are loaded (may already be cached)
       if (Object.keys(this.taskService.assignments()).length === 0) {
@@ -535,6 +560,7 @@ export class StudentDetailComponent {
       this.guideProgress.set(progress);
       this.achievements.set(sortAchievements(achs));
       this.taskSubmissions.set(taskSubs);
+      this.activeSeasonId.set(seasonId);
     } finally {
       this.loading.set(false);
     }

@@ -215,6 +215,8 @@ Coaches start a new season from **Season Rollover** on the coach dashboard. The 
 - **Archived to `archives/{seasonId}/...`:** study guide progress, login streaks, practice reports, task submissions, task assignments, and team planner events. Each archived document keeps its original path in `sourcePath`. Archived team events also store `memberNames`, so past events still show names after a student is deleted.
 - **Kept:** student accounts, achievements, guide visibility settings, AI usage, and practice event definitions.
 - **Returning students** (checked on the page) are re-enrolled. If they were archived, their sign-in is restored. Each returning student also receives the **Returning Member** achievement once per season. It is awarded by the server, so coaches can't assign it by hand.
+- **Achievements are season-tagged.** New assignments carry the active season's `seasonId`. Achievements from before tagging are stamped with the previous season (or `earlier` when the season ID isn't a `YYYY-YYYY` year range). Earned history is never changed.
+- **Carry-over:** each returning student's prior assignments become fresh, incomplete copies for the new season, so they can earn them again. Only the active season is auto-checked. Students who aren't returning get no carry-over.
 - **Other active students** are archived, which blocks their sign-in.
 - **Season summary:** the lists of returning and archived UIDs are stored in `archives/{seasonId}/summary/rollover`. They are not on the season document, which students can read to show the season chip.
 

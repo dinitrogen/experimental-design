@@ -199,14 +199,16 @@ service cloud.firestore {
           'assignedBy',
           'assignedAt',
           'completed',
-          'completedAt'
+          'completedAt',
+          'seasonId'
         ])
         && request.resource.data.studentUid is string
         && request.resource.data.templateId is string
         && request.resource.data.assignedBy == request.auth.uid
         && request.resource.data.assignedAt is timestamp
         && request.resource.data.completed == false
-        && request.resource.data.completedAt == null;
+        && request.resource.data.completedAt == null
+        && (!request.resource.data.keys().hasAny(['seasonId']) || request.resource.data.seasonId is string);
 
       allow update: if isCoach()
         || (

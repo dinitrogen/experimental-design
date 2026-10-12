@@ -673,6 +673,85 @@ async function archiveAndClear(entries: ArchiveEntry[]): Promise<void> {
   }
 }
 
+// Season IDs look like "2026-2027". Any other ID (e.g. test IDs) falls back to the "earlier" tag.
+const EARLIER_SEASON_ID = "earlier";
+
+function previousSeasonId(seasonId: string): string {
+  const match = /^(\d{4})-(\d{4})$/.exec(seasonId);
+  return match ? `${Number(match[1]) - 1}-${Number(match[2]) - 1}` : EARLIER_SEASON_ID;
+}
+
+// Untagged achievements predate season tagging and belong to the season before the one being rolled into.
+function achievementSeason(data: FirebaseFirestore.DocumentData, previous: string): string {
+  return typeof data.seasonId === "string" && data.seasonId ? data.seasonId : previous;
+}
+
+// Sort key so newer seasons come first; "earlier" sorts after every named season.
+function seasonRank(seasonId: string): string {
+  return seasonId === EARLIER_SEASON_ID ? "" : seasonId;
+}
+
+interface CarryOverAssignment {
+  studentUid: string;
+  templateId: string;
+  assignedBy: string;
+}
+
+// Returning students' prior assignments become fresh, incomplete copies for the new season.
+// Keys already present in the new season are skipped, so a re-run never duplicates them.
+function planAchievementCarryOver(
+  docs: FirebaseFirestore.QueryDocumentSnapshot[],
+  returning: Set<string>,
+  seasonId: string,
+  previous: string,
+): CarryOverAssignment[] {
+  const taken = new Set<string>();
+  for (const doc of docs) {
+    const data = doc.data();
+    if (achievementSeason(data, previous) === seasonId) {
+      taken.add(`${data.studentUid}|${data.templateId}`);
+    }
+  }
+
+  const candidates = docs
+    .map((doc) => doc.data())
+    .filter(
+      (data) =>
+        returning.has(String(data.studentUid)) &&
+        data.templateId !== RETURNING_MEMBER_TEMPLATE_ID &&
+        achievementSeason(data, previous) !== seasonId,
+    )
+    .sort((a, b) =>
+      seasonRank(achievementSeason(b, previous)).localeCompare(seasonRank(achievementSeason(a, previous))),
+    );
+
+  const carried: CarryOverAssignment[] = [];
+  for (const data of candidates) {
+    const key = `${data.studentUid}|${data.templateId}`;
+    if (taken.has(key)) continue;
+    taken.add(key);
+    carried.push({
+      studentUid: String(data.studentUid),
+      templateId: String(data.templateId),
+      assignedBy: typeof data.assignedBy === "string" ? data.assignedBy : "system",
+    });
+  }
+  return carried;
+}
+
+async function writeInBatches<T>(
+  items: T[],
+  write: (batch: FirebaseFirestore.WriteBatch, item: T) => void,
+): Promise<void> {
+  for (let start = 0; start < items.length; start += ROLLOVER_BATCH_SIZE) {
+    const batch = db.batch();
+    for (const item of items.slice(start, start + ROLLOVER_BATCH_SIZE)) {
+      write(batch, item);
+    }
+    await batch.commit();
+  }
+}
+
 export const rolloverSeason = onCall(
   { cors: true, invoker: "public", timeoutSeconds: 540, memory: "512MiB" },
   async (request) => {
@@ -732,18 +811,24 @@ export const rolloverSeason = onCall(
     const sources = await loadRolloverSources();
     const entries = buildArchiveEntries(seasonId, sources, displayNames);
 
-    // Dedupe against existing awards so a re-run after a partial failure doesn't double-award.
+    // Read achievements once: untagged docs get stamped, and returning students get carry-over copies.
+    const previous = previousSeasonId(seasonId);
+    const achievementDocs = (await db.collection("achievements").get()).docs;
+    const legacyDocs = achievementDocs.filter((doc) => !doc.data().seasonId);
+    // Dedupe per season so a re-run after a partial failure doesn't double-award, but each year can award again.
     const awardedUids = new Set(
-      (
-        await db
-          .collection("achievements")
-          .where("templateId", "==", RETURNING_MEMBER_TEMPLATE_ID)
-          .get()
-      ).docs.map((doc) => String(doc.data().studentUid)),
+      achievementDocs
+        .filter(
+          (doc) =>
+            doc.data().templateId === RETURNING_MEMBER_TEMPLATE_ID &&
+            achievementSeason(doc.data(), previous) === seasonId,
+        )
+        .map((doc) => String(doc.data().studentUid)),
     );
     const returningMemberUids = plans
       .filter((plan) => plan.returning && !awardedUids.has(plan.uid))
       .map((plan) => plan.uid);
+    const carryOver = planAchievementCarryOver(achievementDocs, returningUids, seasonId, previous);
 
     const counts = {
       progress: entries.progress.length,
@@ -753,6 +838,8 @@ export const rolloverSeason = onCall(
       taskAssignments: entries.taskAssignments.length,
       teamEvents: entries.teamEvents.length,
       returningMemberAwards: returningMemberUids.length,
+      legacyAchievements: legacyDocs.length,
+      carriedAchievements: carryOver.length,
     };
 
     if (dryRun) {
@@ -802,16 +889,31 @@ export const rolloverSeason = onCall(
       }
     }
 
-    for (const uid of returningMemberUids) {
-      await db.collection("achievements").add({
+    // Stamp untagged achievements with the season they were earned in, before any new docs are added.
+    await writeInBatches(legacyDocs, (batch, doc) => batch.update(doc.ref, { seasonId: previous }));
+
+    const newAchievements: Array<Record<string, unknown>> = [
+      ...returningMemberUids.map((uid) => ({
         studentUid: uid,
         templateId: RETURNING_MEMBER_TEMPLATE_ID,
         assignedBy: "system",
         assignedAt: FieldValue.serverTimestamp(),
         completed: true,
         completedAt: FieldValue.serverTimestamp(),
-      });
-    }
+        seasonId,
+      })),
+      ...carryOver.map((item) => ({
+        studentUid: item.studentUid,
+        templateId: item.templateId,
+        assignedBy: item.assignedBy,
+        assignedAt: FieldValue.serverTimestamp(),
+        completed: false,
+        completedAt: null,
+        seasonId,
+      })),
+    ];
+    const achievementsRef = db.collection("achievements");
+    await writeInBatches(newAchievements, (batch, data) => batch.set(achievementsRef.doc(), data));
 
     await archiveAndClear(ROLLOVER_KINDS.flatMap((kind) => entries[kind]));
 

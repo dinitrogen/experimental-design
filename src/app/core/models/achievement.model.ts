@@ -20,6 +20,20 @@ export interface Achievement {
   assignedAt: Timestamp;
   completed: boolean;
   completedAt: Timestamp | null;
+  /** Season this assignment belongs to. Untagged docs predate season tagging. */
+  seasonId?: string;
+}
+
+/** Season tag for achievements from before a real season ID existed. */
+export const EARLIER_SEASON_ID = 'earlier';
+
+/** True when the assignment belongs to the active season (everything counts before the first season exists). */
+export function isInSeason(ach: Pick<Achievement, 'seasonId'>, activeSeasonId: string | null): boolean {
+  return !activeSeasonId || ach.seasonId === activeSeasonId;
+}
+
+export function seasonLabel(seasonId: string): string {
+  return seasonId === EARLIER_SEASON_ID ? 'Earlier' : seasonId;
 }
 
 export const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
@@ -90,9 +104,17 @@ export const ACHIEVEMENT_TEMPLATES: AchievementTemplate[] = [
 
 const TEMPLATE_ORDER = new Map(ACHIEVEMENT_TEMPLATES.map((t, i) => [t.id, i]));
 
-export function sortAchievements<T extends { templateId: string }>(achievements: T[]): T[] {
+// Newest season first; earlier seasons sort below any named season, untagged docs last.
+function seasonSortKey(seasonId: string | undefined): string {
+  if (seasonId === undefined) return '';
+  return seasonId === EARLIER_SEASON_ID ? '0' : seasonId;
+}
+
+export function sortAchievements<T extends { templateId: string; seasonId?: string }>(achievements: T[]): T[] {
   return [...achievements].sort(
-    (a, b) => (TEMPLATE_ORDER.get(a.templateId) ?? 999) - (TEMPLATE_ORDER.get(b.templateId) ?? 999)
+    (a, b) =>
+      (TEMPLATE_ORDER.get(a.templateId) ?? 999) - (TEMPLATE_ORDER.get(b.templateId) ?? 999) ||
+      seasonSortKey(b.seasonId).localeCompare(seasonSortKey(a.seasonId))
   );
 }
 

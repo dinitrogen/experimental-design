@@ -68,7 +68,7 @@ async function readStringField(path: string, field: string): Promise<string | un
   return body.fields?.[field]?.stringValue;
 }
 
-type RawField = { stringValue?: string; mapValue?: { fields?: Record<string, RawField> } };
+type RawField = { stringValue?: string; booleanValue?: boolean; mapValue?: { fields?: Record<string, RawField> } };
 
 async function readDocFields(path: string): Promise<Record<string, RawField> | undefined> {
   const res = await fetch(`${FIRESTORE}/${path}`, { headers: OWNER_HEADERS });
@@ -83,6 +83,14 @@ async function listAwardedStudents(templateId: string): Promise<string[]> {
   return (body.documents ?? [])
     .filter((doc) => doc.fields['templateId']?.stringValue === templateId)
     .map((doc) => doc.fields['studentUid']?.stringValue ?? '');
+}
+
+async function listAchievementsFor(studentUid: string): Promise<Record<string, RawField>[]> {
+  const res = await fetch(`${FIRESTORE}/achievements`, { headers: OWNER_HEADERS });
+  const body = (await res.json()) as { documents?: { fields: Record<string, RawField> }[] };
+  return (body.documents ?? [])
+    .map((doc) => doc.fields)
+    .filter((fields) => fields['studentUid']?.stringValue === studentUid);
 }
 
 async function clearFirestore(): Promise<void> {
@@ -206,6 +214,8 @@ describe('rolloverSeason callable', () => {
       taskAssignments: 1,
       teamEvents: 0,
       returningMemberAwards: 2,
+      legacyAchievements: 1,
+      carriedAchievements: 0,
     });
 
     const actionFor = (uid: string) => result.students.find((s) => s.uid === uid)?.action;
@@ -343,11 +353,27 @@ describe('rolloverSeason callable', () => {
       ],
       alternateUids: [uids.s4],
     });
-    // s2 already holds the award, so the rollover must not add a second one.
+    // s2 already holds this season's award, so the rollover must not add a second one.
     await writeDoc('achievements/returning-existing', {
       studentUid: uids.s2,
       templateId: 'returning-member',
       completed: true,
+      seasonId: SEASON,
+    });
+    // s1 earned a task last season; s3 (not returning) did too. Only s1 should get a fresh copy.
+    await writeDoc('achievements/prior-s1', {
+      studentUid: uids.s1,
+      templateId: 'first-task',
+      assignedBy: 'coach-seed',
+      completed: true,
+      seasonId: 'test-season-2025',
+    });
+    await writeDoc('achievements/prior-s3', {
+      studentUid: uids.s3,
+      templateId: 'first-task',
+      assignedBy: 'coach-seed',
+      completed: true,
+      seasonId: 'test-season-2025',
     });
 
     const res = await callFunction('rolloverSeason', coachToken, {
@@ -361,6 +387,8 @@ describe('rolloverSeason callable', () => {
     const counts = (res.body as RolloverResponse).result.counts;
     expect(counts.teamEvents).toBe(1);
     expect(counts.returningMemberAwards).toBe(1);
+    expect(counts.legacyAchievements).toBe(1);
+    expect(counts.carriedAchievements).toBe(1);
 
     // Live planner is cleared; the archived copy keeps names for archived members too.
     expect(await docExists('teamEvents/event-1')).toBe(false);
@@ -374,6 +402,22 @@ describe('rolloverSeason callable', () => {
     // Only returning students hold the award, and s2 still has exactly one.
     const awarded = await listAwardedStudents('returning-member');
     expect(awarded.sort()).toEqual([uids.s1, uids.s2].sort());
+
+    // Untagged history is stamped with the fallback tag.
+    expect((await readDocFields('achievements/ach-1'))?.seasonId?.stringValue).toBe('earlier');
+
+    // s1's earlier assignment is carried forward as a fresh, incomplete copy; the original stays earned.
+    const s1Docs = await listAchievementsFor(uids.s1);
+    const carried = s1Docs.filter(
+      (f) => f.templateId?.stringValue === 'first-task' && f.seasonId?.stringValue === SEASON,
+    );
+    expect(carried).toHaveLength(1);
+    expect(carried[0]?.completed?.booleanValue).toBe(false);
+    expect(carried[0]?.assignedBy?.stringValue).toBe('coach-seed');
+    expect(s1Docs.find((f) => f.seasonId?.stringValue === 'test-season-2025')?.completed?.booleanValue).toBe(true);
+
+    // s3 is not returning, so nothing is carried into the new season for them.
+    expect((await listAchievementsFor(uids.s3)).some((f) => f.seasonId?.stringValue === SEASON)).toBe(false);
 
     // UID lists live in the coach-only summary, not on the student-readable season doc.
     expect(await docExists(`archives/${SEASON}/summary/rollover`)).toBe(true);

@@ -12,6 +12,8 @@ export interface RolloverCounts {
   taskAssignments: number;
   teamEvents: number;
   returningMemberAwards: number;
+  legacyAchievements: number;
+  carriedAchievements: number;
 }
 
 export interface RolloverStudent {

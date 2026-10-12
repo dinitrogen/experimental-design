@@ -17,7 +17,8 @@ import { ProgressService } from './progress.service';
 import { SubmissionService } from './submission.service';
 import { TaskService } from './task.service';
 import { ResourceService } from './resource.service';
-import { Achievement, getTemplate } from '../models/achievement.model';
+import { Achievement, getTemplate, isInSeason } from '../models/achievement.model';
+import { SeasonService } from './season.service';
 
 @Injectable({ providedIn: 'root' })
 export class AchievementService {
@@ -27,6 +28,7 @@ export class AchievementService {
   private readonly submissionService = inject(SubmissionService);
   private readonly taskService = inject(TaskService);
   private readonly resourceService = inject(ResourceService);
+  private readonly seasonService = inject(SeasonService);
 
   /** Record today's login for the current user */
   async recordLogin(): Promise<void> {
@@ -64,10 +66,11 @@ export class AchievementService {
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Achievement);
   }
 
-  /** Assign an achievement to a student */
+  /** Assign an achievement to a student for the active season */
   async assign(studentUid: string, templateId: string): Promise<void> {
     const coach = this.authService.user();
     if (!coach) return;
+    const seasonId = await this.seasonService.getCurrentSeasonId();
     const docRef = doc(collection(this.firestore, 'achievements'));
     const achievement: Achievement = {
       studentUid,
@@ -76,6 +79,7 @@ export class AchievementService {
       assignedAt: Timestamp.now(),
       completed: false,
       completedAt: null,
+      ...(seasonId ? { seasonId } : {}),
     };
     await setDoc(docRef, achievement);
   }
@@ -87,10 +91,12 @@ export class AchievementService {
 
   /** Check and update auto-completion status for a student's achievements */
   async refreshAutoCompletions(achievements: Achievement[]): Promise<Achievement[]> {
+    const activeSeasonId = await this.seasonService.getCurrentSeasonId();
     const updated: Achievement[] = [];
 
     for (const ach of achievements) {
-      if (ach.completed) {
+      // Completed and past-season assignments are history; only the active season is checked.
+      if (ach.completed || !isInSeason(ach, activeSeasonId)) {
         updated.push(ach);
         continue;
       }

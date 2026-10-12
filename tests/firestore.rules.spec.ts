@@ -297,6 +297,23 @@ describe('Firestore security rules', () => {
     );
   });
 
+  it('lets coaches tag new achievements with a season string, but nothing else extra', async () => {
+    const coach = testEnv.authenticatedContext('coach-1').firestore();
+    const base = {
+      studentUid: 'student-1',
+      templateId: 'first-task',
+      assignedBy: 'coach-1',
+      assignedAt: Timestamp.now(),
+      completed: false,
+      completedAt: null,
+    };
+
+    await assertSucceeds(setDoc(doc(coach, 'achievements/ach-tagged'), { ...base, seasonId: '2026-2027' }));
+    await assertSucceeds(setDoc(doc(coach, 'achievements/ach-untagged'), base));
+    await assertFails(setDoc(doc(coach, 'achievements/ach-number'), { ...base, seasonId: 2026 }));
+    await assertFails(setDoc(doc(coach, 'achievements/ach-extra'), { ...base, seasonId: '2026-2027', extra: true }));
+  });
+
   it('limits task submissions to their student and reserves review fields for coaches', async () => {
     const student = testEnv.authenticatedContext('student-1').firestore();
     const otherStudent = testEnv.authenticatedContext('student-2').firestore();

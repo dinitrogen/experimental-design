@@ -39,6 +39,8 @@ const COUNT_LABELS: Record<keyof RolloverPreview['counts'], string> = {
   taskAssignments: 'Task assignment settings',
   teamEvents: 'Team planner events (archived copies)',
   returningMemberAwards: 'Returning Member awards',
+  legacyAchievements: 'Earlier achievements tagged with their season',
+  carriedAchievements: 'Returning students\u2019 assignments carried into the new season',
 };
 
 interface StudentRow {
