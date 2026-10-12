@@ -168,7 +168,7 @@ interface PreviewState {
               <mat-card-title>Preview for {{ p.result.seasonId }}</mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              @if (p.result.existingStatus === 'complete') {
+              @if (p.result.existingStatus === 'complete' || p.result.existingStatus === 'active') {
                 <p class="error">This season has already been rolled over. Choose a different season ID.</p>
               } @else if (p.result.existingStatus === 'in_progress') {
                 <p class="warning">
@@ -226,7 +226,7 @@ interface PreviewState {
               <ul>
                 @for (season of seasons(); track season.id) {
                   <li>
-                    {{ season.id }}: {{ season.status === 'complete' ? 'complete' : 'in progress' }}
+                    {{ season.id }}: {{ seasonStatusLabel(season.status) }}
                     @if (season.completedAt) {
                       ({{ season.completedAt | date: 'mediumDate' }})
                     }
@@ -307,6 +307,7 @@ export class SeasonRolloverComponent {
       !!preview &&
       this.previewIsCurrent() &&
       preview.result.existingStatus !== 'complete' &&
+      preview.result.existingStatus !== 'active' &&
       this.form.valid &&
       this.form.controls.confirmSeasonId.value === preview.seasonId
     );
@@ -318,6 +319,17 @@ export class SeasonRolloverComponent {
 
   actionLabel(action: RolloverAction): string {
     return ACTION_LABELS[action];
+  }
+
+  seasonStatusLabel(status: string): string {
+    switch (status) {
+      case 'complete':
+        return 'ended';
+      case 'active':
+        return 'active (current)';
+      default:
+        return 'in progress';
+    }
   }
 
   countRows(preview: RolloverPreview): { label: string; value: number }[] {

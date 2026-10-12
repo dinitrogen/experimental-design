@@ -35,7 +35,7 @@ export interface RolloverPreview {
 export interface RolloverResult {
   success: true;
   seasonId: string;
-  status: 'complete';
+  status: 'active';
   counts: RolloverCounts;
   students: RolloverStudent[];
 }

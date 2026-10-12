@@ -808,11 +808,12 @@ export const rolloverSeason = onCall(
     const seasonSnap = await seasonRef.get();
     const existingStatus: string | null = seasonSnap.data()?.status ?? null;
 
+    // Live data belongs to the season that just ended, so it is archived under that season.
+    const previous = previousSeasonId(seasonId);
     const sources = await loadRolloverSources();
-    const entries = buildArchiveEntries(seasonId, sources, displayNames);
+    const entries = buildArchiveEntries(previous, sources, displayNames);
 
     // Read achievements once: untagged docs get stamped, and returning students get carry-over copies.
-    const previous = previousSeasonId(seasonId);
     const achievementDocs = (await db.collection("achievements").get()).docs;
     const legacyDocs = achievementDocs.filter((doc) => !doc.data().seasonId);
     // Dedupe per season so a re-run after a partial failure doesn't double-award, but each year can award again.
@@ -852,7 +853,7 @@ export const rolloverSeason = onCall(
     if (input.backupConfirmed !== true) {
       throw new HttpsError("invalid-argument", "Confirm that a Firestore backup was taken first.");
     }
-    if (existingStatus === "complete") {
+    if (existingStatus === "complete" || existingStatus === "active") {
       throw new HttpsError(
         "failed-precondition",
         `Season ${seasonId} has already been rolled over.`,
@@ -920,7 +921,7 @@ export const rolloverSeason = onCall(
     // UID lists stay coach-only in archives; the season doc is readable by students.
     await db
       .collection("archives")
-      .doc(seasonId)
+      .doc(previous)
       .collection("summary")
       .doc("rollover")
       .set({
@@ -929,17 +930,26 @@ export const rolloverSeason = onCall(
         updatedAt: FieldValue.serverTimestamp(),
       });
 
-    await seasonRef.set(
+    // The season that ended is closed (Past Events lists it); the new season becomes the active one.
+    await db.collection("seasons").doc(previous).set(
       {
+        seasonId: previous,
         status: "complete",
         completedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+    await seasonRef.set(
+      {
+        status: "active",
         updatedAt: FieldValue.serverTimestamp(),
         counts,
       },
       { merge: true },
     );
 
-    return { success: true, seasonId, status: "complete", counts, students: plans };
+    return { success: true, seasonId, status: "active", counts, students: plans };
   },
 );
 

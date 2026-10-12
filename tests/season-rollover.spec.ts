@@ -10,6 +10,8 @@ const OWNER_HEADERS = { Authorization: 'Bearer owner' };
 const API_KEY = 'fake-api-key';
 const PASSWORD = 'secret123';
 const SEASON = 'test-season-2026';
+// Archives are keyed by the season that ended. A non-YYYY-YYYY test ID falls back to 'earlier'.
+const ARCHIVE_SEASON = 'earlier';
 
 interface FunctionError {
   error: { status: string; message: string };
@@ -226,7 +228,7 @@ describe('rolloverSeason callable', () => {
 
     expect(await docExists(`progress/${uids.s1}/items/guide-1`)).toBe(true);
     expect(await docExists(`seasons/${SEASON}`)).toBe(false);
-    expect(await docExists(`archives/${SEASON}/progress/${uids.s1}__guide-1`)).toBe(false);
+    expect(await docExists(`archives/${ARCHIVE_SEASON}/progress/${uids.s1}__guide-1`)).toBe(false);
   });
 
   it('treats an omitted dryRun flag as a dry run', async () => {
@@ -303,7 +305,7 @@ describe('rolloverSeason callable', () => {
       backupConfirmed: true,
     });
     expect(res.status).toBe(200);
-    expect((res.body as RolloverResponse).result.status).toBe('complete');
+    expect((res.body as RolloverResponse).result.status).toBe('active');
 
     // Live season data is cleared.
     expect(await docExists(`progress/${uids.s1}/items/guide-1`)).toBe(false);
@@ -314,14 +316,14 @@ describe('rolloverSeason callable', () => {
     expect(await docExists('settings/taskAssignments')).toBe(false);
 
     // Snapshots are kept under the season.
-    expect(await docExists(`archives/${SEASON}/progress/${uids.s1}__guide-1`)).toBe(true);
-    expect(await readStringField(`archives/${SEASON}/progress/${uids.s1}__guide-1`, 'uid')).toBe(
+    expect(await docExists(`archives/${ARCHIVE_SEASON}/progress/${uids.s1}__guide-1`)).toBe(true);
+    expect(await readStringField(`archives/${ARCHIVE_SEASON}/progress/${uids.s1}__guide-1`, 'uid')).toBe(
       uids.s1,
     );
-    expect(await docExists(`archives/${SEASON}/loginHistory/${uids.s1}`)).toBe(true);
-    expect(await docExists(`archives/${SEASON}/submissions/submission-1`)).toBe(true);
-    expect(await docExists(`archives/${SEASON}/taskSubmissions/task-1`)).toBe(true);
-    expect(await docExists(`archives/${SEASON}/taskAssignments/current`)).toBe(true);
+    expect(await docExists(`archives/${ARCHIVE_SEASON}/loginHistory/${uids.s1}`)).toBe(true);
+    expect(await docExists(`archives/${ARCHIVE_SEASON}/submissions/submission-1`)).toBe(true);
+    expect(await docExists(`archives/${ARCHIVE_SEASON}/taskSubmissions/task-1`)).toBe(true);
+    expect(await docExists(`archives/${ARCHIVE_SEASON}/taskAssignments/current`)).toBe(true);
 
     // Lifetime data and settings that are not per-season survive.
     expect(await docExists('achievements/ach-1')).toBe(true);
@@ -335,8 +337,9 @@ describe('rolloverSeason callable', () => {
     expect((await trySignIn(emails.s3)).message).toBe('USER_DISABLED');
     expect(await readStringField(`users/${uids.s4}`, 'status')).toBe('archived');
 
-    const seasonStatus = await readStringField(`seasons/${SEASON}`, 'status');
-    expect(seasonStatus).toBe('complete');
+    // The new season is active, and the season that ended is closed.
+    expect(await readStringField(`seasons/${SEASON}`, 'status')).toBe('active');
+    expect(await readStringField(`seasons/${ARCHIVE_SEASON}`, 'status')).toBe('complete');
   });
 
   it('archives team events with member names and awards Returning Member once per returning student', async () => {
@@ -392,7 +395,7 @@ describe('rolloverSeason callable', () => {
 
     // Live planner is cleared; the archived copy keeps names for archived members too.
     expect(await docExists('teamEvents/event-1')).toBe(false);
-    const archived = await readDocFields(`archives/${SEASON}/teamEvents/event-1`);
+    const archived = await readDocFields(`archives/${ARCHIVE_SEASON}/teamEvents/event-1`);
     expect(archived?.title?.stringValue).toBe('Regionals');
     const memberNames = archived?.memberNames?.mapValue?.fields ?? {};
     expect(memberNames[uids.s1]?.stringValue).toBe('S1');
@@ -420,7 +423,7 @@ describe('rolloverSeason callable', () => {
     expect((await listAchievementsFor(uids.s3)).some((f) => f.seasonId?.stringValue === SEASON)).toBe(false);
 
     // UID lists live in the coach-only summary, not on the student-readable season doc.
-    expect(await docExists(`archives/${SEASON}/summary/rollover`)).toBe(true);
+    expect(await docExists(`archives/${ARCHIVE_SEASON}/summary/rollover`)).toBe(true);
     const seasonFields = await readDocFields(`seasons/${SEASON}`);
     expect(seasonFields?.returningUids).toBeUndefined();
     expect(seasonFields?.archivedUids).toBeUndefined();
