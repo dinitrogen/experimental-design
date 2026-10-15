@@ -121,7 +121,7 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
         label: 'Procedure',
         type: 'text',
         subLabel:
-          'Write a numbered list of steps, including repeated trials and clean-up. Then draw at least 2 labeled diagrams of your set-up (such as a side view and a top view) on a separate sheet, labeling the materials, IV levels, tools, and where each team member stands. Write "Diagrams drawn on separate sheet" at the end of your procedure.',
+          'Write a numbered list of steps, including repeated trials and clean-up. Then draw at least 2 labeled diagrams of your set-up (such as a side view and a top view) on a separate sheet, labeling the materials, IV levels, tools, and where each team member stands.',
       },
     ],
     dueDate: '',
