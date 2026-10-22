@@ -35,6 +35,8 @@ export interface TaskPrompt {
   expectedColumns?: string[];
   /** For 'table': number of data rows */
   rows?: number;
+  /** For 'text': visible textarea rows */
+  textRows?: number;
   /** For 'table': expected cell values (row-major) for auto-check. null = no check for that cell */
   expectedTableValues?: (string | null)[][];
   /** For 'table': pre-filled read-only cells (row-major). null = editable blank */
@@ -1999,15 +2001,17 @@ function createSimplifiedReportSectionsGITask(): TaskDefinition {
   const sectionInstructions = { ...fullTask.sectionInstructions };
   sectionInstructions['I. Statistics — Sample Calculation at 30 cm'] =
     `Calculate the statistics for the 30 cm ramp height using these five distances: **135, 130, 138, 142, 135 cm**. Mean, median, mode, minimum, maximum, range, Q1, Q3, and IQR are required. To find quartiles with five values, sort the data, leave out the median, then find the median of each half. Round to one decimal place where needed and include units in your work.`;
-  sectionInstructions['I. Statistics — Results for the Other IV Levels'] =
-    `Complete the required statistics table for the remaining ramp heights. Q1, Q3, and IQR are required. Use these trial results:
+  sectionInstructions['I. Statistics — Results for All IV Levels'] =
+    `Complete both statistics tables for all three ramp heights. The sample calculations above show how to find the statistics for 30 cm. Use these trial results:
 
 | Ramp height (cm) | Distances (cm) |
 |:--:|:--|
 | 10 | 45, 42, 48, 45, 50 |
 | 20 | 92, 88, 95, 92, 93 |
+| 30 | 135, 130, 138, 142, 135 |
 
-Write **none** if there is no mode. Round to one decimal place where needed.`;
+Calculate the mean, median, mode, minimum, maximum, range, Q1, Q3, and IQR. Write **none** if there is no mode. Round to one decimal place where needed.`;
+  delete sectionInstructions['I. Statistics — Results for the Other IV Levels'];
   delete sectionInstructions['I. Statistics — Interpret Your Results'];
 
   const removedPromptLabels = new Set([
@@ -2017,19 +2021,85 @@ Write **none** if there is no mode. Round to one decimal place where needed.`;
     'Optional Challenge — Units of Variance',
     'Consistency Across Levels',
   ]);
+  const sampleData = '135, 130, 138, 142, 135 cm';
+  const sampleCalculationWork: Record<string, string> = {
+    'Mean (cm)': 'Show the addition and division you used to find the mean.',
+    'Median (cm)': 'Sort the data and show how you found the middle value.',
+    'Mode (cm)': 'Show which value occurs most often.',
+    'Minimum (cm)': 'Identify the smallest value in the data.',
+    'Maximum (cm)': 'Identify the largest value in the data.',
+    'Range (cm)': 'Show maximum minus minimum.',
+    'Q1 (cm)': 'Sort the data, leave out the median, and show the median of the lower half.',
+    'Q3 (cm)': 'Sort the data, leave out the median, and show the median of the upper half.',
+    'IQR (cm)': 'Show Q3 minus Q1.',
+  };
   const prompts = fullTask.prompts
     .filter((prompt) => !removedPromptLabels.has(prompt.label))
-    .map((prompt) =>
-      prompt.label === 'Quartiles and Variation'
-        ? {
-            ...prompt,
-            subLabel: 'Calculate Q1, Q3, and IQR for each ramp height.',
-            columns: prompt.columns?.slice(0, 4),
-            prefilled: prompt.prefilled?.map((row) => row.slice(0, 4)),
-            expectedTableValues: prompt.expectedTableValues?.map((row) => row.slice(0, 4)),
-          }
-        : prompt,
-    );
+    .map((prompt) => {
+      if (prompt.label === 'Sample Calculation — Mean') {
+        return {
+          ...prompt,
+          subLabel:
+            'Data: 92, 88, 95, 92, 93 cm. Show your addition, division, and answer with units.',
+          textRows: 3,
+        };
+      }
+      if (sampleCalculationWork[prompt.label]) {
+        return {
+          ...prompt,
+          type: 'text' as const,
+          subLabel: `Data: ${sampleData}. ${sampleCalculationWork[prompt.label]}`,
+          textRows: 3,
+        };
+      }
+      if (prompt.label === 'Central Tendency and Range') {
+        return {
+          ...prompt,
+          sectionHeader: 'I. Statistics — Results for All IV Levels',
+          label: 'Central Tendency',
+          subLabel: 'Calculate the mean, median, and mode for each ramp height.',
+          columns: ['Ramp Height (cm)', 'Mean (cm)', 'Median (cm)', 'Mode (cm)'],
+          rows: 3,
+          prefilled: [
+            ['10', null, null, null],
+            ['20', null, null, null],
+            ['30', null, null, null],
+          ],
+          expectedTableValues: [
+            ['10', '46', '45', '45'],
+            ['20', '92', '92', '92'],
+            ['30', '136', '135', '135'],
+          ],
+        };
+      }
+      if (prompt.label === 'Quartiles and Variation') {
+        return {
+          ...prompt,
+          subLabel: 'Calculate the minimum, maximum, range, Q1, Q3, and IQR for each ramp height.',
+          columns: [
+            'Ramp Height (cm)',
+            'Min (cm)',
+            'Max (cm)',
+            'Range (cm)',
+            'Q1 (cm)',
+            'Q3 (cm)',
+            'IQR (cm)',
+          ],
+          rows: 3,
+          prefilled: [
+            ['10', null, null, null, null, null, null],
+            ['20', null, null, null, null, null, null],
+            ['30', null, null, null, null, null, null],
+          ],
+          expectedTableValues: [
+            ['10', '42', '50', '8', '43.5', '49', '5.5'],
+            ['20', '88', '95', '7', '90', '94', '4'],
+            ['30', '130', '142', '12', '132.5', '140', '7.5'],
+          ],
+        };
+      }
+      return prompt;
+    });
 
   return {
     ...fullTask,

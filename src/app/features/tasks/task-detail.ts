@@ -285,7 +285,7 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                             matInput
                             [value]="responses()[i]"
                             (input)="onResponseChange(i, $event)"
-                            rows="4"
+                            [rows]="prompt.textRows ?? 4"
                           ></textarea>
                         </mat-form-field>
                       }

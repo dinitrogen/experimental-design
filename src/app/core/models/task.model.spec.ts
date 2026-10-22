@@ -237,7 +237,25 @@ describe('task definition compatibility', () => {
     const coreTask = TASK_DEFINITIONS.find(
       (item) => item.id === 'task-021-report-sections-g-i-core',
     );
+    const centralTendency = coreTask?.prompts.find((prompt) => prompt.label === 'Central Tendency');
     const quartiles = coreTask?.prompts.find((prompt) => prompt.label === 'Quartiles and Variation');
+    const sampleMean = coreTask?.prompts.find(
+      (prompt) => prompt.label === 'Sample Calculation — Mean',
+    );
+    const sampleCalculationLabels = [
+      'Mean (cm)',
+      'Median (cm)',
+      'Mode (cm)',
+      'Minimum (cm)',
+      'Maximum (cm)',
+      'Range (cm)',
+      'Q1 (cm)',
+      'Q3 (cm)',
+      'IQR (cm)',
+    ];
+    const sampleStatistics = coreTask?.prompts.filter(
+      (prompt) => sampleCalculationLabels.includes(prompt.label),
+    );
 
     expect(fullTask?.prompts.some((prompt) => prompt.label.includes('Optional Challenge'))).toBe(
       true,
@@ -252,13 +270,46 @@ describe('task definition compatibility', () => {
     expect(
       coreTask?.sectionInstructions?.['I. Statistics — Interpret Your Results'],
     ).toBeUndefined();
+    expect(
+      coreTask?.sectionInstructions?.['I. Statistics — Results for the Other IV Levels'],
+    ).toBeUndefined();
+    expect(
+      coreTask?.sectionInstructions?.['I. Statistics — Results for All IV Levels'],
+    ).toContain('| 30 | 135, 130, 138, 142, 135 |');
+    expect(centralTendency?.expectedTableValues?.map((row) => row[0])).toEqual([
+      '10',
+      '20',
+      '30',
+    ]);
+    expect(centralTendency?.columns).toEqual([
+      'Ramp Height (cm)',
+      'Mean (cm)',
+      'Median (cm)',
+      'Mode (cm)',
+    ]);
     expect(quartiles?.columns).toEqual([
       'Ramp Height (cm)',
+      'Min (cm)',
+      'Max (cm)',
+      'Range (cm)',
       'Q1 (cm)',
       'Q3 (cm)',
       'IQR (cm)',
     ]);
-    expect(quartiles?.expectedTableValues?.every((row) => row.length === 4)).toBe(true);
+    expect(quartiles?.expectedTableValues?.map((row) => row[0])).toEqual([
+      '10',
+      '20',
+      '30',
+    ]);
+    expect(quartiles?.expectedTableValues?.every((row) => row.length === 7)).toBe(true);
+    expect(sampleMean?.subLabel).toContain('Data: 92, 88, 95, 92, 93 cm');
+    expect(sampleMean?.textRows).toBe(3);
+    expect(sampleStatistics).toHaveLength(9);
+    expect(sampleStatistics?.every((prompt) => prompt.type === 'text')).toBe(true);
+    expect(sampleStatistics?.every((prompt) => prompt.subLabel?.startsWith('Data: 135'))).toBe(
+      true,
+    );
+    expect(sampleStatistics?.every((prompt) => prompt.textRows === 3)).toBe(true);
   });
 
   it('marks variance and standard deviation as optional while keeping IQR required', () => {
