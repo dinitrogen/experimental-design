@@ -117,4 +117,18 @@ describe('task definition compatibility', () => {
     expect(resultsTables).toHaveLength(2);
     expect(resultsTables?.every((prompt) => (prompt.columns?.length ?? 0) <= 7)).toBe(true);
   });
+
+  it('marks variance and standard deviation as optional while keeping IQR required', () => {
+    const task = TASK_DEFINITIONS.find((item) => item.id === 'task-020-report-sections-g-i');
+    const variancePrompt = task?.prompts.find((prompt) => prompt.label.includes('Variance (cm²)'));
+    const standardDeviationPrompt = task?.prompts.find((prompt) =>
+      prompt.label.includes('Standard Deviation (cm)'),
+    );
+    const quartilesPrompt = task?.prompts.find((prompt) => prompt.label === 'Quartiles and Variation');
+
+    expect(variancePrompt?.label).toContain('Optional Challenge');
+    expect(standardDeviationPrompt?.label).toContain('Optional Challenge');
+    expect(quartilesPrompt?.subLabel).toContain('Required: calculate Q1, Q3, and IQR');
+    expect(quartilesPrompt?.subLabel).toContain('Optional challenge');
+  });
 });

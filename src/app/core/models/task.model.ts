@@ -243,8 +243,8 @@ Notebook measurements (in trial order):
 
 Fill in the column-heading fields directly in both tables. Use clear labels with units. The raw table should contain every measurement; the condensed table should contain only the means you will graph. Show one sample mean calculation.`,
       'H. Graph': `Make a scatter plot of the mean distance for each ramp height from your condensed table. Give the graph a descriptive title, label both axes with units, and add the four data points. Draw a single line of best fit (do not connect the points). Click the graph to place points, or focus it and use the arrow keys plus Enter. Hold Shift with an arrow key for a larger step. Switch to line mode and add two endpoints to draw the best-fit line.`,
-      'I. Statistics — Sample Calculation at 30 cm': `Calculate the statistics for the 30 cm ramp height using these five distances: **135, 130, 138, 142, 135 cm**. For the sample standard deviation, divide by **n − 1**. To find quartiles with five values, sort the data, leave out the median, then find the median of each half. Round to one decimal place where needed. Include units in your work; variance is in cm².`,
-      'I. Statistics — Results for the Other IV Levels': `Complete the table for the remaining ramp heights. Use these trial results:
+      'I. Statistics — Sample Calculation at 30 cm': `Calculate the statistics for the 30 cm ramp height using these five distances: **135, 130, 138, 142, 135 cm**. Mean, median, mode, minimum, maximum, range, Q1, Q3, and IQR are required. **Optional challenge:** calculate the variance and sample standard deviation; for sample standard deviation, divide by **n − 1**. To find quartiles with five values, sort the data, leave out the median, then find the median of each half. Round to one decimal place where needed. Include units in your work; variance is in cm².`,
+      'I. Statistics — Results for the Other IV Levels': `Complete the required statistics table for the remaining ramp heights. Q1, Q3, and IQR are required; variance and standard deviation are optional challenges. Use these trial results:
 
 | Ramp height (cm) | Distances (cm) |
 |:--:|:--|
@@ -253,7 +253,7 @@ Fill in the column-heading fields directly in both tables. Use clear labels with
 | 40 | 165, 160, 172, 170, 163 |
 
 Write **none** if there is no mode. Round to one decimal place where needed.`,
-      'I. Statistics — Interpret Your Results': `Use your calculated range, IQR, and standard deviation to compare how consistent the distances were at each ramp height. The variance is expressed in squared units.`,
+      'I. Statistics — Interpret Your Results': `Use your calculated range and IQR to compare how consistent the distances were at each ramp height. If you completed the optional challenge, you may also use standard deviation. Remember that variance is expressed in squared units.`,
     },
     prompts: [
       // ── G. Quantitative Data ──
@@ -362,9 +362,9 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         tolerance: 0.1,
       },
       {
-        label: 'Deviations Table (30 cm)',
+        label: 'Optional Challenge — Deviations Table (30 cm)',
         type: 'table',
-        subLabel: 'Use the mean you found above.',
+        subLabel: 'Optional challenge: use the mean you found above to calculate each deviation and squared deviation.',
         columns: ['Data Value (cm)', 'Deviation (cm)', 'Squared Deviation (cm²)'],
         rows: 5,
         prefilled: [
@@ -383,14 +383,14 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         ],
       },
       {
-        label: 'Variance (cm²)',
+        label: 'Optional Challenge — Variance (cm²)',
         type: 'number',
         subLabel: 'Divide the sum of the squared deviations by n − 1.',
         expectedAnswer: 19.5,
         tolerance: 0.1,
       },
       {
-        label: 'Standard Deviation (cm)',
+        label: 'Optional Challenge — Standard Deviation (cm)',
         type: 'number',
         expectedAnswer: 4.4,
         tolerance: 0.1,
@@ -446,7 +446,7 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         label: 'Quartiles and Variation',
         type: 'table',
         subLabel:
-          'Use the same trial data to calculate the quartiles, IQR, sample variance, and sample standard deviation.',
+          'Required: calculate Q1, Q3, and IQR for each ramp height. Optional challenge: calculate the sample variance and sample standard deviation.',
         columns: [
           'Ramp Height (cm)',
           'Q1 (cm)',
@@ -480,7 +480,7 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         label: 'Consistency Across Levels',
         type: 'text',
         subLabel:
-          'Which ramp height gave the most consistent distances, and which gave the least consistent? Use at least two statistics of variation (range, IQR, or standard deviation) as evidence.',
+          'Which ramp height gave the most consistent distances, and which gave the least consistent? Use range and IQR as evidence. If you completed the optional challenge, you may also use standard deviation.',
       },
     ],
     dueDate: '',
