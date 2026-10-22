@@ -230,6 +230,37 @@ describe('task definition compatibility', () => {
     expect(quartiles?.expectedTableValues?.map((row) => row[0])).toEqual(['10', '20']);
   });
 
+  it('keeps the full task and adds a core version without optional or interpretation prompts', () => {
+    const fullTask = TASK_DEFINITIONS.find(
+      (item) => item.id === 'task-020-report-sections-g-i',
+    );
+    const coreTask = TASK_DEFINITIONS.find(
+      (item) => item.id === 'task-021-report-sections-g-i-core',
+    );
+    const quartiles = coreTask?.prompts.find((prompt) => prompt.label === 'Quartiles and Variation');
+
+    expect(fullTask?.prompts.some((prompt) => prompt.label.includes('Optional Challenge'))).toBe(
+      true,
+    );
+    expect(coreTask?.title).toContain('Core Practice');
+    expect(coreTask?.prompts.some((prompt) => prompt.label.includes('Optional Challenge'))).toBe(
+      false,
+    );
+    expect(coreTask?.prompts.some((prompt) => prompt.label === 'Consistency Across Levels')).toBe(
+      false,
+    );
+    expect(
+      coreTask?.sectionInstructions?.['I. Statistics — Interpret Your Results'],
+    ).toBeUndefined();
+    expect(quartiles?.columns).toEqual([
+      'Ramp Height (cm)',
+      'Q1 (cm)',
+      'Q3 (cm)',
+      'IQR (cm)',
+    ]);
+    expect(quartiles?.expectedTableValues?.every((row) => row.length === 4)).toBe(true);
+  });
+
   it('marks variance and standard deviation as optional while keeping IQR required', () => {
     const task = TASK_DEFINITIONS.find((item) => item.id === 'task-020-report-sections-g-i');
     const variancePrompt = task?.prompts.find((prompt) => prompt.label.includes('Variance (cm²)'));

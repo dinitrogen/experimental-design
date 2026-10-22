@@ -257,7 +257,7 @@ const REPORT_SECTIONS_A_E_PROMPTS: TaskPrompt[] = [
  * Static task registry. New tasks are added here.
  * Tasks are ordered newest-first for display.
  */
-export const TASK_DEFINITIONS: TaskDefinition[] = [
+const BASE_TASK_DEFINITIONS: TaskDefinition[] = [
   {
     id: 'task-020-report-sections-g-i',
     title: 'Report Writing Practice: Sections G–I (Toy Car Ramp)',
@@ -1986,6 +1986,63 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
     dueDate: '2026-03-25',
     createdAt: '2026-03-18',
   },
+];
+
+function createSimplifiedReportSectionsGITask(): TaskDefinition {
+  const fullTask = BASE_TASK_DEFINITIONS.find(
+    (task) => task.id === 'task-020-report-sections-g-i',
+  );
+  if (!fullTask) {
+    throw new Error('The full Sections G–I task definition is missing.');
+  }
+
+  const sectionInstructions = { ...fullTask.sectionInstructions };
+  sectionInstructions['I. Statistics — Sample Calculation at 30 cm'] =
+    `Calculate the statistics for the 30 cm ramp height using these five distances: **135, 130, 138, 142, 135 cm**. Mean, median, mode, minimum, maximum, range, Q1, Q3, and IQR are required. To find quartiles with five values, sort the data, leave out the median, then find the median of each half. Round to one decimal place where needed and include units in your work.`;
+  sectionInstructions['I. Statistics — Results for the Other IV Levels'] =
+    `Complete the required statistics table for the remaining ramp heights. Q1, Q3, and IQR are required. Use these trial results:
+
+| Ramp height (cm) | Distances (cm) |
+|:--:|:--|
+| 10 | 45, 42, 48, 45, 50 |
+| 20 | 92, 88, 95, 92, 93 |
+
+Write **none** if there is no mode. Round to one decimal place where needed.`;
+  delete sectionInstructions['I. Statistics — Interpret Your Results'];
+
+  const removedPromptLabels = new Set([
+    'Optional Challenge — Deviations Table (30 cm)',
+    'Optional Challenge — Variance (cm²)',
+    'Optional Challenge — Standard Deviation (cm)',
+    'Optional Challenge — Units of Variance',
+    'Consistency Across Levels',
+  ]);
+  const prompts = fullTask.prompts
+    .filter((prompt) => !removedPromptLabels.has(prompt.label))
+    .map((prompt) =>
+      prompt.label === 'Quartiles and Variation'
+        ? {
+            ...prompt,
+            subLabel: 'Calculate Q1, Q3, and IQR for each ramp height.',
+            columns: prompt.columns?.slice(0, 4),
+            prefilled: prompt.prefilled?.map((row) => row.slice(0, 4)),
+            expectedTableValues: prompt.expectedTableValues?.map((row) => row.slice(0, 4)),
+          }
+        : prompt,
+    );
+
+  return {
+    ...fullTask,
+    id: 'task-021-report-sections-g-i-core',
+    title: 'Report Writing Practice: Sections G–I (Toy Car Ramp) — Core Practice',
+    prompts,
+    sectionInstructions,
+  };
+}
+
+export const TASK_DEFINITIONS: TaskDefinition[] = [
+  createSimplifiedReportSectionsGITask(),
+  ...BASE_TASK_DEFINITIONS,
 ];
 
 export function getTaskDefinition(taskId: string): TaskDefinition | undefined {
