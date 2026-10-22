@@ -118,6 +118,25 @@ describe('task definition compatibility', () => {
     expect(resultsTables?.every((prompt) => (prompt.columns?.length ?? 0) <= 7)).toBe(true);
   });
 
+  it('uses the same three IV levels across tables, graph, and remaining-level statistics', () => {
+    const task = TASK_DEFINITIONS.find((item) => item.id === 'task-020-report-sections-g-i');
+    const rawTable = task?.prompts.find((prompt) => prompt.label === 'Raw Data Table');
+    const condensedTable = task?.prompts.find((prompt) => prompt.label === 'Condensed Data Table');
+    const graph = task?.prompts.find((prompt) => prompt.label === 'Build Your Graph');
+    const centralTendency = task?.prompts.find(
+      (prompt) => prompt.label === 'Central Tendency and Range',
+    );
+    const quartiles = task?.prompts.find((prompt) => prompt.label === 'Quartiles and Variation');
+
+    expect(rawTable?.expectedTableValues?.map((row) => row[0])).toEqual(['10', '20', '30']);
+    expect(rawTable?.rows).toBe(3);
+    expect(condensedTable?.expectedTableValues?.map((row) => row[0])).toEqual(['10', '20', '30']);
+    expect(condensedTable?.rows).toBe(3);
+    expect(graph?.graphConfig?.maxPoints).toBe(3);
+    expect(centralTendency?.expectedTableValues?.map((row) => row[0])).toEqual(['10', '20']);
+    expect(quartiles?.expectedTableValues?.map((row) => row[0])).toEqual(['10', '20']);
+  });
+
   it('marks variance and standard deviation as optional while keeping IQR required', () => {
     const task = TASK_DEFINITIONS.find((item) => item.id === 'task-020-report-sections-g-i');
     const variancePrompt = task?.prompts.find((prompt) => prompt.label.includes('Variance (cm²)'));

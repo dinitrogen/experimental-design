@@ -230,7 +230,7 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
     sectionInstructions: {
       'G. Quantitative Data': `A toy car was released from a ramp at different heights. The team measured how far it rolled across the floor after leaving the ramp.
 
-**Independent variable:** ramp height (cm). **Dependent variable:** distance rolled (cm). There were five trials at each height.
+**Independent variable:** ramp height (cm). **Dependent variable:** distance rolled (cm). The team tested three ramp heights, with five trials at each height.
 
 Notebook measurements (in trial order):
 
@@ -239,10 +239,9 @@ Notebook measurements (in trial order):
 | 10 | 45 | 42 | 48 | 45 | 50 |
 | 20 | 92 | 88 | 95 | 92 | 93 |
 | 30 | 135 | 130 | 138 | 142 | 135 |
-| 40 | 165 | 160 | 172 | 170 | 163 |
 
 Fill in the column-heading fields directly in both tables. Use clear labels with units. The raw table should contain every measurement; the condensed table should contain only the means you will graph. Show one sample mean calculation.`,
-      'H. Graph': `Make a scatter plot of the mean distance for each ramp height from your condensed table. Give the graph a descriptive title, label both axes with units, and add the four data points. Draw a single line of best fit (do not connect the points). Click the graph to place points, or focus it and use the arrow keys plus Enter. Hold Shift with an arrow key for a larger step. Switch to line mode and add two endpoints to draw the best-fit line.`,
+      'H. Graph': `Make a scatter plot of the mean distance for each ramp height from your condensed table. Give the graph a descriptive title, label both axes with units, and add the three data points. Draw a single line of best fit (do not connect the points). Click the graph to place points, or focus it and use the arrow keys plus Enter. Hold Shift with an arrow key for a larger step. Switch to line mode and add two endpoints to draw the best-fit line.`,
       'I. Statistics — Sample Calculation at 30 cm': `Calculate the statistics for the 30 cm ramp height using these five distances: **135, 130, 138, 142, 135 cm**. Mean, median, mode, minimum, maximum, range, Q1, Q3, and IQR are required. **Optional challenge:** calculate the variance and sample standard deviation; for sample standard deviation, divide by **n − 1**. To find quartiles with five values, sort the data, leave out the median, then find the median of each half. Round to one decimal place where needed. Include units in your work; variance is in cm².`,
       'I. Statistics — Results for the Other IV Levels': `Complete the required statistics table for the remaining ramp heights. Q1, Q3, and IQR are required; variance and standard deviation are optional challenges. Use these trial results:
 
@@ -250,7 +249,6 @@ Fill in the column-heading fields directly in both tables. Use clear labels with
 |:--:|:--|
 | 10 | 45, 42, 48, 45, 50 |
 | 20 | 92, 88, 95, 92, 93 |
-| 40 | 165, 160, 172, 170, 163 |
 
 Write **none** if there is no mode. Round to one decimal place where needed.`,
       'I. Statistics — Interpret Your Results': `Use your calculated range and IQR to compare how consistent the distances were at each ramp height. If you completed the optional challenge, you may also use standard deviation. Remember that variance is expressed in squared units.`,
@@ -261,7 +259,7 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         sectionHeader: 'G. Quantitative Data',
         label: 'Raw Data Table',
         type: 'table',
-        subLabel: 'Enter clear column headings with units, then enter the four IV levels and all five trials.',
+        subLabel: 'Enter clear column headings with units, then enter the three IV levels and all five trials.',
         columns: ['', '', '', '', '', ''],
         editableColumnHeaders: true,
         expectedColumns: [
@@ -272,9 +270,8 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
           'Trial 4 (cm)',
           'Trial 5 (cm)',
         ],
-        rows: 4,
+        rows: 3,
         prefilled: [
-          [null, null, null, null, null, null],
           [null, null, null, null, null, null],
           [null, null, null, null, null, null],
           [null, null, null, null, null, null],
@@ -283,7 +280,6 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
           ['10', '45', '42', '48', '45', '50'],
           ['20', '92', '88', '95', '92', '93'],
           ['30', '135', '130', '138', '142', '135'],
-          ['40', '165', '160', '172', '170', '163'],
         ],
       },
       {
@@ -293,18 +289,16 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         columns: ['', ''],
         editableColumnHeaders: true,
         expectedColumns: ['Ramp Height (cm)', 'Mean Distance (cm)'],
-        rows: 4,
+        rows: 3,
         prefilled: [
           ['10', null],
           ['20', null],
           ['30', null],
-          ['40', null],
         ],
         expectedTableValues: [
           ['10', '46.0'],
           ['20', '92.0'],
           ['30', '136.0'],
-          ['40', '166.0'],
         ],
       },
       {
@@ -319,7 +313,7 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         sectionHeader: 'H. Graph',
         label: 'Build Your Graph',
         type: 'graph',
-        graphConfig: { xMin: 0, xMax: 50, yMin: 0, yMax: 200, maxPoints: 4 },
+        graphConfig: { xMin: 0, xMax: 50, yMin: 0, yMax: 200, maxPoints: 3 },
       },
 
       // ── I. Statistics: sample calculations at 30 cm (135, 130, 138, 142, 135) ──
@@ -430,16 +424,14 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
           'Max (cm)',
           'Range (cm)',
         ],
-        rows: 3,
+        rows: 2,
         prefilled: [
           ['10', null, null, null, null, null, null],
           ['20', null, null, null, null, null, null],
-          ['40', null, null, null, null, null, null],
         ],
         expectedTableValues: [
           ['10', '46', '45', '45', '42', '50', '8'],
           ['20', '92', '92', '92', '88', '95', '7'],
-          ['40', '166', '165', 'none', '160', '172', '12'],
         ],
       },
       {
@@ -455,16 +447,14 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
           'Variance (cm²)',
           'Std. Dev. (cm)',
         ],
-        rows: 3,
+        rows: 2,
         prefilled: [
           ['10', null, null, null, null, null],
           ['20', null, null, null, null, null],
-          ['40', null, null, null, null, null],
         ],
         expectedTableValues: [
           ['10', '43.5', '49', '5.5', '9.5', '3.1'],
           ['20', '90', '94', '4', '6.5', '2.5'],
-          ['40', '161.5', '171', '9.5', '24.5', '4.9'],
         ],
       },
 
