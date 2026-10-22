@@ -177,6 +177,26 @@ export interface GraphData {
   chartType?: 'scatter' | 'bar';
 }
 
+export function isGraphData(value: unknown): value is GraphData {
+  if (!value || typeof value !== 'object') return false;
+  const graph = value as Record<string, unknown>;
+  return (
+    typeof graph['title'] === 'string' &&
+    typeof graph['xAxisLabel'] === 'string' &&
+    typeof graph['yAxisLabel'] === 'string' &&
+    typeof graph['xMin'] === 'number' &&
+    typeof graph['xMax'] === 'number' &&
+    typeof graph['yMin'] === 'number' &&
+    typeof graph['yMax'] === 'number' &&
+    Array.isArray(graph['points']) &&
+    (graph['points'] as unknown[]).every((point) => {
+      if (!point || typeof point !== 'object') return false;
+      const coordinates = point as Record<string, unknown>;
+      return typeof coordinates['x'] === 'number' && typeof coordinates['y'] === 'number';
+    })
+  );
+}
+
 export interface SectionScores {
   problemStatement: number | null;
   hypothesis: number | null;
@@ -349,7 +369,7 @@ export function createBlankManualCalcs(numRows: number, numTrials = 5): ManualCa
 export function createBlankSubmission(
   studentUid: string,
   practiceEventId: string,
-  studentDisplayName = ''
+  studentDisplayName = '',
 ): Omit<ReportSubmission, 'id'> {
   const now = Timestamp.now();
   return {
@@ -371,9 +391,33 @@ export function createBlankSubmission(
     dataTableIvHeader: '',
     dataTableDvHeader: '',
     dataTable: [
-      { ivValue: '', trial1: null, trial2: null, trial3: null, trial4: null, trial5: null, mean: null },
-      { ivValue: '', trial1: null, trial2: null, trial3: null, trial4: null, trial5: null, mean: null },
-      { ivValue: '', trial1: null, trial2: null, trial3: null, trial4: null, trial5: null, mean: null },
+      {
+        ivValue: '',
+        trial1: null,
+        trial2: null,
+        trial3: null,
+        trial4: null,
+        trial5: null,
+        mean: null,
+      },
+      {
+        ivValue: '',
+        trial1: null,
+        trial2: null,
+        trial3: null,
+        trial4: null,
+        trial5: null,
+        mean: null,
+      },
+      {
+        ivValue: '',
+        trial1: null,
+        trial2: null,
+        trial3: null,
+        trial4: null,
+        trial5: null,
+        mean: null,
+      },
     ],
     qualitativeObsSetup: '',
     qualitativeObsProcedure: '',

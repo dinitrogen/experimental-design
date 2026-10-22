@@ -15,6 +15,7 @@ import {
 } from '@angular/fire/firestore';
 import { AuthService } from './auth.service';
 import {
+  createInitialTaskResponse,
   TASK_DEFINITIONS,
   TaskDefinition,
   TaskSubmission,
@@ -144,17 +145,7 @@ export class TaskService {
     const task = getTaskDefinition(taskId);
     const prompts = task?.prompts ?? [];
     const newDoc = doc(col);
-    const responses = prompts.map((p) => {
-      if (p.type === 'table') {
-        const rows = p.rows ?? 1;
-        const cols = p.columns?.length ?? 1;
-        const emptyTable = Array.from({ length: rows }, (_, r) =>
-          Array.from({ length: cols }, (_, c) => p.prefilled?.[r]?.[c] ?? '')
-        );
-        return JSON.stringify(emptyTable);
-      }
-      return '';
-    });
+    const responses = prompts.map(createInitialTaskResponse);
     const submission: TaskSubmission = {
       taskId,
       studentUid: user.uid,

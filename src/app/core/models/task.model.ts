@@ -1,6 +1,15 @@
 import { Timestamp } from '@angular/fire/firestore';
+import { GraphData } from './submission.model';
 
-export type PromptType = 'text' | 'number' | 'short-answer' | 'table';
+export type PromptType = 'text' | 'number' | 'short-answer' | 'table' | 'graph';
+
+export interface TaskGraphConfig {
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+  maxPoints: number;
+}
 
 export interface TaskPrompt {
   /** Label shown above the input */
@@ -26,15 +35,19 @@ export interface TaskPrompt {
   expectedTableValues?: (string | null)[][];
   /** For 'table': pre-filled read-only cells (row-major). null = editable blank */
   prefilled?: (string | null)[][];
+  /** For 'graph': fixed axis bounds and maximum number of plotted data points */
+  graphConfig?: TaskGraphConfig;
 }
 
 export interface TaskDefinition {
   id: string;
   title: string;
-  /** Relative path to the markdown prompt file in public/ */
-  promptFile: string;
+  /** Relative path to the markdown prompt file in public/ (legacy task format) */
+  promptFile?: string;
   /** Ordered list of prompts/inputs the student must complete */
   prompts: TaskPrompt[];
+  /** Markdown instructions shown beside their related prompts in newer tasks */
+  sectionInstructions?: Record<string, string>;
   dueDate: string; // ISO date string, e.g. '2026-03-20'
   createdAt: string; // ISO date string
 }
@@ -50,7 +63,7 @@ export interface TaskSubmission {
   studentUid: string;
   studentDisplayName?: string;
   status: 'not-started' | 'in-progress' | 'submitted' | 'reviewed';
-  /** One entry per prompt. For 'table' prompts, the value is a JSON-stringified 2D array. */
+  /** One entry per prompt. Table and graph prompt values are JSON-serialized. */
   responses: string[];
   coachFeedback: string;
   /** Per-prompt grades set by the coach during review. Optional for backwards compatibility. */
@@ -59,6 +72,36 @@ export interface TaskSubmission {
   updatedAt: Timestamp;
   submittedAt: Timestamp | null;
   reviewedAt: Timestamp | null;
+}
+
+export function createInitialTaskResponse(prompt: TaskPrompt): string {
+  if (prompt.type === 'table') {
+    const rows = prompt.rows ?? 1;
+    const cols = prompt.columns?.length ?? 1;
+    return JSON.stringify(
+      Array.from({ length: rows }, (_, r) =>
+        Array.from({ length: cols }, (_, c) => prompt.prefilled?.[r]?.[c] ?? ''),
+      ),
+    );
+  }
+  if (prompt.type === 'graph') {
+    const config = prompt.graphConfig;
+    const initialGraph: GraphData = {
+      title: '',
+      xAxisLabel: '',
+      yAxisLabel: '',
+      xMin: config?.xMin ?? 0,
+      xMax: config?.xMax ?? 10,
+      yMin: config?.yMin ?? 0,
+      yMax: config?.yMax ?? 10,
+      points: [],
+      lobfStart: null,
+      lobfEnd: null,
+      chartType: 'scatter',
+    };
+    return JSON.stringify(initialGraph);
+  }
+  return '';
 }
 
 /** Shared response boxes for the "Report Writing Practice: Sections A–E" task versions. */
@@ -74,8 +117,7 @@ const REPORT_SECTIONS_A_E_PROMPTS: TaskPrompt[] = [
     sectionHeader: 'B. Hypothesis',
     label: 'Hypothesis',
     type: 'text',
-    subLabel:
-      'If [IV] increases, then [DV] will [increase/decrease], because [scientific reason].',
+    subLabel: 'If [IV] increases, then [DV] will [increase/decrease], because [scientific reason].',
   },
   {
     sectionHeader: 'C. Variables',
@@ -125,30 +167,81 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
   {
     id: 'task-020-report-sections-g-i',
     title: 'Report Writing Practice: Sections G–I (Toy Car Ramp)',
-    promptFile: 'tasks/task-020-report-sections-g-i.md',
+    sectionInstructions: {
+      'G. Quantitative Data': `A toy car was released from a ramp at different heights. The team measured how far it rolled across the floor after leaving the ramp.
+
+**Independent variable:** ramp height (cm). **Dependent variable:** distance rolled (cm). There were five trials at each height.
+
+Notebook measurements (in trial order):
+
+| Ramp height (cm) | Trial 1 | Trial 2 | Trial 3 | Trial 4 | Trial 5 |
+|:--:|--:|--:|--:|--:|--:|
+| 10 | 45 | 42 | 48 | 45 | 50 |
+| 20 | 92 | 88 | 95 | 92 | 93 |
+| 30 | 135 | 130 | 138 | 142 | 135 |
+| 40 | 165 | 160 | 172 | 170 | 163 |
+
+Fill in both tables. In each table's first row, write clear column headings with units. The raw table should contain every measurement; the condensed table should contain only the means you will graph. Show one sample mean calculation.`,
+      'H. Graph': `Make a scatter plot of the mean distance for each ramp height from your condensed table. Give the graph a descriptive title, label both axes with units, and add the four data points. Draw a single line of best fit (do not connect the points). Click the graph to place points, or focus it and use the arrow keys plus Enter. Hold Shift with an arrow key for a larger step. Switch to line mode and add two endpoints to draw the best-fit line.`,
+      'I. Statistics — Sample Calculation at 30 cm': `Calculate the statistics for the 30 cm ramp height using these five distances: **135, 130, 138, 142, 135 cm**. For the sample standard deviation, divide by **n − 1**. To find quartiles with five values, sort the data, leave out the median, then find the median of each half. Round to one decimal place where needed. Include units in your work; variance is in cm².`,
+      'I. Statistics — Results for the Other IV Levels': `Complete the table for the remaining ramp heights. Use these trial results:
+
+| Ramp height (cm) | Distances (cm) |
+|:--:|:--|
+| 10 | 45, 42, 48, 45, 50 |
+| 20 | 92, 88, 95, 92, 93 |
+| 40 | 165, 160, 172, 170, 163 |
+
+Write **none** if there is no mode. Round to one decimal place where needed.`,
+      'I. Statistics — Interpret Your Results': `Use your calculated range, IQR, and standard deviation to compare how consistent the distances were at each ramp height. The variance is expressed in squared units.`,
+    },
     prompts: [
       // ── G. Quantitative Data ──
       {
         sectionHeader: 'G. Quantitative Data',
-        label: 'Raw Data Table — Column Headings',
-        type: 'text',
+        label: 'Raw Data Table',
+        type: 'table',
         subLabel:
-          'Write the column headings you would use for the raw data table (one column for the IV, then one for each trial). Include units and make each heading clear.',
+          'Use the first row for column headings, then enter the four IV levels and all five trials.',
+        columns: ['Column 1', 'Column 2', 'Column 3', 'Column 4', 'Column 5', 'Column 6'],
+        rows: 5,
+        prefilled: [
+          [null, null, null, null, null, null],
+          [null, null, null, null, null, null],
+          [null, null, null, null, null, null],
+          [null, null, null, null, null, null],
+          [null, null, null, null, null, null],
+        ],
+        expectedTableValues: [
+          [
+            'Ramp Height (cm)',
+            'Trial 1 (cm)',
+            'Trial 2 (cm)',
+            'Trial 3 (cm)',
+            'Trial 4 (cm)',
+            'Trial 5 (cm)',
+          ],
+          ['10', '45', '42', '48', '45', '50'],
+          ['20', '92', '88', '95', '92', '93'],
+          ['30', '135', '130', '138', '142', '135'],
+          ['40', '165', '160', '172', '170', '163'],
+        ],
       },
       {
         label: 'Condensed Data Table',
         type: 'table',
-        subLabel:
-          'Fill in only the data you will graph: the mean distance for each ramp height.',
-        columns: ['Ramp Height (cm)', 'Mean Distance (cm)'],
-        rows: 4,
+        subLabel: 'Use the first row for column headings. Include only the means you will graph.',
+        columns: ['Column 1', 'Column 2'],
+        rows: 5,
         prefilled: [
-          ['10', null],
-          ['20', null],
-          ['30', null],
-          ['40', null],
+          [null, null],
+          [null, null],
+          [null, null],
+          [null, null],
+          [null, null],
         ],
         expectedTableValues: [
+          ['Ramp Height (cm)', 'Mean Distance (cm)'],
           ['10', '46.0'],
           ['20', '92.0'],
           ['30', '136.0'],
@@ -159,39 +252,15 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
         label: 'Sample Calculation — Mean',
         type: 'text',
         subLabel:
-          'Show one sample calculation for the mean at the 20 cm ramp height. Write out the numbers you add and divide, and include units.',
+          'Show how you calculated the mean distance at 20 cm. Include the measurements, division, and units.',
       },
 
       // ── H. Graph ──
       {
         sectionHeader: 'H. Graph',
-        label: 'Graph Title',
-        type: 'text',
-        subLabel: 'Write a title that names both the IV and the DV.',
-      },
-      {
-        label: 'x-axis',
-        type: 'text',
-        subLabel:
-          'Which variable goes on the x-axis? Give the axis label with units and the scale you would use (start, end, and the step between labels).',
-      },
-      {
-        label: 'y-axis',
-        type: 'text',
-        subLabel:
-          'Which variable goes on the y-axis? Give the axis label with units and the scale you would use. Explain why your scale fits your data.',
-      },
-      {
-        label: 'Line of Best Fit',
-        type: 'text',
-        subLabel:
-          'List the four points you would plot as (x, y). Then describe the line of best fit you would draw and the trend it shows. Explain why you would not connect the dots.',
-      },
-      {
-        label: 'Fix the Flawed Graph',
-        type: 'text',
-        subLabel:
-          'Find at least 4 problems with the other team’s graph (see the table in the task description). For each one, say how to fix it.',
+        label: 'Build Your Graph',
+        type: 'graph',
+        graphConfig: { xMin: 0, xMax: 50, yMin: 0, yMax: 200, maxPoints: 4 },
       },
 
       // ── I. Statistics: sample calculations at 30 cm (135, 130, 138, 142, 135) ──
@@ -295,22 +364,28 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
           'Calculate each statistic for the remaining ramp heights. Write "none" if there is no mode. Round to one decimal place. The 30 cm level is done above.',
         columns: [
           'Ramp Height (cm)',
+          'Mean (cm)',
           'Median (cm)',
           'Mode (cm)',
+          'Min (cm)',
+          'Max (cm)',
           'Range (cm)',
+          'Q1 (cm)',
+          'Q3 (cm)',
           'IQR (cm)',
+          'Variance (cm²)',
           'Std. Dev. (cm)',
         ],
         rows: 3,
         prefilled: [
-          ['10', null, null, null, null, null],
-          ['20', null, null, null, null, null],
-          ['40', null, null, null, null, null],
+          ['10', null, null, null, null, null, null, null, null, null, null, null],
+          ['20', null, null, null, null, null, null, null, null, null, null, null],
+          ['40', null, null, null, null, null, null, null, null, null, null, null],
         ],
         expectedTableValues: [
-          ['10', '45', '45', '8', '5.5', '3.1'],
-          ['20', '92', '92', '7', '4', '2.5'],
-          ['40', '165', 'none', '12', '9.5', '4.9'],
+          ['10', '46', '45', '45', '42', '50', '8', '43.5', '49', '5.5', '9.5', '3.1'],
+          ['20', '92', '92', '92', '88', '95', '7', '90', '94', '4', '6.5', '2.5'],
+          ['40', '166', '165', 'none', '160', '172', '12', '161.5', '171', '9.5', '24.5', '4.9'],
         ],
       },
 
@@ -370,14 +445,12 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'Applications',
         type: 'text',
-        subLabel:
-          'How could these findings be useful in the real world? List at least 3–4.',
+        subLabel: 'How could these findings be useful in the real world? List at least 3–4.',
       },
       {
         label: 'Recommendations for Future Experiments',
         type: 'text',
-        subLabel:
-          'What follow-up experiments could extend these findings? Suggest at least 3–4.',
+        subLabel: 'What follow-up experiments could extend these findings? Suggest at least 3–4.',
       },
     ],
     dueDate: '',
@@ -821,7 +894,8 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
         label: 'Statement of Problem',
         type: 'text',
         sectionHeader: 'Topic 1 — Evaporative Cooling',
-        subLabel: 'Write a testable question about evaporative cooling using the provided materials.',
+        subLabel:
+          'Write a testable question about evaporative cooling using the provided materials.',
       },
       {
         label: 'Hypothesis',
@@ -858,7 +932,8 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
         label: 'Statement of Problem',
         type: 'text',
         sectionHeader: 'Topic 2 — Structural Load-Bearing',
-        subLabel: 'Write a testable question about structural load-bearing using the provided materials.',
+        subLabel:
+          'Write a testable question about structural load-bearing using the provided materials.',
       },
       {
         label: 'Hypothesis',
@@ -895,7 +970,8 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
         label: 'Statement of Problem',
         type: 'text',
         sectionHeader: 'Topic 3 — Static Electricity',
-        subLabel: 'Write a testable question about static electricity using the provided materials.',
+        subLabel:
+          'Write a testable question about static electricity using the provided materials.',
       },
       {
         label: 'Hypothesis',
@@ -1663,7 +1739,8 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
       {
         label: 'IV Level 1 — Variance Units',
         type: 'short-answer',
-        subLabel: 'What are the units of variance? Think about what happens when you square the original units.',
+        subLabel:
+          'What are the units of variance? Think about what happens when you square the original units.',
         inline: true,
       },
       {
@@ -1792,8 +1869,16 @@ export const TASK_DEFINITIONS: TaskDefinition[] = [
     title: 'Experiment Design Challenge',
     promptFile: 'tasks/task-001-experiment-brainstorm.md',
     prompts: [
-      { label: 'Prompt 1 — Velocity', type: 'text', subLabel: 'Include your statement of problem, hypothesis, IV, DV, and procedure' },
-      { label: 'Prompt 2 — Reaction Time', type: 'text', subLabel: 'Include your statement of problem, hypothesis, IV, DV, and procedure' },
+      {
+        label: 'Prompt 1 — Velocity',
+        type: 'text',
+        subLabel: 'Include your statement of problem, hypothesis, IV, DV, and procedure',
+      },
+      {
+        label: 'Prompt 2 — Reaction Time',
+        type: 'text',
+        subLabel: 'Include your statement of problem, hypothesis, IV, DV, and procedure',
+      },
     ],
     dueDate: '2026-03-25',
     createdAt: '2026-03-18',

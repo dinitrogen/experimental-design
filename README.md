@@ -283,7 +283,7 @@ scripts/
 └── write-build-info.mjs   # Generates the build identifier before Angular commands
 public/
 ├── guides/                # Markdown study guide content
-└── tasks/                 # Markdown task content
+└── tasks/                 # Legacy Markdown task prompts; new tasks may use inline section instructions
 functions/
 └── src/index.ts           # Cloud Functions (AI data generation via Gemini)
 ```

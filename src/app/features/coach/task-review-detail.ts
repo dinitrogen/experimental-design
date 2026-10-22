@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  input,
-  signal,
-  OnInit,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, signal, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -20,12 +13,16 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MarkdownComponent } from 'ngx-markdown';
 import { TaskService } from '../../core/services/task.service';
-import { TaskSubmission, getTaskDefinition, TaskDefinition, TaskPrompt, PromptGrade } from '../../core/models/task.model';
 import {
-  Firestore,
-  doc,
-  getDoc,
-} from '@angular/fire/firestore';
+  TaskSubmission,
+  getTaskDefinition,
+  TaskDefinition,
+  TaskPrompt,
+  PromptGrade,
+} from '../../core/models/task.model';
+import { GraphData, isGraphData } from '../../core/models/submission.model';
+import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
 
 @Component({
   selector: 'app-task-review-detail',
@@ -42,6 +39,7 @@ import {
     MatDividerModule,
     MatTooltipModule,
     MarkdownComponent,
+    GraphCanvasComponent,
   ],
   template: `
     <div class="content-container">
@@ -59,27 +57,36 @@ import {
         </mat-card>
       } @else {
         <div class="page-header">
-          <button mat-icon-button (click)="goBack()" aria-label="Back to reviews" matTooltip="Back to reviews">
+          <button
+            mat-icon-button
+            (click)="goBack()"
+            aria-label="Back to reviews"
+            matTooltip="Back to reviews"
+          >
             <mat-icon>arrow_back</mat-icon>
           </button>
           <div>
             <h1 class="page-title">{{ taskDef()?.title ?? submission()!.taskId }}</h1>
-            <p class="subtitle">Submitted by {{ submission()!.studentDisplayName || submission()!.studentUid }}</p>
+            <p class="subtitle">
+              Submitted by {{ submission()!.studentDisplayName || submission()!.studentUid }}
+            </p>
           </div>
         </div>
 
         <!-- Task Prompt -->
-        <mat-card class="prompt-card">
-          <mat-card-header>
-            <mat-icon mat-card-avatar>description</mat-icon>
-            <mat-card-title>Task Prompt</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="markdown-body">
-              <markdown [data]="markdownContent()" katex></markdown>
-            </div>
-          </mat-card-content>
-        </mat-card>
+        @if (markdownContent()) {
+          <mat-card class="prompt-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>description</mat-icon>
+              <mat-card-title>Task Prompt</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="markdown-body">
+                <markdown [data]="markdownContent()" katex></markdown>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
 
         <mat-divider />
 
@@ -91,8 +98,19 @@ import {
               <mat-divider />
             }
             <h3 class="section-header">{{ getPrompt(i)!.sectionHeader }}</h3>
+            @if (getSectionInstructions(getPrompt(i)!.sectionHeader!); as instructions) {
+              <mat-card class="section-instructions">
+                <mat-card-content class="markdown-body">
+                  <markdown [data]="instructions" katex></markdown>
+                </mat-card-content>
+              </mat-card>
+            }
           }
-          <mat-card class="response-card" [class.graded-correct]="promptGrades()[i]?.correct === true" [class.graded-incorrect]="promptGrades()[i]?.correct === false">
+          <mat-card
+            class="response-card"
+            [class.graded-correct]="promptGrades()[i]?.correct === true"
+            [class.graded-incorrect]="promptGrades()[i]?.correct === false"
+          >
             <mat-card-content>
               <h3>{{ getPromptLabel(i) }}</h3>
               @if (isTablePrompt(i)) {
@@ -118,6 +136,12 @@ import {
                     </tbody>
                   </table>
                 </div>
+              } @else if (isGraphPrompt(i)) {
+                <app-graph-canvas
+                  [graphData]="getGraphData(response)"
+                  [isReadonly]="true"
+                  [showAxisLabelPlaceholders]="false"
+                />
               } @else {
                 <p class="response-text">{{ response || '(No response provided)' }}</p>
               }
@@ -202,21 +226,11 @@ import {
               ></textarea>
             </mat-form-field>
             <div class="actions">
-              <button
-                mat-button
-                color="warn"
-                (click)="deleteSubmission()"
-                [disabled]="saving()"
-              >
+              <button mat-button color="warn" (click)="deleteSubmission()" [disabled]="saving()">
                 <mat-icon>delete</mat-icon>
                 Delete & Reset
               </button>
-              <button
-                mat-flat-button
-                color="primary"
-                (click)="saveReview()"
-                [disabled]="saving()"
-              >
+              <button mat-flat-button color="primary" (click)="saveReview()" [disabled]="saving()">
                 <mat-icon>check</mat-icon>
                 {{ submission()!.status === 'reviewed' ? 'Update Review' : 'Submit Review' }}
               </button>
@@ -383,6 +397,11 @@ import {
       margin-top: 4px;
       opacity: 0.75;
     }
+
+    .section-instructions {
+      margin-bottom: 16px;
+      background: #f8f9fa;
+    }
   `,
 })
 export class TaskReviewDetailComponent implements OnInit {
@@ -418,12 +437,13 @@ export class TaskReviewDetailComponent implements OnInit {
       // Initialize prompt grades from existing data or empty array
       const promptCount = def?.prompts.length ?? sub.responses.length;
       const existing = sub.promptGrades ?? [];
-      const grades: PromptGrade[] = Array.from({ length: promptCount }, (_, i) =>
-        existing[i] ?? { correct: true }
+      const grades: PromptGrade[] = Array.from(
+        { length: promptCount },
+        (_, i) => existing[i] ?? { correct: true },
       );
       this.promptGrades.set(grades);
 
-      if (def) {
+      if (def?.promptFile) {
         this.http.get(def.promptFile, { responseType: 'text' }).subscribe({
           next: (content) => this.markdownContent.set(content),
           error: () => this.markdownContent.set('*Task prompt could not be loaded.*'),
@@ -445,15 +465,25 @@ export class TaskReviewDetailComponent implements OnInit {
     this.saving.set(true);
     try {
       await this.taskService.saveTaskReview(sub.id, this.feedback(), this.promptGrades());
-      this.submission.update((s) => s ? { ...s, status: 'reviewed', promptGrades: this.promptGrades() } : s);
+      this.submission.update((s) =>
+        s ? { ...s, status: 'reviewed', promptGrades: this.promptGrades() } : s,
+      );
       this.snackBar.open('Review saved!', '', { duration: 3000 });
     } catch (err: unknown) {
       console.error('Failed to save task review:', err);
       const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('permission') || message.includes('unauthenticated') || message.includes('UNAUTHENTICATED')) {
-        this.snackBar.open('Session expired — please refresh the page and try again.', 'Dismiss', { duration: 8000 });
+      if (
+        message.includes('permission') ||
+        message.includes('unauthenticated') ||
+        message.includes('UNAUTHENTICATED')
+      ) {
+        this.snackBar.open('Session expired — please refresh the page and try again.', 'Dismiss', {
+          duration: 8000,
+        });
       } else {
-        this.snackBar.open('Failed to save review. Please try again.', 'Dismiss', { duration: 5000 });
+        this.snackBar.open('Failed to save review. Please try again.', 'Dismiss', {
+          duration: 5000,
+        });
       }
     } finally {
       this.saving.set(false);
@@ -471,7 +501,9 @@ export class TaskReviewDetailComponent implements OnInit {
       this.goBack();
     } catch (err: unknown) {
       console.error('Failed to delete task submission:', err);
-      this.snackBar.open('Failed to delete submission. Please try again.', 'Dismiss', { duration: 5000 });
+      this.snackBar.open('Failed to delete submission. Please try again.', 'Dismiss', {
+        duration: 5000,
+      });
     } finally {
       this.saving.set(false);
     }
@@ -485,6 +517,10 @@ export class TaskReviewDetailComponent implements OnInit {
     return this.taskDef()?.prompts[index];
   }
 
+  protected getSectionInstructions(header: string): string | undefined {
+    return this.taskDef()?.sectionInstructions?.[header];
+  }
+
   protected getPromptLabel(index: number): string {
     return this.taskDef()?.prompts[index]?.label ?? `Response ${index + 1}`;
   }
@@ -493,11 +529,39 @@ export class TaskReviewDetailComponent implements OnInit {
     return this.taskDef()?.prompts[index]?.type === 'table';
   }
 
+  protected isGraphPrompt(index: number): boolean {
+    return this.taskDef()?.prompts[index]?.type === 'graph';
+  }
+
+  protected getGraphData(raw: string): GraphData {
+    try {
+      const graph: unknown = JSON.parse(raw);
+      if (isGraphData(graph)) return graph;
+    } catch {
+      // Show an empty graph for invalid or legacy response values.
+    }
+    return {
+      title: '',
+      xAxisLabel: '',
+      yAxisLabel: '',
+      xMin: 0,
+      xMax: 10,
+      yMin: 0,
+      yMax: 10,
+      points: [],
+      lobfStart: null,
+      lobfEnd: null,
+      chartType: 'scatter',
+    };
+  }
+
   protected parseTable(raw: string): string[][] {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     return [];
   }
 

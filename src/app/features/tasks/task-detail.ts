@@ -21,7 +21,15 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MarkdownComponent } from 'ngx-markdown';
 import { TaskService } from '../../core/services/task.service';
-import { TaskDefinition, TaskSubmission, TaskPrompt, PromptGrade } from '../../core/models/task.model';
+import {
+  createInitialTaskResponse,
+  TaskDefinition,
+  TaskSubmission,
+  TaskPrompt,
+  PromptGrade,
+} from '../../core/models/task.model';
+import { GraphData, GraphPoint, isGraphData } from '../../core/models/submission.model';
+import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
 import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
 
 @Component({
@@ -39,6 +47,7 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
     MatSnackBarModule,
     MatDividerModule,
     MarkdownComponent,
+    GraphCanvasComponent,
   ],
   template: `
     <div class="content-container">
@@ -77,13 +86,15 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
           </mat-card>
         }
 
-        <mat-card class="prompt-card">
-          <mat-card-content>
-            <div class="markdown-body">
-              <markdown [data]="markdownContent()" katex></markdown>
-            </div>
-          </mat-card-content>
-        </mat-card>
+        @if (markdownContent()) {
+          <mat-card class="prompt-card">
+            <mat-card-content>
+              <div class="markdown-body">
+                <markdown [data]="markdownContent()" katex></markdown>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
 
         <mat-divider />
 
@@ -96,6 +107,13 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                 <mat-divider class="iv-divider" />
               }
               <h2>{{ prompt.sectionHeader }}</h2>
+              @if (getSectionInstructions(prompt.sectionHeader); as instructions) {
+                <mat-card class="section-instructions">
+                  <mat-card-content class="markdown-body">
+                    <markdown [data]="instructions" katex></markdown>
+                  </mat-card-content>
+                </mat-card>
+              }
             }
             @if (shouldShowDivider(i)) {
               <mat-divider class="iv-divider" />
@@ -134,12 +152,25 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                         </table>
                       </div>
                     }
+                    @case ('graph') {
+                      <app-graph-canvas
+                        [graphData]="getGraphData(i)"
+                        [isReadonly]="true"
+                        [showAxisLabelPlaceholders]="false"
+                      />
+                    }
                     @default {
-                      <p class="submitted-response">{{ responses()[i] || '(No response provided)' }}</p>
+                      <p class="submitted-response">
+                        {{ responses()[i] || '(No response provided)' }}
+                      </p>
                     }
                   }
                   @if (isReviewed() && getPromptGrade(i); as grade) {
-                    <div class="prompt-grade" [class.correct]="grade.correct" [class.incorrect]="!grade.correct">
+                    <div
+                      class="prompt-grade"
+                      [class.correct]="grade.correct"
+                      [class.incorrect]="!grade.correct"
+                    >
                       <mat-icon>{{ grade.correct ? 'check_circle' : 'cancel' }}</mat-icon>
                       @if (!grade.correct && grade.comment) {
                         <span>{{ grade.comment }}</span>
@@ -157,9 +188,15 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                       @if (getNextPrompt(i)!.subLabel) {
                         <p class="sub-label">{{ getNextPrompt(i)!.subLabel }}</p>
                       }
-                      <p class="submitted-response">{{ responses()[i + 1] || '(No response provided)' }}</p>
+                      <p class="submitted-response">
+                        {{ responses()[i + 1] || '(No response provided)' }}
+                      </p>
                       @if (isReviewed() && getPromptGrade(i + 1); as inlineGrade) {
-                        <div class="prompt-grade inline-grade" [class.correct]="inlineGrade.correct" [class.incorrect]="!inlineGrade.correct">
+                        <div
+                          class="prompt-grade inline-grade"
+                          [class.correct]="inlineGrade.correct"
+                          [class.incorrect]="!inlineGrade.correct"
+                        >
                           <mat-icon>{{ inlineGrade.correct ? 'check_circle' : 'cancel' }}</mat-icon>
                           @if (!inlineGrade.correct && inlineGrade.comment) {
                             <span>{{ inlineGrade.comment }}</span>
@@ -179,7 +216,10 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                         }
                         @switch (prompt.type) {
                           @case ('number') {
-                            <mat-form-field appearance="outline" class="response-field number-field">
+                            <mat-form-field
+                              appearance="outline"
+                              class="response-field number-field"
+                            >
                               <mat-label>{{ prompt.inputLabel || prompt.label }}</mat-label>
                               <input
                                 matInput
@@ -208,7 +248,10 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                         }
                         @switch (getNextPrompt(i)!.type) {
                           @case ('number') {
-                            <mat-form-field appearance="outline" class="response-field number-field">
+                            <mat-form-field
+                              appearance="outline"
+                              class="response-field number-field"
+                            >
                               <mat-label>{{ getNextPrompt(i)!.label }}</mat-label>
                               <input
                                 matInput
@@ -292,7 +335,11 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                                           [value]="cell"
                                           placeholder="Enter value"
                                           (input)="onTableCellChange(i, r, c, $event)"
-                                          [attr.aria-label]="(prompt.columns?.[c] ?? 'Column ' + (c + 1)) + ' Row ' + (r + 1)"
+                                          [attr.aria-label]="
+                                            (prompt.columns?.[c] ?? 'Column ' + (c + 1)) +
+                                            ' Row ' +
+                                            (r + 1)
+                                          "
                                         />
                                       }
                                     </td>
@@ -302,6 +349,89 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                             </tbody>
                           </table>
                         </div>
+                      }
+                      @case ('graph') {
+                        <div class="graph-label-fields">
+                          <mat-form-field appearance="outline" class="response-field">
+                            <mat-label>Graph title</mat-label>
+                            <input
+                              matInput
+                              [value]="getGraphData(i).title"
+                              (input)="onGraphFieldChange(i, 'title', $event)"
+                            />
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" class="response-field">
+                            <mat-label>X-axis label (IV)</mat-label>
+                            <input
+                              matInput
+                              [value]="getGraphData(i).xAxisLabel"
+                              (input)="onGraphFieldChange(i, 'xAxisLabel', $event)"
+                            />
+                          </mat-form-field>
+                          <mat-form-field appearance="outline" class="response-field">
+                            <mat-label>Y-axis label (DV)</mat-label>
+                            <input
+                              matInput
+                              [value]="getGraphData(i).yAxisLabel"
+                              (input)="onGraphFieldChange(i, 'yAxisLabel', $event)"
+                            />
+                          </mat-form-field>
+                        </div>
+                        <p class="sub-label graph-help">
+                          Add up to {{ prompt.graphConfig?.maxPoints ?? 4 }} points by clicking the
+                          grid or using the keyboard. Select line mode to place the two endpoints of
+                          your line of best fit.
+                        </p>
+                        <div class="graph-controls">
+                          <button
+                            mat-stroked-button
+                            type="button"
+                            [class.active-toggle]="getGraphMode(i) === 'points'"
+                            [attr.aria-pressed]="getGraphMode(i) === 'points'"
+                            (click)="setGraphMode(i, 'points')"
+                          >
+                            Plot points
+                          </button>
+                          <button
+                            mat-stroked-button
+                            type="button"
+                            [class.active-toggle]="getGraphMode(i) === 'lobf'"
+                            [attr.aria-pressed]="getGraphMode(i) === 'lobf'"
+                            (click)="setGraphMode(i, 'lobf')"
+                          >
+                            Draw line of best fit
+                          </button>
+                          <button
+                            mat-stroked-button
+                            type="button"
+                            (click)="undoGraphAction(i)"
+                            [disabled]="
+                              !getGraphData(i).points.length && !getGraphData(i).lobfStart
+                            "
+                          >
+                            Undo
+                          </button>
+                        </div>
+                        <app-graph-canvas
+                          [graphData]="getGraphData(i)"
+                          [showAxisLabelPlaceholders]="false"
+                          [snapToTick]="false"
+                          [lobfPending]="
+                            getGraphData(i).lobfStart && !getGraphData(i).lobfEnd
+                              ? getGraphData(i).lobfStart
+                              : null
+                          "
+                          (canvasClicked)="onGraphCanvasClick(i, $event)"
+                        />
+                        <p class="graph-point-summary" aria-live="polite">
+                          {{ getGraphData(i).points.length }} of
+                          {{ prompt.graphConfig?.maxPoints ?? 4 }} points plotted.
+                          @if (getGraphData(i).lobfStart && !getGraphData(i).lobfEnd) {
+                            First line endpoint placed; add the second endpoint.
+                          } @else if (getGraphData(i).lobfStart && getGraphData(i).lobfEnd) {
+                            Line of best fit drawn.
+                          }
+                        </p>
                       }
                     }
                   }
@@ -392,6 +522,19 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
       margin-bottom: 24px;
     }
 
+    .section-instructions {
+      margin: 0 0 16px;
+      background: #f8f9fa;
+    }
+
+    .section-instructions .markdown-body > :first-child {
+      margin-top: 0;
+    }
+
+    .section-instructions .markdown-body > :last-child {
+      margin-bottom: 0;
+    }
+
     .markdown-body {
       line-height: 1.6;
     }
@@ -456,6 +599,24 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
 
     .table-wrapper {
       overflow-x: auto;
+    }
+
+    .graph-label-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0 12px;
+    }
+
+    .graph-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .graph-help,
+    .graph-point-summary {
+      margin: 0 0 12px;
     }
 
     .data-table {
@@ -610,6 +771,7 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
   protected readonly submission = signal<TaskSubmission | null>(null);
   protected readonly markdownContent = signal('');
   protected readonly responses = signal<string[]>([]);
+  protected readonly graphModes = signal<Record<number, 'points' | 'lobf'>>({});
 
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSaveInterval: ReturnType<typeof setInterval> | null = null;
@@ -635,6 +797,89 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
 
   protected getNextPrompt(index: number): TaskPrompt | undefined {
     return this.task()?.prompts[index + 1];
+  }
+
+  protected getSectionInstructions(header: string): string | undefined {
+    return this.task()?.sectionInstructions?.[header];
+  }
+
+  protected getGraphData(promptIndex: number): GraphData {
+    try {
+      const parsed: unknown = JSON.parse(this.responses()[promptIndex] ?? '');
+      if (isGraphData(parsed)) return parsed;
+    } catch {
+      // Use the configured blank graph until a saved response is available.
+    }
+    const prompt = this.task()?.prompts[promptIndex];
+    const initial = prompt ? createInitialTaskResponse(prompt) : '';
+    try {
+      const parsed: unknown = JSON.parse(initial);
+      if (isGraphData(parsed)) return parsed;
+    } catch {
+      // A graph prompt without valid bounds falls through to the safe defaults.
+    }
+    return {
+      title: '',
+      xAxisLabel: '',
+      yAxisLabel: '',
+      xMin: 0,
+      xMax: 10,
+      yMin: 0,
+      yMax: 10,
+      points: [],
+      lobfStart: null,
+      lobfEnd: null,
+      chartType: 'scatter',
+    };
+  }
+
+  protected getGraphMode(promptIndex: number): 'points' | 'lobf' {
+    return this.graphModes()[promptIndex] ?? 'points';
+  }
+
+  protected setGraphMode(promptIndex: number, mode: 'points' | 'lobf'): void {
+    this.graphModes.update((modes) => ({ ...modes, [promptIndex]: mode }));
+  }
+
+  protected onGraphFieldChange(
+    promptIndex: number,
+    field: 'title' | 'xAxisLabel' | 'yAxisLabel',
+    event: Event,
+  ): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.saveGraphData(promptIndex, (graph) => ({ ...graph, [field]: value }));
+  }
+
+  protected onGraphCanvasClick(promptIndex: number, point: GraphPoint): void {
+    const graph = this.getGraphData(promptIndex);
+    if (this.getGraphMode(promptIndex) === 'lobf') {
+      this.saveGraphData(promptIndex, (current) =>
+        !current.lobfStart || current.lobfEnd
+          ? { ...current, lobfStart: point, lobfEnd: null }
+          : { ...current, lobfEnd: point },
+      );
+      return;
+    }
+
+    const maxPoints = this.task()?.prompts[promptIndex].graphConfig?.maxPoints ?? 4;
+    if (graph.points.length >= maxPoints) {
+      this.snackBar.open(`This graph allows ${maxPoints} data points.`, 'Dismiss', {
+        duration: 3000,
+      });
+      return;
+    }
+    this.saveGraphData(promptIndex, (current) => ({
+      ...current,
+      points: [...current.points, point],
+    }));
+  }
+
+  protected undoGraphAction(promptIndex: number): void {
+    this.saveGraphData(promptIndex, (graph) => {
+      if (graph.lobfEnd) return { ...graph, lobfEnd: null };
+      if (graph.lobfStart) return { ...graph, lobfStart: null };
+      return { ...graph, points: graph.points.slice(0, -1) };
+    });
   }
 
   /** Show a divider when the IV Level prefix changes between non-inline prompts */
@@ -671,10 +916,12 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
     this.task.set(taskDef);
 
     // Load markdown prompt
-    this.http.get(taskDef.promptFile, { responseType: 'text' }).subscribe({
-      next: (content) => this.markdownContent.set(content),
-      error: () => this.markdownContent.set('*Task prompt could not be loaded.*'),
-    });
+    if (taskDef.promptFile) {
+      this.http.get(taskDef.promptFile, { responseType: 'text' }).subscribe({
+        next: (content) => this.markdownContent.set(content),
+        error: () => this.markdownContent.set('*Task prompt could not be loaded.*'),
+      });
+    }
 
     // Get or create submission
     const sub = await this.taskService.getOrCreateTaskSubmission(taskDef.id);
@@ -682,18 +929,7 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
 
     // If prompt structure changed, reinitialize responses to match current prompts
     if (sub.responses.length !== taskDef.prompts.length) {
-      const freshResponses = taskDef.prompts.map((p) => {
-        if (p.type === 'table') {
-          const rows = p.rows ?? 1;
-          const cols = p.columns?.length ?? 1;
-          return JSON.stringify(
-            Array.from({ length: rows }, (_, r) =>
-              Array.from({ length: cols }, (_, c) => p.prefilled?.[r]?.[c] ?? '')
-            )
-          );
-        }
-        return '';
-      });
+      const freshResponses = taskDef.prompts.map(createInitialTaskResponse);
       this.responses.set(freshResponses);
       // Persist the corrected responses so the mismatch is fixed permanently
       if (sub.id) {
@@ -736,7 +972,9 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     const prompt = this.task()?.prompts[promptIndex];
     const rows = prompt?.rows ?? 1;
     const cols = prompt?.columns?.length ?? 1;
@@ -754,6 +992,16 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
     this.responses.update((prev) => {
       const copy = [...prev];
       copy[promptIndex] = JSON.stringify(table);
+      return copy;
+    });
+    this.markDirtyAndScheduleSave();
+  }
+
+  private saveGraphData(promptIndex: number, update: (graph: GraphData) => GraphData): void {
+    const graph = update(this.getGraphData(promptIndex));
+    this.responses.update((prev) => {
+      const copy = [...prev];
+      copy[promptIndex] = JSON.stringify(graph);
       return copy;
     });
     this.markDirtyAndScheduleSave();

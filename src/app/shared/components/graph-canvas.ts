@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, input, output, effect, viewChild, ElementRef, afterNextRender } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  input,
+  output,
+  effect,
+  viewChild,
+  ElementRef,
+  afterNextRender,
+} from '@angular/core';
 import { GraphData, GraphPoint } from '../../core/models/submission.model';
 
 const M = { top: 45, right: 25, bottom: 55, left: 65 };
@@ -18,11 +27,22 @@ function niceInterval(range: number, targetTicks = 8): number {
 @Component({
   selector: 'app-graph-canvas',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<canvas #canvas [attr.width]="cW" [attr.height]="cH"
-    role="img" [attr.aria-label]="graphData().title || 'Graph'"
-    (mousedown)="onMouse($event)" (touchstart)="onTouch($event)"></canvas>`,
+  template: `<canvas
+      #canvas
+      [attr.width]="cW"
+      [attr.height]="cH"
+      [attr.role]="isReadonly() ? 'img' : 'application'"
+      [attr.aria-label]="canvasLabel()"
+      tabindex="0"
+      (mousedown)="onMouse($event)"
+      (touchstart)="onTouch($event)"
+      (keydown)="onKeydown($event)"
+    ></canvas>
+    <span class="visually-hidden" aria-live="polite">{{ keyboardStatus }}</span>`,
   styles: `
-    :host { display: block; }
+    :host {
+      display: block;
+    }
     canvas {
       width: 100%;
       max-width: 700px;
@@ -31,8 +51,22 @@ function niceInterval(range: number, targetTicks = 8): number {
       background: #fff;
       touch-action: none;
     }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
     :host:not(.readonly) canvas {
-      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cline x1='12' y1='0' x2='12' y2='24' stroke='black' stroke-width='1.5'/%3E%3Cline x1='0' y1='12' x2='24' y2='12' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") 12 12, crosshair;
+      cursor:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cline x1='12' y1='0' x2='12' y2='24' stroke='black' stroke-width='1.5'/%3E%3Cline x1='0' y1='12' x2='24' y2='12' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E")
+          12 12,
+        crosshair;
     }
   `,
   host: {
@@ -44,6 +78,8 @@ export class GraphCanvasComponent {
   readonly isReadonly = input(false);
   readonly lobfPending = input<GraphPoint | null>(null);
   readonly fineGrid = input(false);
+  readonly showAxisLabelPlaceholders = input(true);
+  readonly snapToTick = input(true);
   readonly canvasClicked = output<GraphPoint>();
 
   protected readonly cW = W;
@@ -52,12 +88,16 @@ export class GraphCanvasComponent {
   private readonly canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private tickX = 1;
   private tickY = 1;
+  protected keyboardStatus = '';
+  private keyboardPoint: GraphPoint | null = null;
 
   constructor() {
     effect(() => {
       const data = this.graphData();
       this.lobfPending();
       this.fineGrid();
+      this.showAxisLabelPlaceholders();
+      this.snapToTick();
       const el = this.canvasRef();
       if (el) this.draw(el.nativeElement, data);
     });
@@ -66,6 +106,20 @@ export class GraphCanvasComponent {
       const el = this.canvasRef();
       if (el) this.draw(el.nativeElement, this.graphData());
     });
+  }
+
+  protected canvasLabel(): string {
+    const graph = this.graphData();
+    const title = graph.title || 'Graph';
+    const axes = `X-axis: ${graph.xAxisLabel || 'not labeled'}. Y-axis: ${graph.yAxisLabel || 'not labeled'}.`;
+    const points = graph.points.length
+      ? `Plotted points: ${graph.points.map((point) => `(${this.fmt(point.x)}, ${this.fmt(point.y)})`).join(', ')}.`
+      : 'No data points plotted.';
+    const line = graph.lobfStart && graph.lobfEnd ? 'A line of best fit is drawn.' : '';
+    const instructions = this.isReadonly()
+      ? ''
+      : ' Use arrow keys to move the graph cursor, Shift plus an arrow key for a larger step, and Enter to place a point.';
+    return `${title}. ${axes} ${points} ${line}${instructions}`;
   }
 
   protected onMouse(e: MouseEvent): void {
@@ -81,6 +135,36 @@ export class GraphCanvasComponent {
     this.emitClick(t.clientX, t.clientY);
   }
 
+  protected onKeydown(event: KeyboardEvent): void {
+    if (this.isReadonly()) return;
+    const data = this.graphData();
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter'].includes(event.key)) return;
+    event.preventDefault();
+
+    const point = this.keyboardPoint ?? { x: data.xMin, y: data.yMin };
+    if (event.key === 'Enter') {
+      this.canvasClicked.emit(point);
+      this.keyboardStatus = `Placed point at ${this.fmt(point.x)}, ${this.fmt(point.y)}.`;
+      return;
+    }
+
+    const stepX = this.snapToTick() ? this.tickX : 1;
+    const stepY = this.snapToTick() ? this.tickY : 1;
+    const keyboardStepX = event.shiftKey ? stepX * 10 : stepX;
+    const keyboardStepY = event.shiftKey ? stepY * 10 : stepY;
+    const dx =
+      event.key === 'ArrowLeft' ? -keyboardStepX : event.key === 'ArrowRight' ? keyboardStepX : 0;
+    const dy =
+      event.key === 'ArrowDown' ? -keyboardStepY : event.key === 'ArrowUp' ? keyboardStepY : 0;
+    this.keyboardPoint = {
+      x: Math.max(data.xMin, Math.min(data.xMax, point.x + dx)),
+      y: Math.max(data.yMin, Math.min(data.yMax, point.y + dy)),
+    };
+    this.keyboardStatus = `Graph cursor at ${this.fmt(this.keyboardPoint.x)}, ${this.fmt(this.keyboardPoint.y)}. Press Enter to place.`;
+    const canvas = this.canvasRef()?.nativeElement;
+    if (canvas) this.draw(canvas, data);
+  }
+
   private emitClick(clientX: number, clientY: number): void {
     const canvas = this.canvasRef()?.nativeElement;
     if (!canvas) return;
@@ -92,8 +176,10 @@ export class GraphCanvasComponent {
     const data = this.graphData();
     const rawX = data.xMin + ((px - M.left) / PW) * (data.xMax - data.xMin);
     const rawY = data.yMin + ((M.top + PH - py) / PH) * (data.yMax - data.yMin);
-    const x = Math.max(data.xMin, Math.min(data.xMax, Math.round(rawX / this.tickX) * this.tickX));
-    const y = Math.max(data.yMin, Math.min(data.yMax, Math.round(rawY / this.tickY) * this.tickY));
+    const stepX = this.snapToTick() ? this.tickX : 1;
+    const stepY = this.snapToTick() ? this.tickY : 1;
+    const x = Math.max(data.xMin, Math.min(data.xMax, Math.round(rawX / stepX) * stepX));
+    const y = Math.max(data.yMin, Math.min(data.yMax, Math.round(rawY / stepY) * stepY));
     this.canvasClicked.emit({
       x: parseFloat(x.toPrecision(10)),
       y: parseFloat(y.toPrecision(10)),
@@ -120,6 +206,7 @@ export class GraphCanvasComponent {
       this.drawPoints(ctx, data);
       this.drawLobf(ctx, data);
       this.drawPending(ctx, data);
+      this.drawKeyboardPoint(ctx, data);
     }
     this.drawTitle(ctx, data);
   }
@@ -134,34 +221,62 @@ export class GraphCanvasComponent {
   private drawGrid(ctx: CanvasRenderingContext2D, data: GraphData): void {
     ctx.strokeStyle = '#e8e8e8';
     ctx.lineWidth = 1;
-    for (let x = Math.ceil(data.xMin / this.tickX) * this.tickX; x <= data.xMax + this.tickX * 0.001; x += this.tickX) {
+    for (
+      let x = Math.ceil(data.xMin / this.tickX) * this.tickX;
+      x <= data.xMax + this.tickX * 0.001;
+      x += this.tickX
+    ) {
       const [px] = this.toPixel(data, x, 0);
-      ctx.beginPath(); ctx.moveTo(px, M.top); ctx.lineTo(px, M.top + PH); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(px, M.top);
+      ctx.lineTo(px, M.top + PH);
+      ctx.stroke();
     }
-    for (let y = Math.ceil(data.yMin / this.tickY) * this.tickY; y <= data.yMax + this.tickY * 0.001; y += this.tickY) {
+    for (
+      let y = Math.ceil(data.yMin / this.tickY) * this.tickY;
+      y <= data.yMax + this.tickY * 0.001;
+      y += this.tickY
+    ) {
       const [, py] = this.toPixel(data, 0, y);
-      ctx.beginPath(); ctx.moveTo(M.left, py); ctx.lineTo(M.left + PW, py); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(M.left, py);
+      ctx.lineTo(M.left + PW, py);
+      ctx.stroke();
     }
   }
 
   private drawAxes(ctx: CanvasRenderingContext2D, data: GraphData): void {
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(M.left, M.top + PH); ctx.lineTo(M.left + PW, M.top + PH); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(M.left, M.top); ctx.lineTo(M.left, M.top + PH); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(M.left, M.top + PH);
+    ctx.lineTo(M.left + PW, M.top + PH);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(M.left, M.top);
+    ctx.lineTo(M.left, M.top + PH);
+    ctx.stroke();
 
     // Tick labels
     ctx.fillStyle = '#555';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    for (let x = Math.ceil(data.xMin / this.tickX) * this.tickX; x <= data.xMax + this.tickX * 0.001; x += this.tickX) {
+    for (
+      let x = Math.ceil(data.xMin / this.tickX) * this.tickX;
+      x <= data.xMax + this.tickX * 0.001;
+      x += this.tickX
+    ) {
       const [px] = this.toPixel(data, x, 0);
       ctx.fillText(this.fmt(x), px, M.top + PH + 6);
     }
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    for (let y = Math.ceil(data.yMin / this.tickY) * this.tickY; y <= data.yMax + this.tickY * 0.001; y += this.tickY) {
+    for (
+      let y = Math.ceil(data.yMin / this.tickY) * this.tickY;
+      y <= data.yMax + this.tickY * 0.001;
+      y += this.tickY
+    ) {
       const [, py] = this.toPixel(data, 0, y);
       ctx.fillText(this.fmt(y), M.left - 8, py);
     }
@@ -171,19 +286,25 @@ export class GraphCanvasComponent {
     ctx.font = '13px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(data.xAxisLabel || 'X Axis', M.left + PW / 2, H - 15);
+    ctx.fillText(
+      data.xAxisLabel || (this.showAxisLabelPlaceholders() ? 'X Axis' : ''),
+      M.left + PW / 2,
+      H - 15,
+    );
 
     ctx.save();
     ctx.translate(18, M.top + PH / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(data.yAxisLabel || 'Y Axis', 0, 0);
+    ctx.fillText(data.yAxisLabel || (this.showAxisLabelPlaceholders() ? 'Y Axis' : ''), 0, 0);
     ctx.restore();
   }
 
   private drawPoints(ctx: CanvasRenderingContext2D, data: GraphData): void {
-    const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#1565c0';
+    const primary =
+      getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() ||
+      '#1565c0';
     ctx.fillStyle = primary;
     for (const pt of data.points ?? []) {
       const [px, py] = this.toPixel(data, pt.x, pt.y);
@@ -207,23 +328,40 @@ export class GraphCanvasComponent {
     // Horizontal grid lines only
     ctx.strokeStyle = '#e8e8e8';
     ctx.lineWidth = 1;
-    for (let y = Math.ceil(data.yMin / this.tickY) * this.tickY; y <= data.yMax + this.tickY * 0.001; y += this.tickY) {
+    for (
+      let y = Math.ceil(data.yMin / this.tickY) * this.tickY;
+      y <= data.yMax + this.tickY * 0.001;
+      y += this.tickY
+    ) {
       const py = M.top + PH - ((y - data.yMin) / yRange) * PH;
-      ctx.beginPath(); ctx.moveTo(M.left, py); ctx.lineTo(M.left + PW, py); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(M.left, py);
+      ctx.lineTo(M.left + PW, py);
+      ctx.stroke();
     }
 
     // Axes
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(M.left, M.top + PH); ctx.lineTo(M.left + PW, M.top + PH); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(M.left, M.top); ctx.lineTo(M.left, M.top + PH); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(M.left, M.top + PH);
+    ctx.lineTo(M.left + PW, M.top + PH);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(M.left, M.top);
+    ctx.lineTo(M.left, M.top + PH);
+    ctx.stroke();
 
     // Y tick labels
     ctx.fillStyle = '#555';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    for (let y = Math.ceil(data.yMin / this.tickY) * this.tickY; y <= data.yMax + this.tickY * 0.001; y += this.tickY) {
+    for (
+      let y = Math.ceil(data.yMin / this.tickY) * this.tickY;
+      y <= data.yMax + this.tickY * 0.001;
+      y += this.tickY
+    ) {
       const py = M.top + PH - ((y - data.yMin) / yRange) * PH;
       ctx.fillText(this.fmt(y), M.left - 8, py);
     }
@@ -288,7 +426,8 @@ export class GraphCanvasComponent {
     let x1: number, y1: number, x2: number, y2: number;
     if (dx === 0) {
       x1 = x2 = data.lobfStart.x;
-      y1 = data.yMin; y2 = data.yMax;
+      y1 = data.yMin;
+      y2 = data.yMax;
     } else {
       const slope = dy / dx;
       x1 = data.xMin;
@@ -317,7 +456,9 @@ export class GraphCanvasComponent {
     for (const pt of [data.lobfStart, data.lobfEnd]) {
       const [px, py] = this.toPixel(data, pt.x, pt.y);
       ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fill();
       ctx.strokeStyle = '#d32f2f';
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -335,6 +476,19 @@ export class GraphCanvasComponent {
     ctx.arc(px, py, 6, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  private drawKeyboardPoint(ctx: CanvasRenderingContext2D, data: GraphData): void {
+    if (!this.keyboardPoint) return;
+    const [px, py] = this.toPixel(data, this.keyboardPoint.x, this.keyboardPoint.y);
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px - 8, py);
+    ctx.lineTo(px + 8, py);
+    ctx.moveTo(px, py - 8);
+    ctx.lineTo(px, py + 8);
+    ctx.stroke();
   }
 
   private drawTitle(ctx: CanvasRenderingContext2D, data: GraphData): void {
