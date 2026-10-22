@@ -65,6 +65,99 @@ describe('createInitialTaskResponse', () => {
     });
   });
 
+  it('trims obsolete rows from saved editable-table responses', () => {
+    const prompt: TaskPrompt = {
+      label: 'Condensed data',
+      type: 'table',
+      columns: ['', ''],
+      editableColumnHeaders: true,
+      rows: 3,
+    };
+
+    expect(
+      parseTaskTableResponse(
+        JSON.stringify({
+          headers: ['Ramp height (cm)', 'Mean distance (cm)'],
+          rows: [
+            ['10', '46'],
+            ['20', '92'],
+            ['30', '136'],
+            ['40', '166'],
+          ],
+        }),
+        prompt,
+      ),
+    ).toEqual({
+      headers: ['Ramp height (cm)', 'Mean distance (cm)'],
+      rows: [
+        ['10', '46'],
+        ['20', '92'],
+        ['30', '136'],
+      ],
+    });
+  });
+
+  it('trims obsolete rows while preserving fixed-table prefills', () => {
+    const prompt: TaskPrompt = {
+      label: 'Statistics',
+      type: 'table',
+      columns: ['Ramp height', 'Mean'],
+      rows: 2,
+      prefilled: [
+        ['10', null],
+        ['20', null],
+      ],
+    };
+
+    expect(
+      parseTaskTableResponse(
+        JSON.stringify([
+          ['10', '46'],
+          ['20', '92'],
+          ['40', '166'],
+        ]),
+        prompt,
+      ),
+    ).toEqual({
+      headers: ['Ramp height', 'Mean'],
+      rows: [
+        ['10', '46'],
+        ['20', '92'],
+      ],
+    });
+  });
+
+  it('migrates legacy headers and trims old rows after a table size change', () => {
+    const prompt: TaskPrompt = {
+      label: 'Raw data',
+      type: 'table',
+      columns: ['', ''],
+      editableColumnHeaders: true,
+      expectedColumns: ['Ramp height (cm)', 'Distance (cm)'],
+      rows: 3,
+    };
+
+    expect(
+      parseTaskTableResponse(
+        JSON.stringify([
+          ['Ramp height (cm)', 'Distance (cm)'],
+          ['10', '46'],
+          ['20', '92'],
+          ['30', '136'],
+          ['40', '166'],
+        ]),
+        prompt,
+      ),
+    ).toEqual({
+      headers: ['Ramp height (cm)', 'Distance (cm)'],
+      rows: [
+        ['10', '46'],
+        ['20', '92'],
+        ['30', '136'],
+      ],
+    });
+  });
+
   it('initializes a blank graph using its configured bounds', () => {
     const prompt: TaskPrompt = {
       label: 'Graph',

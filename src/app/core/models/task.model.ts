@@ -126,6 +126,39 @@ function isStringMatrix(value: unknown): value is string[][] {
   return Array.isArray(value) && value.every(isStringArray);
 }
 
+function normalizeTaskTableResponse(
+  headers: string[],
+  rows: string[][],
+  prompt: TaskPrompt,
+): TaskTableResponse {
+  const columns = prompt.columns ?? [];
+  const rowCount = prompt.rows ?? 1;
+  const columnCount = columns.length || 1;
+  return {
+    headers: Array.from({ length: columnCount }, (_, col) => headers[col] ?? columns[col] ?? ''),
+    rows: Array.from({ length: rowCount }, (_, row) =>
+      Array.from(
+        { length: columnCount },
+        (_, col) => rows[row]?.[col] ?? prompt.prefilled?.[row]?.[col] ?? '',
+      ),
+    ),
+  };
+}
+
+function isLegacyHeaderRow(row: string[], prompt: TaskPrompt): boolean {
+  const expectedColumns = prompt.expectedColumns;
+  if (
+    expectedColumns?.length === row.length &&
+    row.every(
+      (cell, index) =>
+        cell.trim().toLowerCase() === expectedColumns[index]?.trim().toLowerCase(),
+    )
+  ) {
+    return true;
+  }
+  return row.some((cell) => cell.trim() !== '' && Number.isNaN(Number(cell)));
+}
+
 export function parseTaskTableResponse(raw: string, prompt: TaskPrompt): TaskTableResponse {
   const columns = prompt.columns ?? [];
   const rowCount = prompt.rows ?? 1;
@@ -145,17 +178,18 @@ export function parseTaskTableResponse(raw: string, prompt: TaskPrompt): TaskTab
         isStringArray(table['headers']) &&
         isStringMatrix(table['rows'])
       ) {
-        return {
-          headers: table['headers'],
-          rows: table['rows'],
-        };
+        return normalizeTaskTableResponse(table['headers'], table['rows'], prompt);
       }
     }
     if (isStringMatrix(parsed)) {
-      if (prompt.editableColumnHeaders && parsed.length === rowCount + 1) {
-        return { headers: parsed[0], rows: parsed.slice(1) };
+      const hasLegacyHeaderRow =
+        prompt.editableColumnHeaders &&
+        parsed.length > rowCount &&
+        (parsed.length > rowCount + 1 || isLegacyHeaderRow(parsed[0], prompt));
+      if (hasLegacyHeaderRow) {
+        return normalizeTaskTableResponse(parsed[0], parsed.slice(1), prompt);
       }
-      return { headers: columns, rows: parsed };
+      return normalizeTaskTableResponse(columns, parsed, prompt);
     }
   } catch {
     // Return configured blank cells when an existing response cannot be parsed.
