@@ -358,10 +358,10 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
       // ── I. Statistics: remaining IV levels ──
       {
         sectionHeader: 'I. Statistics — Results for the Other IV Levels',
-        label: 'Results Table (10, 20, and 40 cm)',
+        label: 'Central Tendency and Range',
         type: 'table',
         subLabel:
-          'Calculate each statistic for the remaining ramp heights. Write "none" if there is no mode. Round to one decimal place. The 30 cm level is done above.',
+          'Calculate these statistics for each remaining ramp height. Write "none" if there is no mode. Round to one decimal place. The 30 cm level is done above.',
         columns: [
           'Ramp Height (cm)',
           'Mean (cm)',
@@ -370,6 +370,26 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
           'Min (cm)',
           'Max (cm)',
           'Range (cm)',
+        ],
+        rows: 3,
+        prefilled: [
+          ['10', null, null, null, null, null, null],
+          ['20', null, null, null, null, null, null],
+          ['40', null, null, null, null, null, null],
+        ],
+        expectedTableValues: [
+          ['10', '46', '45', '45', '42', '50', '8'],
+          ['20', '92', '92', '92', '88', '95', '7'],
+          ['40', '166', '165', 'none', '160', '172', '12'],
+        ],
+      },
+      {
+        label: 'Quartiles and Variation',
+        type: 'table',
+        subLabel:
+          'Use the same trial data to calculate the quartiles, IQR, sample variance, and sample standard deviation.',
+        columns: [
+          'Ramp Height (cm)',
           'Q1 (cm)',
           'Q3 (cm)',
           'IQR (cm)',
@@ -378,14 +398,14 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         ],
         rows: 3,
         prefilled: [
-          ['10', null, null, null, null, null, null, null, null, null, null, null],
-          ['20', null, null, null, null, null, null, null, null, null, null, null],
-          ['40', null, null, null, null, null, null, null, null, null, null, null],
+          ['10', null, null, null, null, null],
+          ['20', null, null, null, null, null],
+          ['40', null, null, null, null, null],
         ],
         expectedTableValues: [
-          ['10', '46', '45', '45', '42', '50', '8', '43.5', '49', '5.5', '9.5', '3.1'],
-          ['20', '92', '92', '92', '88', '95', '7', '90', '94', '4', '6.5', '2.5'],
-          ['40', '166', '165', 'none', '160', '172', '12', '161.5', '171', '9.5', '24.5', '4.9'],
+          ['10', '43.5', '49', '5.5', '9.5', '3.1'],
+          ['20', '90', '94', '4', '6.5', '2.5'],
+          ['40', '161.5', '171', '9.5', '24.5', '4.9'],
         ],
       },
 

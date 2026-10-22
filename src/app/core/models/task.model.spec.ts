@@ -58,4 +58,17 @@ describe('task definition compatibility', () => {
       'Notebook measurements',
     );
   });
+
+  it('keeps each statistics results table compact enough to use on screen', () => {
+    const task = TASK_DEFINITIONS.find((item) => item.id === 'task-020-report-sections-g-i');
+    const statisticsTables = task?.prompts.filter(
+      (prompt) => prompt.type === 'table' && prompt.expectedTableValues,
+    );
+    const resultsTables = statisticsTables?.filter((prompt) =>
+      ['Central Tendency and Range', 'Quartiles and Variation'].includes(prompt.label),
+    );
+
+    expect(resultsTables).toHaveLength(2);
+    expect(resultsTables?.every((prompt) => (prompt.columns?.length ?? 0) <= 7)).toBe(true);
+  });
 });
