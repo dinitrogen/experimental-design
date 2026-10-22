@@ -471,9 +471,9 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
       // ── I. Statistics: interpretation ──
       {
         sectionHeader: 'I. Statistics — Interpret Your Results',
-        label: 'Units of Variance',
+        label: 'Optional Challenge — Units of Variance',
         type: 'short-answer',
-        subLabel: 'What are the units of the variance when the data is in cm?',
+        subLabel: 'Optional challenge: what are the units of the variance when the data is in cm?',
         inputLabel: 'Units',
       },
       {

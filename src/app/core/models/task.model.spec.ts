@@ -124,10 +124,14 @@ describe('task definition compatibility', () => {
     const standardDeviationPrompt = task?.prompts.find((prompt) =>
       prompt.label.includes('Standard Deviation (cm)'),
     );
+    const varianceUnitsPrompt = task?.prompts.find(
+      (prompt) => prompt.label === 'Optional Challenge — Units of Variance',
+    );
     const quartilesPrompt = task?.prompts.find((prompt) => prompt.label === 'Quartiles and Variation');
 
     expect(variancePrompt?.label).toContain('Optional Challenge');
     expect(standardDeviationPrompt?.label).toContain('Optional Challenge');
+    expect(varianceUnitsPrompt?.subLabel).toContain('Optional challenge');
     expect(quartilesPrompt?.subLabel).toContain('Required: calculate Q1, Q3, and IQR');
     expect(quartilesPrompt?.subLabel).toContain('Optional challenge');
   });
