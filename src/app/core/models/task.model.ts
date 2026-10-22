@@ -29,6 +29,10 @@ export interface TaskPrompt {
   tolerance?: number;
   /** For 'table': column headers */
   columns?: string[];
+  /** For 'table': let students edit the column headers */
+  editableColumnHeaders?: boolean;
+  /** For 'table': expected column headers, shown to coaches during review */
+  expectedColumns?: string[];
   /** For 'table': number of data rows */
   rows?: number;
   /** For 'table': expected cell values (row-major) for auto-check. null = no check for that cell */
@@ -63,7 +67,7 @@ export interface TaskSubmission {
   studentUid: string;
   studentDisplayName?: string;
   status: 'not-started' | 'in-progress' | 'submitted' | 'reviewed';
-  /** One entry per prompt. Table and graph prompt values are JSON-serialized. */
+  /** One entry per prompt. Legacy tables are JSON matrices; editable-header tables and graphs are JSON objects. */
   responses: string[];
   coachFeedback: string;
   /** Per-prompt grades set by the coach during review. Optional for backwards compatibility. */
@@ -78,11 +82,16 @@ export function createInitialTaskResponse(prompt: TaskPrompt): string {
   if (prompt.type === 'table') {
     const rows = prompt.rows ?? 1;
     const cols = prompt.columns?.length ?? 1;
-    return JSON.stringify(
-      Array.from({ length: rows }, (_, r) =>
-        Array.from({ length: cols }, (_, c) => prompt.prefilled?.[r]?.[c] ?? ''),
-      ),
+    const tableRows = Array.from({ length: rows }, (_, r) =>
+      Array.from({ length: cols }, (_, c) => prompt.prefilled?.[r]?.[c] ?? ''),
     );
+    if (prompt.editableColumnHeaders) {
+      return JSON.stringify({
+        headers: Array.from({ length: cols }, () => ''),
+        rows: tableRows,
+      });
+    }
+    return JSON.stringify(tableRows);
   }
   if (prompt.type === 'graph') {
     const config = prompt.graphConfig;
@@ -102,6 +111,57 @@ export function createInitialTaskResponse(prompt: TaskPrompt): string {
     return JSON.stringify(initialGraph);
   }
   return '';
+}
+
+export interface TaskTableResponse {
+  headers: string[];
+  rows: string[][];
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isStringMatrix(value: unknown): value is string[][] {
+  return Array.isArray(value) && value.every(isStringArray);
+}
+
+export function parseTaskTableResponse(raw: string, prompt: TaskPrompt): TaskTableResponse {
+  const columns = prompt.columns ?? [];
+  const rowCount = prompt.rows ?? 1;
+  const columnCount = columns.length || 1;
+  const fallback: TaskTableResponse = {
+    headers: columns,
+    rows: Array.from({ length: rowCount }, (_, r) =>
+      Array.from({ length: columnCount }, (_, c) => prompt.prefilled?.[r]?.[c] ?? ''),
+    ),
+  };
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const table = parsed as Record<string, unknown>;
+      if (
+        isStringArray(table['headers']) &&
+        isStringMatrix(table['rows'])
+      ) {
+        return {
+          headers: table['headers'],
+          rows: table['rows'],
+        };
+      }
+    }
+    if (isStringMatrix(parsed)) {
+      if (prompt.editableColumnHeaders && parsed.length === rowCount + 1) {
+        return { headers: parsed[0], rows: parsed.slice(1) };
+      }
+      return { headers: columns, rows: parsed };
+    }
+  } catch {
+    // Return configured blank cells when an existing response cannot be parsed.
+  }
+
+  return fallback;
 }
 
 /** Shared response boxes for the "Report Writing Practice: Sections A–E" task versions. */
@@ -181,7 +241,7 @@ Notebook measurements (in trial order):
 | 30 | 135 | 130 | 138 | 142 | 135 |
 | 40 | 165 | 160 | 172 | 170 | 163 |
 
-Fill in both tables. In each table's first row, write clear column headings with units. The raw table should contain every measurement; the condensed table should contain only the means you will graph. Show one sample mean calculation.`,
+Fill in the column-heading fields directly in both tables. Use clear labels with units. The raw table should contain every measurement; the condensed table should contain only the means you will graph. Show one sample mean calculation.`,
       'H. Graph': `Make a scatter plot of the mean distance for each ramp height from your condensed table. Give the graph a descriptive title, label both axes with units, and add the four data points. Draw a single line of best fit (do not connect the points). Click the graph to place points, or focus it and use the arrow keys plus Enter. Hold Shift with an arrow key for a larger step. Switch to line mode and add two endpoints to draw the best-fit line.`,
       'I. Statistics — Sample Calculation at 30 cm': `Calculate the statistics for the 30 cm ramp height using these five distances: **135, 130, 138, 142, 135 cm**. For the sample standard deviation, divide by **n − 1**. To find quartiles with five values, sort the data, leave out the median, then find the median of each half. Round to one decimal place where needed. Include units in your work; variance is in cm².`,
       'I. Statistics — Results for the Other IV Levels': `Complete the table for the remaining ramp heights. Use these trial results:
@@ -201,26 +261,25 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
         sectionHeader: 'G. Quantitative Data',
         label: 'Raw Data Table',
         type: 'table',
-        subLabel:
-          'Use the first row for column headings, then enter the four IV levels and all five trials.',
-        columns: ['Column 1', 'Column 2', 'Column 3', 'Column 4', 'Column 5', 'Column 6'],
-        rows: 5,
+        subLabel: 'Enter clear column headings with units, then enter the four IV levels and all five trials.',
+        columns: ['', '', '', '', '', ''],
+        editableColumnHeaders: true,
+        expectedColumns: [
+          'Ramp Height (cm)',
+          'Trial 1 (cm)',
+          'Trial 2 (cm)',
+          'Trial 3 (cm)',
+          'Trial 4 (cm)',
+          'Trial 5 (cm)',
+        ],
+        rows: 4,
         prefilled: [
-          [null, null, null, null, null, null],
           [null, null, null, null, null, null],
           [null, null, null, null, null, null],
           [null, null, null, null, null, null],
           [null, null, null, null, null, null],
         ],
         expectedTableValues: [
-          [
-            'Ramp Height (cm)',
-            'Trial 1 (cm)',
-            'Trial 2 (cm)',
-            'Trial 3 (cm)',
-            'Trial 4 (cm)',
-            'Trial 5 (cm)',
-          ],
           ['10', '45', '42', '48', '45', '50'],
           ['20', '92', '88', '95', '92', '93'],
           ['30', '135', '130', '138', '142', '135'],
@@ -230,18 +289,18 @@ Write **none** if there is no mode. Round to one decimal place where needed.`,
       {
         label: 'Condensed Data Table',
         type: 'table',
-        subLabel: 'Use the first row for column headings. Include only the means you will graph.',
-        columns: ['Column 1', 'Column 2'],
-        rows: 5,
+        subLabel: 'Enter clear column headings with units. Include only the means you will graph.',
+        columns: ['', ''],
+        editableColumnHeaders: true,
+        expectedColumns: ['Ramp Height (cm)', 'Mean Distance (cm)'],
+        rows: 4,
         prefilled: [
-          [null, null],
-          [null, null],
-          [null, null],
-          [null, null],
-          [null, null],
+          ['10', null],
+          ['20', null],
+          ['30', null],
+          ['40', null],
         ],
         expectedTableValues: [
-          ['Ramp Height (cm)', 'Mean Distance (cm)'],
           ['10', '46.0'],
           ['20', '92.0'],
           ['30', '136.0'],

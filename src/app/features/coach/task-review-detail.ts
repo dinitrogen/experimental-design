@@ -19,6 +19,7 @@ import {
   TaskDefinition,
   TaskPrompt,
   PromptGrade,
+  parseTaskTableResponse,
 } from '../../core/models/task.model';
 import { GraphData, isGraphData } from '../../core/models/submission.model';
 import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
@@ -116,17 +117,17 @@ import { Firestore, doc, getDoc } from '@angular/fire/firestore';
               @if (isTablePrompt(i)) {
                 <div class="table-wrapper">
                   <table class="data-table">
-                    @if (getPrompt(i)?.columns; as cols) {
+                    @if (getPrompt(i)?.columns) {
                       <thead>
                         <tr>
-                          @for (col of cols; track col) {
-                            <th>{{ col }}</th>
+                          @for (col of getTableHeaders(response, i); track $index) {
+                            <th>{{ col || '—' }}</th>
                           }
                         </tr>
                       </thead>
                     }
                     <tbody>
-                      @for (row of parseTable(response); track $index) {
+                      @for (row of parseTable(response, i); track $index) {
                         <tr>
                           @for (cell of row; track $index) {
                             <td>{{ cell || '—' }}</td>
@@ -152,7 +153,7 @@ import { Firestore, doc, getDoc } from '@angular/fire/firestore';
                 <details class="expected-table-details">
                   <summary>Show expected values</summary>
                   <table class="data-table expected-table">
-                    @if (getPrompt(i)?.columns; as cols) {
+                    @if (getExpectedTableHeaders(i); as cols) {
                       <thead>
                         <tr>
                           @for (col of cols; track col) {
@@ -555,14 +556,19 @@ export class TaskReviewDetailComponent implements OnInit {
     };
   }
 
-  protected parseTable(raw: string): string[][] {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      /* fall through */
-    }
-    return [];
+  protected getTableHeaders(raw: string, index: number): string[] {
+    const prompt = this.getPrompt(index);
+    return prompt ? parseTaskTableResponse(raw, prompt).headers : [];
+  }
+
+  protected getExpectedTableHeaders(index: number): string[] {
+    const prompt = this.getPrompt(index);
+    return prompt?.expectedColumns ?? prompt?.columns ?? [];
+  }
+
+  protected parseTable(raw: string, index: number): string[][] {
+    const prompt = this.getPrompt(index);
+    return prompt ? parseTaskTableResponse(raw, prompt).rows : [];
   }
 
   protected setGrade(index: number, correct: boolean): void {

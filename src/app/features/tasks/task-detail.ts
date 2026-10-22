@@ -27,6 +27,7 @@ import {
   TaskSubmission,
   TaskPrompt,
   PromptGrade,
+  parseTaskTableResponse,
 } from '../../core/models/task.model';
 import { GraphData, GraphPoint, isGraphData } from '../../core/models/submission.model';
 import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
@@ -134,8 +135,8 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                           @if (prompt.columns) {
                             <thead>
                               <tr>
-                                @for (col of prompt.columns; track col) {
-                                  <th>{{ col }}</th>
+                                @for (col of getTableHeaders(i); track $index) {
+                                  <th>{{ col || '—' }}</th>
                                 }
                               </tr>
                             </thead>
@@ -316,8 +317,20 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                             @if (prompt.columns) {
                               <thead>
                                 <tr>
-                                  @for (col of prompt.columns; track col) {
-                                    <th>{{ col }}</th>
+                                  @for (col of getTableHeaders(i); track $index; let c = $index) {
+                                    <th>
+                                      @if (prompt.editableColumnHeaders) {
+                                        <input
+                                          class="table-input header-input"
+                                          [value]="col"
+                                          placeholder="Column heading"
+                                          (input)="onTableHeaderChange(i, c, $event)"
+                                          [attr.aria-label]="'Column heading ' + (c + 1)"
+                                        />
+                                      } @else {
+                                        {{ col }}
+                                      }
+                                    </th>
                                   }
                                 </tr>
                               </thead>
@@ -336,9 +349,8 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                                           placeholder="Enter value"
                                           (input)="onTableCellChange(i, r, c, $event)"
                                           [attr.aria-label]="
-                                            (prompt.columns?.[c] ?? 'Column ' + (c + 1)) +
-                                            ' Row ' +
-                                            (r + 1)
+                                            (getTableHeaders(i)[c] || 'Column ' + (c + 1)) +
+                                            ' Row ' + (r + 1)
                                           "
                                         />
                                       }
@@ -635,6 +647,15 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
 
     .data-table th {
       background: #f5f5f5;
+      font-weight: 500;
+    }
+
+    .data-table.editable th {
+      padding: 0;
+    }
+
+    .data-table.editable .header-input {
+      min-width: 100px;
       font-weight: 500;
     }
 
@@ -968,17 +989,15 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
   }
 
   protected getTableData(promptIndex: number): string[][] {
-    const raw = this.responses()[promptIndex];
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      /* fall through */
-    }
     const prompt = this.task()?.prompts[promptIndex];
-    const rows = prompt?.rows ?? 1;
-    const cols = prompt?.columns?.length ?? 1;
-    return Array.from({ length: rows }, () => Array.from({ length: cols }, () => ''));
+    if (!prompt) return [];
+    return parseTaskTableResponse(this.responses()[promptIndex] ?? '', prompt).rows;
+  }
+
+  protected getTableHeaders(promptIndex: number): string[] {
+    const prompt = this.task()?.prompts[promptIndex];
+    if (!prompt) return [];
+    return parseTaskTableResponse(this.responses()[promptIndex] ?? '', prompt).headers;
   }
 
   protected isCellReadOnly(prompt: TaskPrompt, row: number, col: number): boolean {
@@ -987,11 +1006,32 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
 
   protected onTableCellChange(promptIndex: number, row: number, col: number, event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    const table = this.getTableData(promptIndex);
-    table[row][col] = value;
+    const prompt = this.task()?.prompts[promptIndex];
+    if (!prompt) return;
+    const response = parseTaskTableResponse(this.responses()[promptIndex] ?? '', prompt);
+    response.rows[row][col] = value;
+    this.saveTableResponse(promptIndex, prompt, response.headers, response.rows);
+  }
+
+  protected onTableHeaderChange(promptIndex: number, column: number, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    const prompt = this.task()?.prompts[promptIndex];
+    if (!prompt) return;
+    const response = parseTaskTableResponse(this.responses()[promptIndex] ?? '', prompt);
+    response.headers[column] = value;
+    this.saveTableResponse(promptIndex, prompt, response.headers, response.rows);
+  }
+
+  private saveTableResponse(
+    promptIndex: number,
+    prompt: TaskPrompt,
+    headers: string[],
+    rows: string[][],
+  ): void {
+    const value = prompt.editableColumnHeaders ? JSON.stringify({ headers, rows }) : JSON.stringify(rows);
     this.responses.update((prev) => {
       const copy = [...prev];
-      copy[promptIndex] = JSON.stringify(table);
+      copy[promptIndex] = value;
       return copy;
     });
     this.markDirtyAndScheduleSave();

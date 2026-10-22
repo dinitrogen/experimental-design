@@ -1,4 +1,9 @@
-import { createInitialTaskResponse, TASK_DEFINITIONS, TaskPrompt } from './task.model';
+import {
+  createInitialTaskResponse,
+  parseTaskTableResponse,
+  TASK_DEFINITIONS,
+  TaskPrompt,
+} from './task.model';
 
 describe('createInitialTaskResponse', () => {
   it('preserves the legacy editable-table response shape and prefilled cells', () => {
@@ -17,6 +22,47 @@ describe('createInitialTaskResponse', () => {
       ['10', ''],
       ['20', ''],
     ]);
+  });
+
+  it('stores editable column headings with the table rows', () => {
+    const prompt: TaskPrompt = {
+      label: 'Raw data',
+      type: 'table',
+      columns: ['', ''],
+      editableColumnHeaders: true,
+      rows: 2,
+    };
+
+    expect(JSON.parse(createInitialTaskResponse(prompt))).toEqual({
+      headers: ['', ''],
+      rows: [
+        ['', ''],
+        ['', ''],
+      ],
+    });
+  });
+
+  it('migrates legacy first-row headings when reading an editable table', () => {
+    const prompt: TaskPrompt = {
+      label: 'Raw data',
+      type: 'table',
+      columns: ['', ''],
+      editableColumnHeaders: true,
+      rows: 1,
+    };
+
+    expect(
+      parseTaskTableResponse(
+        JSON.stringify([
+          ['Ramp height (cm)', 'Distance (cm)'],
+          ['10', '46'],
+        ]),
+        prompt,
+      ),
+    ).toEqual({
+      headers: ['Ramp height (cm)', 'Distance (cm)'],
+      rows: [['10', '46']],
+    });
   });
 
   it('initializes a blank graph using its configured bounds', () => {
