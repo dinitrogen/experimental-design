@@ -123,6 +123,216 @@ const REPORT_SECTIONS_A_E_PROMPTS: TaskPrompt[] = [
  */
 export const TASK_DEFINITIONS: TaskDefinition[] = [
   {
+    id: 'task-020-report-sections-g-i',
+    title: 'Report Writing Practice: Sections G–I (Toy Car Ramp)',
+    promptFile: 'tasks/task-020-report-sections-g-i.md',
+    prompts: [
+      // ── G. Quantitative Data ──
+      {
+        sectionHeader: 'G. Quantitative Data',
+        label: 'Raw Data Table — Column Headings',
+        type: 'text',
+        subLabel:
+          'Write the column headings you would use for the raw data table (one column for the IV, then one for each trial). Include units and make each heading clear.',
+      },
+      {
+        label: 'Condensed Data Table',
+        type: 'table',
+        subLabel:
+          'Fill in only the data you will graph: the mean distance for each ramp height.',
+        columns: ['Ramp Height (cm)', 'Mean Distance (cm)'],
+        rows: 4,
+        prefilled: [
+          ['10', null],
+          ['20', null],
+          ['30', null],
+          ['40', null],
+        ],
+        expectedTableValues: [
+          ['10', '46.0'],
+          ['20', '92.0'],
+          ['30', '136.0'],
+          ['40', '166.0'],
+        ],
+      },
+      {
+        label: 'Sample Calculation — Mean',
+        type: 'text',
+        subLabel:
+          'Show one sample calculation for the mean at the 20 cm ramp height. Write out the numbers you add and divide, and include units.',
+      },
+
+      // ── H. Graph ──
+      {
+        sectionHeader: 'H. Graph',
+        label: 'Graph Title',
+        type: 'text',
+        subLabel: 'Write a title that names both the IV and the DV.',
+      },
+      {
+        label: 'x-axis',
+        type: 'text',
+        subLabel:
+          'Which variable goes on the x-axis? Give the axis label with units and the scale you would use (start, end, and the step between labels).',
+      },
+      {
+        label: 'y-axis',
+        type: 'text',
+        subLabel:
+          'Which variable goes on the y-axis? Give the axis label with units and the scale you would use. Explain why your scale fits your data.',
+      },
+      {
+        label: 'Line of Best Fit',
+        type: 'text',
+        subLabel:
+          'List the four points you would plot as (x, y). Then describe the line of best fit you would draw and the trend it shows. Explain why you would not connect the dots.',
+      },
+      {
+        label: 'Fix the Flawed Graph',
+        type: 'text',
+        subLabel:
+          'Find at least 4 problems with the other team’s graph (see the table in the task description). For each one, say how to fix it.',
+      },
+
+      // ── I. Statistics: sample calculations at 30 cm (135, 130, 138, 142, 135) ──
+      {
+        sectionHeader: 'I. Statistics — Sample Calculation at 30 cm',
+        label: 'Mean (cm)',
+        type: 'number',
+        subLabel: 'Data: 135, 130, 138, 142, 135 cm',
+        expectedAnswer: 136.0,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Median (cm)',
+        type: 'number',
+        expectedAnswer: 135,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Mode (cm)',
+        type: 'number',
+        expectedAnswer: 135,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Minimum (cm)',
+        type: 'number',
+        expectedAnswer: 130,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Maximum (cm)',
+        type: 'number',
+        expectedAnswer: 142,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Range (cm)',
+        type: 'number',
+        expectedAnswer: 12,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Deviations Table (30 cm)',
+        type: 'table',
+        subLabel: 'Use the mean you found above.',
+        columns: ['Data Value (cm)', 'Deviation (cm)', 'Squared Deviation (cm²)'],
+        rows: 5,
+        prefilled: [
+          ['135', null, null],
+          ['130', null, null],
+          ['138', null, null],
+          ['142', null, null],
+          ['135', null, null],
+        ],
+        expectedTableValues: [
+          ['135', '-1', '1'],
+          ['130', '-6', '36'],
+          ['138', '2', '4'],
+          ['142', '6', '36'],
+          ['135', '-1', '1'],
+        ],
+      },
+      {
+        label: 'Variance (cm²)',
+        type: 'number',
+        subLabel: 'Divide the sum of the squared deviations by n − 1.',
+        expectedAnswer: 19.5,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Standard Deviation (cm)',
+        type: 'number',
+        expectedAnswer: 4.4,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Q1 (cm)',
+        type: 'number',
+        expectedAnswer: 132.5,
+        tolerance: 0.1,
+      },
+      {
+        label: 'Q3 (cm)',
+        type: 'number',
+        expectedAnswer: 140,
+        tolerance: 0.1,
+      },
+      {
+        label: 'IQR (cm)',
+        type: 'number',
+        expectedAnswer: 7.5,
+        tolerance: 0.1,
+      },
+
+      // ── I. Statistics: remaining IV levels ──
+      {
+        sectionHeader: 'I. Statistics — Results for the Other IV Levels',
+        label: 'Results Table (10, 20, and 40 cm)',
+        type: 'table',
+        subLabel:
+          'Calculate each statistic for the remaining ramp heights. Write "none" if there is no mode. Round to one decimal place. The 30 cm level is done above.',
+        columns: [
+          'Ramp Height (cm)',
+          'Median (cm)',
+          'Mode (cm)',
+          'Range (cm)',
+          'IQR (cm)',
+          'Std. Dev. (cm)',
+        ],
+        rows: 3,
+        prefilled: [
+          ['10', null, null, null, null, null],
+          ['20', null, null, null, null, null],
+          ['40', null, null, null, null, null],
+        ],
+        expectedTableValues: [
+          ['10', '45', '45', '8', '5.5', '3.1'],
+          ['20', '92', '92', '7', '4', '2.5'],
+          ['40', '165', 'none', '12', '9.5', '4.9'],
+        ],
+      },
+
+      // ── I. Statistics: interpretation ──
+      {
+        sectionHeader: 'I. Statistics — Interpret Your Results',
+        label: 'Units of Variance',
+        type: 'short-answer',
+        subLabel: 'What are the units of the variance when the data is in cm?',
+        inputLabel: 'Units',
+      },
+      {
+        label: 'Consistency Across Levels',
+        type: 'text',
+        subLabel:
+          'Which ramp height gave the most consistent distances, and which gave the least consistent? Use at least two statistics of variation (range, IQR, or standard deviation) as evidence.',
+      },
+    ],
+    dueDate: '',
+    createdAt: '2026-10-22',
+  },
+  {
     id: 'task-019-report-sections-a-e-buoyancy',
     title: 'Report Writing Practice: Sections A–E (Buoyancy)',
     promptFile: 'tasks/task-019-report-sections-a-e-buoyancy.md',
