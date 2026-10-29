@@ -16,12 +16,11 @@ import {
 import { AuthService } from './auth.service';
 import {
   createInitialTaskResponse,
-  TASK_DEFINITIONS,
   TaskDefinition,
   TaskSubmission,
   PromptGrade,
-  getTaskDefinition,
 } from '../models/task.model';
+import { TASK_DEFINITIONS, getTaskDefinition } from '../tasks/task-registry';
 
 export interface TaskAssignment {
   type: 'all' | 'individual';

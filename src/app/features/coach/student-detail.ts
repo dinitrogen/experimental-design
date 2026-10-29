@@ -20,7 +20,8 @@ import { ReadingProgress } from '../../core/models/resource.model';
 import { ReportSubmission } from '../../core/models/submission.model';
 import { Achievement, ACHIEVEMENT_TEMPLATES, getTemplate, isInSeason, seasonLabel, sortAchievements } from '../../core/models/achievement.model';
 import { SeasonService } from '../../core/services/season.service';
-import { TaskSubmission, TASK_DEFINITIONS } from '../../core/models/task.model';
+import { TaskSubmission } from '../../core/models/task.model';
+import { TASK_DEFINITIONS } from '../../core/tasks/task-registry';
 
 @Component({
   selector: 'app-student-detail',
@@ -531,7 +532,12 @@ export class StudentDetailComponent {
     if (!uid) return [];
     const subs = this.taskSubmissions();
     const assignments = this.taskService.assignments();
-    return TASK_DEFINITIONS.map((def) => {
+    return TASK_DEFINITIONS.filter((def) => {
+      const assignment = assignments[def.id];
+      const isAssigned = assignment &&
+        (assignment.type === 'all' || assignment.studentUids.includes(uid));
+      return !def.archived || isAssigned || subs.some((sub) => sub.taskId === def.id);
+    }).map((def) => {
       const assignment = assignments[def.id];
       const isAssigned = assignment
         ? assignment.type === 'all' || assignment.studentUids.includes(uid)

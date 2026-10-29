@@ -266,8 +266,9 @@ src/
 ├── environments/          # Firebase config (gitignored)
 ├── app/
 │   ├── core/
-│   │   ├── models/        # Data interfaces & constants
-│   │   └── services/      # Firebase services, auth, PDF generation
+│   │   ├── models/        # Data interfaces & response helpers
+│   │   ├── services/      # Firebase services, auth, PDF generation
+│   │   └── tasks/         # Task definitions & registry
 │   ├── features/
 │   │   ├── auth/          # Login & password change
 │   │   ├── coach/         # Coach dashboard, student management
@@ -287,6 +288,14 @@ public/
 functions/
 └── src/index.ts           # Cloud Functions (AI data generation via Gemini)
 ```
+
+### Task definitions and archive
+
+Task definitions live in `src/app/core/tasks/` and are registered in `task-registry.ts`. Newer tasks can include Markdown instructions alongside their response sections; older tasks may reference a prompt in `public/tasks/`.
+
+Set `archived: true` on a definition to move it out of the coach's default assignment list. Coaches can use **Show archived tasks** to view and manage its assignments. Archiving does not remove existing assignments or submissions, and assigned students can still access the task.
+
+Student responses are stored by task ID and prompt position. Preserve task IDs, prompt order, and response shapes when reorganizing definitions. For changes to an already assigned task's prompts, create a new task ID or implement a migration rather than changing the existing response structure.
 
 ## License
 

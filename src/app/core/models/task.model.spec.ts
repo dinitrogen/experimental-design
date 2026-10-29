@@ -1,9 +1,9 @@
 import {
   createInitialTaskResponse,
   parseTaskTableResponse,
-  TASK_DEFINITIONS,
   TaskPrompt,
 } from './task.model';
+import { getTaskDefinition, TASK_DEFINITIONS } from '../tasks/task-registry';
 
 describe('createInitialTaskResponse', () => {
   it('preserves the legacy editable-table response shape and prefilled cells', () => {
@@ -182,6 +182,71 @@ describe('createInitialTaskResponse', () => {
 });
 
 describe('task definition compatibility', () => {
+  it('archives only tasks 001 through 016 without removing them from lookup', () => {
+    expect(new Set(TASK_DEFINITIONS.map((task) => task.id)).size).toBe(22);
+    for (const task of TASK_DEFINITIONS) {
+      const number = Number(task.id.match(/^task-(\d{3})-/)?.[1]);
+      expect(task.archived === true).toBe(number >= 1 && number <= 16);
+      expect(getTaskDefinition(task.id)).toBe(task);
+    }
+  });
+
+  it('provides separate CER and conclusion responses without a variation CER', () => {
+    const task = TASK_DEFINITIONS.find((item) => item.id === 'task-022-report-sections-k-l-cer');
+
+    expect(task?.promptFile).toBeUndefined();
+    expect(task?.dueDate).toBe('');
+    expect(task?.prompts.map((prompt) => prompt.label)).toEqual([
+      'Data Trend — Claim',
+      'Data Trend — Evidence',
+      'Data Trend — Reasoning',
+      'Outliers — Claim',
+      'Outliers — Evidence',
+      'Outliers — Reasoning',
+      'Conclusion — Hypothesis Restated',
+      'Conclusion — Claim',
+      'Conclusion — Evidence',
+      'Conclusion — Reasoning',
+    ]);
+    expect(task?.prompts.every((prompt) => prompt.type === 'text')).toBe(true);
+    expect(task?.prompts.filter((prompt) => prompt.sectionHeader).map((prompt) => prompt.sectionHeader))
+      .toEqual(['K. Analysis — Data Trend', 'K. Analysis — Outliers', 'L. Conclusion']);
+    for (const prompt of task?.prompts ?? []) {
+      if (prompt.sectionHeader) {
+        expect(task?.sectionInstructions?.[prompt.sectionHeader]).toBeTruthy();
+      }
+    }
+  });
+
+  it('uses consistent statistics, bounds, and a best-fit line in the CER exercise', () => {
+    const task = TASK_DEFINITIONS.find((item) => item.id === 'task-022-report-sections-k-l-cer');
+    const instructions = task?.sectionInstructions?.['K. Analysis — Data Trend'] ?? '';
+    const rows = [...instructions.matchAll(/^\| (\d+) \| ([\d, ]+) \|$/gm)];
+    const outliers: number[] = [];
+
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      const height = Number(row[1]);
+      const trials = row[2].split(',').map(Number);
+      const sorted = [...trials].sort((a, b) => a - b);
+      const mean = trials.reduce((sum, value) => sum + value, 0) / trials.length;
+      const q1 = sorted[1];
+      const q3 = sorted[5];
+      const iqr = q3 - q1;
+      const lower = q1 - 1.5 * iqr;
+      const upper = q3 + 1.5 * iqr;
+
+      expect(trials).toHaveLength(7);
+      expect(instructions).toContain(
+        `| ${height} | ${mean} | ${sorted[0]} | ${sorted[6]} | ${q1} | ${q3} | ${iqr} |`,
+      );
+      expect(mean).toBeCloseTo(4.7 * height - 2);
+      outliers.push(...trials.filter((value) => value < lower || value > upper));
+    }
+    expect(instructions).toContain('y = 4.7x − 2');
+    expect(outliers).toEqual([170]);
+  });
+
   it('keeps existing markdown tasks while allowing inline section instructions', () => {
     const legacyTask = TASK_DEFINITIONS.find(
       (task) => task.id === 'task-019-report-sections-a-e-buoyancy',

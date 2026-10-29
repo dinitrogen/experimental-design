@@ -14,7 +14,8 @@ import { AchievementService } from '../../core/services/achievement.service';
 import { TaskService } from '../../core/services/task.service';
 import { ReportSubmission } from '../../core/models/submission.model';
 import { Achievement, getTemplate, seasonLabel, sortAchievements } from '../../core/models/achievement.model';
-import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model';
+import { TaskSubmission } from '../../core/models/task.model';
+import { getTaskDefinition } from '../../core/tasks/task-registry';
 import { ActiveSeasonChipComponent } from '../../shared/components/active-season-chip';
 
 @Component({

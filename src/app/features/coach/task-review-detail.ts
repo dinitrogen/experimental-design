@@ -15,12 +15,12 @@ import { MarkdownComponent } from 'ngx-markdown';
 import { TaskService } from '../../core/services/task.service';
 import {
   TaskSubmission,
-  getTaskDefinition,
   TaskDefinition,
   TaskPrompt,
   PromptGrade,
   parseTaskTableResponse,
 } from '../../core/models/task.model';
+import { getTaskDefinition } from '../../core/tasks/task-registry';
 import { GraphData, isGraphData } from '../../core/models/submission.model';
 import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
 import { Firestore, doc, getDoc } from '@angular/fire/firestore';

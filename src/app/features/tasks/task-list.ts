@@ -45,6 +45,13 @@ interface TaskView {
       <h1 class="page-title">Tasks</h1>
       @if (isCoach()) {
         <p class="page-subtitle">Manage and assign tasks to your students.</p>
+        <button mat-stroked-button type="button" class="archive-toggle" [attr.aria-pressed]="showArchived()"
+                (click)="showArchived.update(value => !value)">
+          Show archived tasks ({{ archivedCount }})
+        </button>
+        @if (showArchived()) {
+          <p>Showing archived tasks. Existing assignments can still be managed here.</p>
+        }
       } @else {
         <p class="page-subtitle">Complete assigned tasks to practice your experimental design skills.</p>
       }
@@ -58,8 +65,8 @@ interface TaskView {
           <mat-card-content class="empty-state">
             <mat-icon>assignment</mat-icon>
             @if (isCoach()) {
-              <h2>No Tasks</h2>
-              <p>No task definitions found.</p>
+              <h2>No {{ showArchived() ? 'Archived ' : '' }}Tasks</h2>
+              <p>No {{ showArchived() ? 'archived' : 'active' }} task definitions found.</p>
             } @else {
               <h2>No Tasks Assigned</h2>
               <p>Your coach hasn't assigned any tasks yet. Check back later!</p>
@@ -191,6 +198,10 @@ interface TaskView {
     .page-subtitle {
       color: #666;
       margin: -8px 0 24px;
+    }
+
+    .archive-toggle {
+      margin-bottom: 20px;
     }
 
     .loading-container {
@@ -341,6 +352,8 @@ export class TaskListComponent implements OnInit {
 
   protected readonly isCoach = this.authService.isCoach;
   protected readonly loading = signal(true);
+  protected readonly showArchived = signal(false);
+  protected readonly archivedCount = this.taskService.getAllTasks().filter((task) => task.archived).length;
   private readonly submissions = signal<TaskSubmission[]>([]);
 
   protected readonly tasks = computed<TaskView[]>(() => {
@@ -350,9 +363,9 @@ export class TaskListComponent implements OnInit {
     const assignments = this.taskService.assignments();
     const uid = this.authService.user()?.uid;
 
-    // Coaches see all tasks; students see only assigned tasks
+    // Archive filtering only affects the coach's assignment list.
     const definitions = this.isCoach()
-      ? allDefs
+      ? allDefs.filter((def) => !!def.archived === this.showArchived())
       : allDefs.filter((def) => uid && this.taskService.isAssignedTo(def.id, uid));
 
     return definitions

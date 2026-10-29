@@ -14,7 +14,8 @@ import { SubmissionService } from '../../core/services/submission.service';
 import { TaskService } from '../../core/services/task.service';
 import { ResourceService } from '../../core/services/resource.service';
 import { ReportSubmission } from '../../core/models/submission.model';
-import { TaskSubmission, getTaskDefinition } from '../../core/models/task.model';
+import { TaskSubmission } from '../../core/models/task.model';
+import { getTaskDefinition } from '../../core/tasks/task-registry';
 import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
