@@ -3,6 +3,30 @@ import { GraphCanvasComponent } from '../../../../shared/components/graph-canvas
 import { GraphStepComponent } from './graph';
 
 describe('GraphStepComponent ranges', () => {
+  it('displays and toggles the placement mode without changing the report default', async () => {
+    await TestBed.configureTestingModule({ imports: [GraphStepComponent] })
+      .overrideComponent(GraphCanvasComponent, { set: { template: '' } })
+      .compileComponents();
+    const report = TestBed.createComponent(GraphStepComponent);
+    report.detectChanges();
+    const reportButton: HTMLButtonElement = report.nativeElement.querySelector('button[aria-label="Free placement"]');
+    expect(reportButton.getAttribute('aria-pressed')).toBe('false');
+    expect(reportButton.textContent).toContain('Snap to grid');
+
+    const guide = TestBed.createComponent(GraphStepComponent);
+    guide.componentRef.setInput('freePlacementByDefault', true);
+    guide.detectChanges();
+    const button: HTMLButtonElement = guide.nativeElement.querySelector('button[aria-label="Free placement"]');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(button.textContent).toContain('Free placement');
+    expect(button.classList.contains('active-toggle')).toBe(true);
+    button.click();
+    guide.detectChanges();
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(button.textContent).toContain('Snap to grid');
+    expect(button.classList.contains('active-toggle')).toBe(false);
+  });
+
   it('suggests usable ranges for constant negative values', async () => {
     await TestBed.configureTestingModule({ imports: [GraphStepComponent] })
       .overrideComponent(GraphCanvasComponent, { set: { template: '' } })

@@ -14,10 +14,10 @@
         <mat-icon>save</mat-icon> {{ saving() ? 'Saving...' : 'Save workspace' }}
       </button>
       <button mat-stroked-button type="button" (click)="generateData()" [disabled]="saving() || generating() || replacing()">
-        <mat-icon>auto_awesome</mat-icon> Generate an experiment and data with AI
+        <mat-icon>auto_awesome</mat-icon> Generate experiment and data
       </button>
       <button mat-stroked-button type="button" (click)="generateDataForExperiment()" [disabled]="saving() || generating() || replacing()">
-        <mat-icon>auto_awesome</mat-icon> Generate data for my experiment with AI
+        <mat-icon>auto_awesome</mat-icon> Generate data
       </button>
       <button mat-stroked-button type="button" (click)="reset()" [disabled]="saving() || generating() || replacing()">
         Reset to blank
@@ -26,15 +26,18 @@
     </div>
     @if (saveError()) { <p role="alert">{{ saveError() }}</p> }
     <p>Use <strong>Save workspace</strong> to keep one workspace with your account and reopen it on another device.</p>
-    <p>Enter everything yourself, generate data for your own experiment, or let AI invent an experiment and data. For your own experiment, enter both variables below; optionally enter a hypothesis, procedure, and IV levels. Leave all IV levels blank for AI to choose them.</p>
-    <p>AI-generated data are fictional, not real measurements. Generating data for your experiment sends its details and IV levels to the AI service; generating an entire experiment does not send your workspace details.</p>
-    @if (generating()) { <p role="status">Generating fictional practice data...</p> }
+    <p>Enter your own data or generate fictional practice data. For your experiment, enter both variables; leave IV levels blank to have them chosen for you.</p>
+    @if (generating()) {
+      <div class="generation-status" role="status" aria-live="polite">
+        <mat-spinner diameter="24" aria-hidden="true" /> Generating practice data...
+      </div>
+    }
     @if (aiMessage()) { <p role="status">{{ aiMessage() }}</p> }
 
-    <fieldset [disabled]="generating() || replacing()" class="workspace-fieldset">
+    <fieldset [disabled]="generating() || replacing()" [attr.inert]="generating() || replacing() ? '' : null" class="workspace-fieldset">
       <section>
         <h2>1. Describe your experiment</h2>
-        <p>Include units in your variable names. Use the buttons above if you want AI to generate data.</p>
+        <p>Include units in your variable names.</p>
         <div class="fields">
           <mat-form-field appearance="outline">
             <mat-label>Independent variable (with units)</mat-label>
@@ -50,12 +53,12 @@
         <div class="fields">
           <mat-form-field appearance="outline">
             <mat-label>Hypothesis (optional)</mat-label>
-            <textarea matInput maxlength="2000" rows="2" [value]="workspace().hypothesis"
+            <textarea matInput maxlength="2000" rows="4" [value]="workspace().hypothesis"
               (input)="updateExperiment('hypothesis', $event)"></textarea>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Procedure (optional)</mat-label>
-            <textarea matInput maxlength="4000" rows="2" [value]="workspace().procedure"
+            <textarea matInput maxlength="4000" rows="4" [value]="workspace().procedure"
               (input)="updateExperiment('procedure', $event)"></textarea>
           </mat-form-field>
         </div>
@@ -128,14 +131,14 @@
           [independentVar]="workspace().independentVar"
           [dependentVar]="workspace().dependentVar"
           [manualCalculations]="workspace().manualCalculations"
+          [freePlacementByDefault]="true"
           [syncVersion]="graphSyncVersion()"
           (changed)="updateFromStep($event, 'graph')"
         />
         <mat-card class="explanation">
           <mat-card-content>
-            <h3>What does y = mx + b mean?</h3>
-            <p><strong>x</strong> is the independent variable and <strong>y</strong> is the predicted dependent variable. The slope <strong>m</strong> is the change in y for each one-unit increase in x, in y-units per x-unit. The intercept <strong>b</strong> is the predicted y when x = 0, in y-units.</p>
-            <p>A positive slope rises; a negative slope falls. The intercept may not be meaningful if x = 0 is outside the experiment’s tested range. A best-fit line summarizes a trend; it does not prove causation or guarantee predictions outside that range.</p>
+            <h3>How to calculate the line of best fit</h3>
+            <p>Choose two points on your line. Calculate the slope, m = (y₂ − y₁) / (x₂ − x₁), then the intercept, b = y₁ − mx₁. The equation is y = mx + b.</p>
             @if (workspace().graphData.lobfStart && workspace().graphData.lobfEnd) {
               @if (line(); as answer) {
                 <details>
@@ -145,7 +148,14 @@
                     b = y₁ − m × x₁ = {{ formatNumber(answer.intercept) }}<br />
                     y = {{ formatNumber(answer.slope) }}x {{ answer.intercept < 0 ? '−' : '+' }} {{ formatNumber(answer.intercept < 0 ? -answer.intercept : answer.intercept) }}
                   </p>
-                  <p>For each 1 x-unit increase, the line predicts a change of {{ formatNumber(answer.slope) }} y-units. At x = 0, it predicts {{ formatNumber(answer.intercept) }} y-units.</p>
+                  @if (answer.slope > 0) {
+                    <p>Your slope is positive {{ formatNumber(answer.slope) }} {{ slopeUnit() }}. Your drawn line suggests {{ yAxis().name }} increases as {{ xAxis().name }} increases.</p>
+                  } @else if (answer.slope < 0) {
+                    <p>Your slope is {{ formatNumber(answer.slope) }} {{ slopeUnit() }}. Your drawn line suggests {{ yAxis().name }} decreases as {{ xAxis().name }} increases.</p>
+                  } @else {
+                    <p>Your slope is zero {{ slopeUnit() }}. Your drawn line suggests no change in {{ yAxis().name }} as {{ xAxis().name }} increases.</p>
+                  }
+                  <p>The intercept is the predicted {{ yAxis().name }} at zero {{ xAxis().name }}; it may not be meaningful outside your tested range.</p>
                 </details>
               } @else {
                 <p role="status">The selected endpoints have the same x value. A vertical line has no slope-intercept equation; choose endpoints with different x values.</p>

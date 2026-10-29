@@ -223,7 +223,7 @@ type TrialKey = (typeof ALL_TRIAL_KEYS)[number];
       border-bottom: 2px solid #e0e0e0;
     }
     .header-input {
-      width: 120px;
+      width: 240px;
       padding: 4px 6px;
       border: 1px dashed #bbb;
       border-radius: 4px;

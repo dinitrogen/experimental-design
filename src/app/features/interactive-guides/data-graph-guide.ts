@@ -27,6 +27,15 @@ import { InteractiveWorkspaceService } from './workspace.service';
 
 type ExperimentField = 'independentVar' | 'dependentVar' | 'hypothesis' | 'procedure';
 
+function axisDescription(label: string, fallback: string): { name: string; unit: string } {
+  const text = label.trim();
+  const match = text.match(/^(.*?)\s*(?:\(([^()]*)\)|\[([^\[\]]*)\])\s*$/);
+  return {
+    name: (match?.[1]?.trim() || text || fallback),
+    unit: (match?.[2] || match?.[3] || '').trim(),
+  };
+}
+
 @Component({
   selector: 'app-data-graph-guide',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,6 +70,22 @@ export class DataGraphGuideComponent implements OnInit {
   protected readonly line = computed(() => {
     const graph = this.workspace().graphData;
     return drawnLine(graph.lobfStart, graph.lobfEnd);
+  });
+  protected readonly xAxis = computed(() => axisDescription(
+    this.workspace().independentVar || this.workspace().graphData.xAxisLabel,
+    'the independent variable',
+  ));
+  protected readonly yAxis = computed(() => axisDescription(
+    this.workspace().dependentVar || this.workspace().graphData.yAxisLabel,
+    'the dependent variable',
+  ));
+  protected readonly slopeUnit = computed(() => {
+    const x = this.xAxis().unit;
+    const y = this.yAxis().unit;
+    if (x && y) return `${y}/${x}`;
+    if (y) return `${y} per unit of ${this.xAxis().name}`;
+    if (x) return `dependent-variable units/${x}`;
+    return 'dependent-variable units per independent-variable unit';
   });
   protected readonly extraFields: { key: keyof ExtraStatistics; label: string }[] = [
     { key: 'min', label: 'Minimum' }, { key: 'max', label: 'Maximum' },

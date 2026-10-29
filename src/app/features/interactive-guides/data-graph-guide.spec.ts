@@ -24,6 +24,128 @@ function exampleWorkspace(): GuideWorkspace {
 }
 
 describe('DataGraphGuideComponent', () => {
+  it.each([
+    { start: { x: 1, y: 2 }, end: { x: 3, y: 10 }, message: 'Your slope is positive 4 cm/s.', trend: 'Distance increases as Time increases.' },
+    { start: { x: 1, y: 10 }, end: { x: 3, y: 2 }, message: 'Your slope is -4 cm/s.', trend: 'Distance decreases as Time increases.' },
+    { start: { x: 1, y: 2 }, end: { x: 3, y: 2 }, message: 'Your slope is zero cm/s.', trend: 'no change in Distance as Time increases.' },
+  ])('explains a drawn line using its variables and units', async ({ start, end, message, trend }) => {
+    const workspace = createWorkspace();
+    workspace.independentVar = 'Time (s)';
+    workspace.dependentVar = 'Distance (cm)';
+    workspace.graphData.lobfStart = start;
+    workspace.graphData.lobfEnd = end;
+    await TestBed.configureTestingModule({
+      imports: [DataGraphGuideComponent],
+      providers: [
+        provideRouter([]),
+        { provide: InteractiveWorkspaceService, useValue: { load: async () => workspace } },
+        { provide: AiDataService, useValue: {} },
+        { provide: MatDialog, useValue: {} },
+      ],
+    }).overrideComponent(GraphCanvasComponent, { set: { template: '' } }).compileComponents();
+    const fixture = TestBed.createComponent(DataGraphGuideComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    expect(page.textContent).toContain('How to calculate the line of best fit');
+    expect(page.textContent).toContain(message);
+    expect(page.textContent).toContain(trend);
+    expect(page.querySelector('button[aria-label="Free placement"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect([...page.querySelectorAll('textarea')].every((field) => field.rows === 4)).toBe(true);
+  });
+
+  it('explains why a vertical line has no slope-intercept equation', async () => {
+    const workspace = createWorkspace();
+    workspace.graphData.lobfStart = { x: 1, y: 2 };
+    workspace.graphData.lobfEnd = { x: 1, y: 4 };
+    await TestBed.configureTestingModule({
+      imports: [DataGraphGuideComponent],
+      providers: [
+        provideRouter([]),
+        { provide: InteractiveWorkspaceService, useValue: { load: async () => workspace } },
+        { provide: AiDataService, useValue: {} },
+        { provide: MatDialog, useValue: {} },
+      ],
+    }).overrideComponent(GraphCanvasComponent, { set: { template: '' } }).compileComponents();
+    const fixture = TestBed.createComponent(DataGraphGuideComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    expect(page.textContent).toContain('A vertical line has no slope-intercept equation');
+  });
+
+  it.each([
+    { iv: '', dv: '', xLabel: 'Time (s)', yLabel: 'Distance [m]', unit: 'm/s' },
+    { iv: 'Time', dv: 'Distance', xLabel: '', yLabel: '', unit: 'dependent-variable units per independent-variable unit' },
+  ])('uses axis labels or a safe fallback for missing units', async ({ iv, dv, xLabel, yLabel, unit }) => {
+    const workspace = createWorkspace();
+    workspace.independentVar = iv;
+    workspace.dependentVar = dv;
+    workspace.graphData.xAxisLabel = xLabel;
+    workspace.graphData.yAxisLabel = yLabel;
+    workspace.graphData.lobfStart = { x: 1, y: 2 };
+    workspace.graphData.lobfEnd = { x: 3, y: 10 };
+    await TestBed.configureTestingModule({
+      imports: [DataGraphGuideComponent],
+      providers: [
+        provideRouter([]),
+        { provide: InteractiveWorkspaceService, useValue: { load: async () => workspace } },
+        { provide: AiDataService, useValue: {} },
+        { provide: MatDialog, useValue: {} },
+      ],
+    }).overrideComponent(GraphCanvasComponent, { set: { template: '' } }).compileComponents();
+    const fixture = TestBed.createComponent(DataGraphGuideComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(`Your slope is positive 4 ${unit}.`);
+  });
+
+  it('shows a progress indicator and disables the workspace during generation', async () => {
+    let finish!: (value: {
+      independentVar: string; dependentVar: string; hypothesis: string; procedure: string;
+      dataTable: GuideWorkspace['dataTable']; notes: string;
+    }) => void;
+    const pending = new Promise<{
+      independentVar: string; dependentVar: string; hypothesis: string; procedure: string;
+      dataTable: GuideWorkspace['dataTable']; notes: string;
+    }>((resolve) => { finish = resolve; });
+    await TestBed.configureTestingModule({
+      imports: [DataGraphGuideComponent],
+      providers: [
+        provideRouter([]),
+        { provide: InteractiveWorkspaceService, useValue: { load: async () => null } },
+        { provide: AiDataService, useValue: { generateGuideExample: () => pending } },
+        { provide: MatDialog, useValue: { open: () => ({ afterClosed: () => of(true) }) } },
+      ],
+    }).overrideComponent(GraphCanvasComponent, { set: { template: '' } }).compileComponents();
+    const fixture = TestBed.createComponent(DataGraphGuideComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    const button = [...page.querySelectorAll('button')].find((item) =>
+      item.textContent?.includes('Generate experiment and data'),
+    )!;
+    button.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fixture.detectChanges();
+    const fieldset = page.querySelector<HTMLFieldSetElement>('fieldset.workspace-fieldset')!;
+    expect(fieldset.disabled).toBe(true);
+    expect(fieldset.hasAttribute('inert')).toBe(true);
+    expect(button.disabled).toBe(true);
+    expect(page.querySelector('.generation-status mat-spinner')).not.toBeNull();
+    expect(page.textContent).toContain('Generating practice data...');
+    finish({ independentVar: 'Time (s)', dependentVar: 'Distance (cm)', hypothesis: '', procedure: '', dataTable: createWorkspace().dataTable, notes: '' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fieldset.disabled).toBe(false);
+    expect(fieldset.hasAttribute('inert')).toBe(false);
+    expect(page.querySelector('.generation-status')).toBeNull();
+  });
+
   it('saves entered data, calculations, and exact line endpoints and reloads them', async () => {
     let saved: GuideWorkspace | null = null;
     const save = vi.fn(async (workspace: GuideWorkspace) => { saved = structuredClone(workspace); });
@@ -166,7 +288,7 @@ describe('DataGraphGuideComponent', () => {
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
     const button = [...page.querySelectorAll('button')].find((item) =>
-      item.textContent?.includes('Generate an experiment and data with AI'),
+      item.textContent?.includes('Generate experiment and data'),
     );
     expect(button!.compareDocumentPosition(page.querySelector('h2')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     button!.click();
@@ -243,7 +365,7 @@ describe('DataGraphGuideComponent', () => {
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
     [...page.querySelectorAll('button')].find((item) =>
-      item.textContent?.includes('Generate data for my experiment with AI'),
+      item.textContent?.includes('Generate data'),
     )!.click();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -299,7 +421,7 @@ describe('DataGraphGuideComponent', () => {
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
     const button = [...page.querySelectorAll('button')].find((item) =>
-      item.textContent?.includes('Generate data for my experiment with AI'),
+      item.textContent?.includes('Generate data'),
     )!;
     button.click();
     await fixture.whenStable();
@@ -330,7 +452,7 @@ describe('DataGraphGuideComponent', () => {
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
     const button = [...page.querySelectorAll('button')].find((item) =>
-      item.textContent?.includes('Generate data for my experiment with AI'),
+      item.textContent?.includes('Generate data'),
     )!;
     const row = page.querySelector<HTMLInputElement>('input[aria-label="IV value for row 1"]')!;
     row.value = '';
@@ -383,7 +505,7 @@ describe('DataGraphGuideComponent', () => {
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
     const button = [...page.querySelectorAll('button')].find((item) =>
-      item.textContent?.includes('Generate an experiment and data with AI'),
+      item.textContent?.includes('Generate experiment and data'),
     );
     button!.click();
     await fixture.whenStable();

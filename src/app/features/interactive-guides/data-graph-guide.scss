@@ -9,6 +9,13 @@
   flex: 1 1 260px;
 }
 
+.generation-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+
 .workspace-fieldset {
   border: 0;
   padding: 0;

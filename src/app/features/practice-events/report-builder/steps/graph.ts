@@ -149,9 +149,11 @@ function niceInterval(range: number, targetTicks = 8): number {
         </button>
         @if (localGraph().chartType !== 'bar') {
           <button mat-stroked-button type="button" (click)="freePlacement.set(!freePlacement())"
+            [class.active-toggle]="freePlacement()"
             [attr.aria-pressed]="freePlacement()"
+            aria-label="Free placement"
             matTooltip="Allow placement between grid lines">
-            Free placement
+            {{ freePlacement() ? 'Free placement' : 'Snap to grid' }}
           </button>
           <button mat-stroked-button (click)="fineGrid.set(!fineGrid())"
             [class.active-toggle]="fineGrid()"
@@ -479,6 +481,7 @@ export class GraphStepComponent {
   readonly manualCalculations = input<ManualCalculations | undefined>();
   readonly allowCheckMyWork = input(true);
   readonly syncVersion = input(0);
+  readonly freePlacementByDefault = input(false);
 
   readonly changed = output<Partial<ReportSubmission>>();
 
@@ -509,7 +512,7 @@ export class GraphStepComponent {
   });
   protected readonly plotMode = signal<'plot' | 'lobf'>('plot');
   protected readonly fineGrid = signal(false);
-  protected readonly freePlacement = signal(false);
+  protected readonly freePlacement = linkedSignal(() => this.freePlacementByDefault());
   protected readonly exactX = signal('');
   protected readonly exactY = signal('');
   protected readonly coordinateError = signal('');
