@@ -106,6 +106,7 @@ type TrialKey = (typeof ALL_TRIAL_KEYS)[number];
           <mat-icon>remove</mat-icon> Remove Last Row
         </button>
         <span class="spacer"></span>
+        @if (showAiGeneration()) {
         <span [matTooltip]="!independentVar() || !dependentVar()
             ? 'Fill in your Independent and Dependent Variables first (Step 3)'
             : 'Use AI to populate realistic sample data based on your experiment'">
@@ -119,6 +120,7 @@ type TrialKey = (typeof ALL_TRIAL_KEYS)[number];
             {{ generating() ? 'Generating...' : 'Generate Sample Data' }}
           </button>
         </span>
+        }
       </div>
       @if (aiNotes()) {
         <div class="ai-notes">
@@ -179,6 +181,9 @@ type TrialKey = (typeof ALL_TRIAL_KEYS)[number];
             <mat-icon>check_circle</mat-icon>
             Check My Calculations
           </button>
+          @if (requireCompleteTrials() && showMeanValidation() && hasIncompleteTrials()) {
+            <p role="status">Complete all active trials for each level before checking its mean.</p>
+          }
         </div>
       }
 
@@ -369,6 +374,8 @@ export class DataTableStepComponent {
   readonly dataTableDvHeader = input('');
   readonly showHints = input(true);
   readonly allowCheckMyWork = input(true);
+  readonly requireCompleteTrials = input(false);
+  readonly showAiGeneration = input(true);
   readonly syncVersion = input(0);
   readonly changed = output<Partial<ReportSubmission>>();
 
@@ -403,6 +410,12 @@ export class DataTableStepComponent {
   protected readonly activeTrialKeys = computed(() =>
     ALL_TRIAL_KEYS.slice(0, this.activeTrialCount())
   );
+  protected readonly hasIncompleteTrials = computed(() =>
+    this.localRows().some((row) =>
+      (row.ivValue.trim() !== '' || row.mean !== null) &&
+      this.activeTrialKeys().some((key) => row[key] === null),
+    ),
+  );
 
   protected displayVal(v: number | null | undefined): string {
     return v !== null && v !== undefined && !isNaN(v) ? String(v) : '';
@@ -422,6 +435,7 @@ export class DataTableStepComponent {
   protected isMeanCorrect(rowIndex: number): boolean {
     const row = this.localRows()[rowIndex];
     if (row.mean === null) return false;
+    if (this.requireCompleteTrials() && this.activeTrialKeys().some((key) => row[key] === null)) return false;
     const correctStr = this.computedMean(rowIndex);
     if (correctStr === '—') return false;
     const correctNum = parseFloat(correctStr);

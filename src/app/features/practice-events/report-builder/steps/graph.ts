@@ -148,6 +148,11 @@ function niceInterval(range: number, targetTicks = 8): number {
           Clear
         </button>
         @if (localGraph().chartType !== 'bar') {
+          <button mat-stroked-button type="button" (click)="freePlacement.set(!freePlacement())"
+            [attr.aria-pressed]="freePlacement()"
+            matTooltip="Allow placement between grid lines">
+            Free placement
+          </button>
           <button mat-stroked-button (click)="fineGrid.set(!fineGrid())"
             [class.active-toggle]="fineGrid()"
             matTooltip="Toggle finer grid for more precise point placement">
@@ -173,8 +178,28 @@ function niceInterval(range: number, targetTicks = 8): number {
         [graphData]="localGraph()"
         [lobfPending]="lobfFirstPoint()"
         [fineGrid]="fineGrid()"
+        [snapToTick]="!freePlacement()"
         (canvasClicked)="onCanvasClick($event)"
       />
+
+      @if (localGraph().chartType !== 'bar') {
+        <div class="coordinate-entry">
+          <mat-form-field appearance="outline">
+            <mat-label>Exact x coordinate</mat-label>
+            <input matInput type="number" [value]="exactX()" (input)="setExactCoordinate('x', $event)" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Exact y coordinate</mat-label>
+            <input matInput type="number" [value]="exactY()" (input)="setExactCoordinate('y', $event)" />
+          </mat-form-field>
+          <button mat-stroked-button type="button" (click)="placeExactPoint()">
+            {{ plotMode() === 'lobf' ? 'Place line endpoint' : 'Plot point' }}
+          </button>
+        </div>
+        @if (coordinateError()) {
+          <p role="alert">{{ coordinateError() }}</p>
+        }
+      }
 
       @if (dataTable().length > 0) {
         <mat-card class="ref-card">
@@ -194,6 +219,11 @@ function niceInterval(range: number, targetTicks = 8): number {
       <!-- LOBF Calculation (scatter plot only) -->
       @if (localGraph().chartType !== 'bar' && localGraph().lobfStart && localGraph().lobfEnd) {
         <h3 class="lobf-heading"><mat-icon>timeline</mat-icon> Line of Best Fit Calculation</h3>
+        <p>Selected line endpoints: ({{ localGraph().lobfStart!.x }}, {{ localGraph().lobfStart!.y }})
+          and ({{ localGraph().lobfEnd!.x }}, {{ localGraph().lobfEnd!.y }}).</p>
+        @if (localGraph().lobfStart!.x === localGraph().lobfEnd!.x) {
+          <p role="status">These endpoints make a vertical line, which cannot be written as y = mx + b. Choose two endpoints with different x values.</p>
+        }
         @if (showHints()) {
           <p class="hint">
             Use the two endpoints from your LOBF to calculate slope (rise over run)
@@ -336,6 +366,14 @@ function niceInterval(range: number, targetTicks = 8): number {
       display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
       margin-bottom: 12px;
     }
+    .coordinate-entry {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .coordinate-entry mat-form-field { width: 160px; }
 
     .active-toggle { background: #e3f2fd; border-color: #1565c0; color: #1565c0; }
 
@@ -471,6 +509,10 @@ export class GraphStepComponent {
   });
   protected readonly plotMode = signal<'plot' | 'lobf'>('plot');
   protected readonly fineGrid = signal(false);
+  protected readonly freePlacement = signal(false);
+  protected readonly exactX = signal('');
+  protected readonly exactY = signal('');
+  protected readonly coordinateError = signal('');
   protected readonly lobfFirstPoint = signal<GraphPoint | null>(null);
   protected readonly showLobfCheck = signal(false);
   protected readonly itemCount = computed(() => {
@@ -535,6 +577,26 @@ export class GraphStepComponent {
     }
   }
 
+  protected setExactCoordinate(axis: 'x' | 'y', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    (axis === 'x' ? this.exactX : this.exactY).set(value);
+    this.coordinateError.set('');
+  }
+
+  protected placeExactPoint(): void {
+    const x = Number(this.exactX());
+    const y = Number(this.exactY());
+    const graph = this.localGraph();
+    if (graph.xMin >= graph.xMax || graph.yMin >= graph.yMax ||
+        !this.exactX().trim() || !this.exactY().trim() || !Number.isFinite(x) || !Number.isFinite(y) ||
+        x < graph.xMin || x > graph.xMax || y < graph.yMin || y > graph.yMax) {
+      this.coordinateError.set('Enter numeric x and y coordinates within the graph bounds.');
+      return;
+    }
+    this.coordinateError.set('');
+    this.onCanvasClick({ x, y });
+  }
+
   protected undoPoint(): void {
     if (this.localGraph().chartType === 'bar') {
       this.localGraph.update(g => ({ ...g, bars: (g.bars ?? []).slice(0, -1) }));
@@ -574,11 +636,15 @@ export class GraphStepComponent {
       if (vals.length === 0) return { min: 0, max: 10 };
       const maxV = Math.max(...vals);
       const minV = Math.min(...vals);
-      const range = maxV - minV || maxV || 1;
+      const lower = Math.min(0, minV);
+      const upper = Math.max(0, maxV);
+      const range = upper - lower || 1;
       const step = niceInterval(range);
+      const min = Math.floor(lower / step) * step;
+      const max = Math.ceil(upper / step) * step;
       return {
-        min: minV >= 0 ? 0 : Math.floor(minV / step) * step,
-        max: Math.ceil(maxV * 1.1 / step) * step || step,
+        min,
+        max: max > min ? max : min + step,
       };
     };
     const yR = suggest(yValues);
@@ -604,36 +670,22 @@ export class GraphStepComponent {
 
   protected isLobfSlopeCorrect(): boolean {
     const c = this.localCalcs();
-    const y2 = parseFloat(c.lobfY2);
-    const y1 = parseFloat(c.lobfY1);
-    const x2 = parseFloat(c.lobfX2);
-    const x1 = parseFloat(c.lobfX1);
-    const student = parseFloat(c.lobfSlope);
-    if ([y2, y1, x2, x1, student].some(isNaN)) return false;
-    if (x2 === x1) return false;
-    const expected = (y2 - y1) / (x2 - x1);
+    const { lobfStart: start, lobfEnd: end } = this.localGraph();
+    if (!start || !end || start.x === end.x || !c.lobfSlope.trim()) return false;
+    const student = Number(c.lobfSlope);
+    if (!Number.isFinite(student)) return false;
+    const expected = (end.y - start.y) / (end.x - start.x);
     return Math.abs(student - expected) < 0.05;
   }
 
   protected isLobfInterceptCorrect(): boolean {
     const c = this.localCalcs();
-    const student = parseFloat(c.lobfIntercept);
-    const m = parseFloat(c.lobfSlope);
-    const x1 = parseFloat(c.lobfX1);
-    const y1 = parseFloat(c.lobfY1);
-    const x2 = parseFloat(c.lobfX2);
-    const y2 = parseFloat(c.lobfY2);
-    if (isNaN(student) || isNaN(m)) return false;
-
-    const candidates: number[] = [];
-    if (!isNaN(x1) && !isNaN(y1)) candidates.push(y1 - m * x1);
-    if (!isNaN(x2) && !isNaN(y2)) candidates.push(y2 - m * x2);
-    const intY = parseFloat(c.lobfIntY);
-    const intM = parseFloat(c.lobfIntM);
-    const intX = parseFloat(c.lobfIntX);
-    if (!isNaN(intY) && !isNaN(intM) && !isNaN(intX)) candidates.push(intY - intM * intX);
-    if (candidates.length === 0) return false;
-    return candidates.some(exp => Math.abs(student - exp) < 0.1);
+    const { lobfStart: start, lobfEnd: end } = this.localGraph();
+    if (!start || !end || start.x === end.x || !c.lobfIntercept.trim()) return false;
+    const student = Number(c.lobfIntercept);
+    if (!Number.isFinite(student)) return false;
+    const slope = (end.y - start.y) / (end.x - start.x);
+    return Math.abs(student - (start.y - slope * start.x)) < 0.1;
   }
 
   private emit(): void {

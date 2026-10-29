@@ -435,6 +435,24 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                           "
                           (canvasClicked)="onGraphCanvasClick(i, $event)"
                         />
+                        <div class="graph-controls">
+                          <mat-form-field appearance="outline">
+                            <mat-label>Exact x coordinate</mat-label>
+                            <input matInput type="number" [value]="graphCoordinates()[i]?.x ?? ''"
+                              (input)="updateGraphCoordinate(i, 'x', $event)" />
+                          </mat-form-field>
+                          <mat-form-field appearance="outline">
+                            <mat-label>Exact y coordinate</mat-label>
+                            <input matInput type="number" [value]="graphCoordinates()[i]?.y ?? ''"
+                              (input)="updateGraphCoordinate(i, 'y', $event)" />
+                          </mat-form-field>
+                          <button mat-stroked-button type="button" (click)="placeExactGraphPoint(i)">
+                            {{ getGraphMode(i) === 'lobf' ? 'Place line endpoint' : 'Plot point' }}
+                          </button>
+                        </div>
+                        @if (graphCoordinateErrors()[i]) {
+                          <p role="alert">{{ graphCoordinateErrors()[i] }}</p>
+                        }
                         <p class="graph-point-summary" aria-live="polite">
                           {{ getGraphData(i).points.length }} of
                           {{ prompt.graphConfig?.maxPoints ?? 4 }} points plotted.
@@ -793,6 +811,8 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
   protected readonly markdownContent = signal('');
   protected readonly responses = signal<string[]>([]);
   protected readonly graphModes = signal<Record<number, 'points' | 'lobf'>>({});
+  protected readonly graphCoordinates = signal<Record<number, { x: string; y: string }>>({});
+  protected readonly graphCoordinateErrors = signal<Record<number, string>>({});
 
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private autoSaveInterval: ReturnType<typeof setInterval> | null = null;
@@ -869,6 +889,32 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
   ): void {
     const value = (event.target as HTMLInputElement).value;
     this.saveGraphData(promptIndex, (graph) => ({ ...graph, [field]: value }));
+  }
+
+  protected updateGraphCoordinate(index: number, axis: 'x' | 'y', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.graphCoordinates.update((coordinates) => ({
+      ...coordinates,
+      [index]: { ...(coordinates[index] || { x: '', y: '' }), [axis]: value },
+    }));
+    this.graphCoordinateErrors.update((errors) => ({ ...errors, [index]: '' }));
+  }
+
+  protected placeExactGraphPoint(index: number): void {
+    const coordinates = this.graphCoordinates()[index];
+    const graph = this.getGraphData(index);
+    const x = Number(coordinates?.x);
+    const y = Number(coordinates?.y);
+    if (!coordinates?.x.trim() || !coordinates?.y.trim() || !Number.isFinite(x) || !Number.isFinite(y) ||
+        graph.xMin >= graph.xMax || graph.yMin >= graph.yMax ||
+        x < graph.xMin || x > graph.xMax || y < graph.yMin || y > graph.yMax) {
+      this.graphCoordinateErrors.update((errors) => ({
+        ...errors, [index]: 'Enter numeric x and y coordinates within the graph bounds.',
+      }));
+      return;
+    }
+    this.graphCoordinateErrors.update((errors) => ({ ...errors, [index]: '' }));
+    this.onGraphCanvasClick(index, { x, y });
   }
 
   protected onGraphCanvasClick(promptIndex: number, point: GraphPoint): void {

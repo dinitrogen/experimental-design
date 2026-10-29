@@ -148,8 +148,8 @@ export class GraphCanvasComponent {
       return;
     }
 
-    const stepX = this.snapToTick() ? this.tickX : 1;
-    const stepY = this.snapToTick() ? this.tickY : 1;
+    const stepX = this.snapToTick() ? this.tickX : this.tickX / 10;
+    const stepY = this.snapToTick() ? this.tickY : this.tickY / 10;
     const keyboardStepX = event.shiftKey ? stepX * 10 : stepX;
     const keyboardStepY = event.shiftKey ? stepY * 10 : stepY;
     const dx =
@@ -157,8 +157,8 @@ export class GraphCanvasComponent {
     const dy =
       event.key === 'ArrowDown' ? -keyboardStepY : event.key === 'ArrowUp' ? keyboardStepY : 0;
     this.keyboardPoint = {
-      x: Math.max(data.xMin, Math.min(data.xMax, point.x + dx)),
-      y: Math.max(data.yMin, Math.min(data.yMax, point.y + dy)),
+      x: Number(Math.max(data.xMin, Math.min(data.xMax, point.x + dx)).toPrecision(10)),
+      y: Number(Math.max(data.yMin, Math.min(data.yMax, point.y + dy)).toPrecision(10)),
     };
     this.keyboardStatus = `Graph cursor at ${this.fmt(this.keyboardPoint.x)}, ${this.fmt(this.keyboardPoint.y)}. Press Enter to place.`;
     const canvas = this.canvasRef()?.nativeElement;
@@ -176,13 +176,11 @@ export class GraphCanvasComponent {
     const data = this.graphData();
     const rawX = data.xMin + ((px - M.left) / PW) * (data.xMax - data.xMin);
     const rawY = data.yMin + ((M.top + PH - py) / PH) * (data.yMax - data.yMin);
-    const stepX = this.snapToTick() ? this.tickX : 1;
-    const stepY = this.snapToTick() ? this.tickY : 1;
-    const x = Math.max(data.xMin, Math.min(data.xMax, Math.round(rawX / stepX) * stepX));
-    const y = Math.max(data.yMin, Math.min(data.yMax, Math.round(rawY / stepY) * stepY));
+    const x = this.snapToTick() ? Math.round(rawX / this.tickX) * this.tickX : rawX;
+    const y = this.snapToTick() ? Math.round(rawY / this.tickY) * this.tickY : rawY;
     this.canvasClicked.emit({
-      x: parseFloat(x.toPrecision(10)),
-      y: parseFloat(y.toPrecision(10)),
+      x: Number(Math.max(data.xMin, Math.min(data.xMax, x)).toPrecision(6)),
+      y: Number(Math.max(data.yMin, Math.min(data.yMax, y)).toPrecision(6)),
     });
   }
 

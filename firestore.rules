@@ -260,6 +260,18 @@ service cloud.firestore {
       allow delete: if isCoach();
     }
 
+    match /interactiveGuideWorkspaces/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['version', 'workspace', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['version', 'workspace', 'updatedAt'])
+        && request.resource.data.version == 1
+        && request.resource.data.workspace is string
+        && request.resource.data.workspace.size() <= 200000
+        && request.resource.data.updatedAt is timestamp;
+      allow delete: if isOwner(userId);
+    }
+
     match /taskSubmissions/{submissionId} {
       allow read: if isCoach()
         || (signedIn() && resource.data.studentUid == request.auth.uid);

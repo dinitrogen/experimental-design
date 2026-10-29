@@ -297,6 +297,14 @@ Set `archived: true` on a definition to move it out of the coach's default assig
 
 Student responses are stored by task ID and prompt position. Preserve task IDs, prompt order, and response shapes when reorganizing definitions. For changes to an already assigned task's prompts, create a new task ID or implement a migration rather than changing the existing response structure.
 
+### Interactive guides
+
+The **Data Tables, Statistics & Graphing** guide gives each signed-in user one private workspace. Students can enter their own data, load a toy-car example, or have AI invent a simple experiment and fictional practice data without supplying a premise. They enter and check statistics and condensed means, plot points, draw a line, and optionally reveal the equation derived from its endpoints. AI generation uses the same service and quota as practice events; the guide does not send the current workspace's experiment details to that service.
+
+Work is saved to the user's account when they select **Save workspace**; unsaved changes prompt a warning before navigation. Loading an example, starting blank, or generating AI data requires confirmation before replacing work. The workspace is separate from task and report submissions. Existing practice-event graphs offer a free-placement toggle and exact coordinate entry; task graphs also allow points between grid marks.
+
+Workspace records are stored in `interactiveGuideWorkspaces/{uid}` and are accessible only to their owner. Deploy the Firestore rules together with the frontend when releasing changes to this feature.
+
 ## License
 
 This project is provided as-is for educational use with Science Olympiad teams.

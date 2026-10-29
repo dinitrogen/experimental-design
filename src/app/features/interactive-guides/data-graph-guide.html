@@ -1,0 +1,166 @@
+<div class="content-container">
+  <a mat-button routerLink="/interactive-guides"><mat-icon>arrow_back</mat-icon> Interactive Guides</a>
+  <h1 class="page-title">Data Tables, Statistics &amp; Graphing</h1>
+  <p>Practice with your own measurements or sample data. This workspace is separate from your reports and assignments.</p>
+
+  @if (loading()) {
+    <mat-spinner diameter="40" aria-label="Loading workspace" />
+  } @else if (loadError()) {
+    <p role="alert">{{ loadError() }}</p>
+    <button mat-stroked-button type="button" (click)="load()">Try loading again</button>
+  } @else {
+    <div class="workspace-actions">
+      <button mat-flat-button type="button" (click)="save()" [disabled]="saving() || generating() || replacing() || !dirty()">
+        <mat-icon>save</mat-icon> {{ saving() ? 'Saving...' : 'Save workspace' }}
+      </button>
+      <button mat-stroked-button type="button" (click)="generateData()" [disabled]="saving() || generating() || replacing()">
+        <mat-icon>auto_awesome</mat-icon> Generate an experiment and data with AI
+      </button>
+      <button mat-stroked-button type="button" (click)="useExample()" [disabled]="saving() || generating() || replacing()">
+        Load example
+      </button>
+      <button mat-stroked-button type="button" (click)="reset()" [disabled]="saving() || generating() || replacing()">
+        Start blank
+      </button>
+      <span role="status">{{ dirty() ? 'Unsaved changes' : 'Saved or no changes' }}</span>
+    </div>
+    @if (saveError()) { <p role="alert">{{ saveError() }}</p> }
+    <p>Use <strong>Save workspace</strong> to keep one workspace with your account and reopen it on another device.</p>
+    <p>Optional: AI invents an experiment and fictional practice data, not real measurements. No experiment details from this workspace are sent to the AI service.</p>
+    @if (generating()) { <p role="status">Generating a practice experiment and data...</p> }
+    @if (aiMessage()) { <p role="status">{{ aiMessage() }}</p> }
+
+    <fieldset [disabled]="generating() || replacing()" class="workspace-fieldset">
+      <section>
+        <h2>1. Describe your experiment</h2>
+        <p>Include units in your variable names. Or use the AI button above to generate a fictional experiment and data.</p>
+        <div class="fields">
+          <mat-form-field appearance="outline">
+            <mat-label>Independent variable (with units)</mat-label>
+            <input matInput maxlength="200" [value]="workspace().independentVar"
+              (input)="updateExperiment('independentVar', $event)" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Dependent variable (with units)</mat-label>
+            <input matInput maxlength="200" [value]="workspace().dependentVar"
+              (input)="updateExperiment('dependentVar', $event)" />
+          </mat-form-field>
+        </div>
+        <div class="fields">
+          <mat-form-field appearance="outline">
+            <mat-label>Hypothesis (optional)</mat-label>
+            <textarea matInput maxlength="2000" rows="2" [value]="workspace().hypothesis"
+              (input)="updateExperiment('hypothesis', $event)"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Procedure (optional)</mat-label>
+            <textarea matInput maxlength="4000" rows="2" [value]="workspace().procedure"
+              (input)="updateExperiment('procedure', $event)"></textarea>
+          </mat-form-field>
+        </div>
+      </section>
+
+      <section>
+        <h2>2. Raw and condensed data</h2>
+        <p>Enter measurements for each trial, then calculate and enter a mean for each level. You can check your means when ready.</p>
+        <app-step-data-table
+          [dataTable]="workspace().dataTable"
+          [numTrials]="workspace().numTrials"
+          [independentVar]="workspace().independentVar"
+          [dependentVar]="workspace().dependentVar"
+          [dataTableIvHeader]="workspace().dataTableIvHeader"
+          [dataTableDvHeader]="workspace().dataTableDvHeader"
+          [showAiGeneration]="false"
+          [requireCompleteTrials]="true"
+          [syncVersion]="tableSyncVersion()"
+          (changed)="updateFromStep($event, 'table')"
+        />
+      </section>
+
+      <section>
+        <h2>3. Practice statistics</h2>
+        <p>Complete the summary and sample calculations below. Q1 and Q3 use the medians of the lower and upper halves, excluding the overall median when there is an odd number of trials. Variance and sample standard deviation are optional challenges.</p>
+        <app-step-statistics
+          [dataTable]="workspace().dataTable"
+          [numTrials]="workspace().numTrials"
+          [statisticsNotes]="workspace().statisticsNotes"
+          [manualCalculations]="workspace().manualCalculations"
+          [requireCompleteTrials]="true"
+          [syncVersion]="statisticsSyncVersion()"
+          (changed)="updateFromStep($event, 'statistics')"
+        />
+        <h3>Minimum, maximum and quartiles for each level</h3>
+        <p>Sort the trials. The minimum and maximum are the smallest and largest values; Q1 and Q3 are the middle values of the lower and upper halves.</p>
+        <div class="table-wrapper" role="region" aria-label="Additional statistics" tabindex="0">
+          <table>
+            <thead><tr><th scope="col">IV level</th>
+              @for (field of extraFields; track field.key) { <th scope="col">{{ field.label }}</th> }
+            </tr></thead>
+            <tbody>
+              @for (row of workspace().dataTable; track $index; let i = $index) {
+                <tr>
+                  <th scope="row">{{ row.ivValue || 'Row ' + (i + 1) }}</th>
+                  @for (field of extraFields; track field.key) {
+                    <td>
+                      <input type="text" inputmode="decimal" [value]="workspace().extraStatistics[i][field.key]"
+                        [attr.aria-label]="field.label + ' for row ' + (i + 1)"
+                        (input)="updateExtra(i, field.key, $event)" />
+                      @if (showExtraCheck()) {
+                        <span class="result">{{ extraResult(i, field.key) }}</span>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <button mat-stroked-button type="button" (click)="showExtraCheck.set(true)">Check minimum, maximum and quartiles</button>
+      </section>
+
+      <section>
+        <h2>4. Graph and line of best fit</h2>
+        <p>Choose scales and label axes with units. Plot each IV level and its entered mean; use two points on your drawn line, not necessarily data points, to find its equation. Free placement and exact coordinates are available below.</p>
+        <app-step-graph
+          [graphData]="workspace().graphData"
+          [dataTable]="workspace().dataTable"
+          [independentVar]="workspace().independentVar"
+          [dependentVar]="workspace().dependentVar"
+          [manualCalculations]="workspace().manualCalculations"
+          [syncVersion]="graphSyncVersion()"
+          (changed)="updateFromStep($event, 'graph')"
+        />
+        <mat-card class="explanation">
+          <mat-card-content>
+            <h3>What does y = mx + b mean?</h3>
+            <p><strong>x</strong> is the independent variable and <strong>y</strong> is the predicted dependent variable. The slope <strong>m</strong> is the change in y for each one-unit increase in x, in y-units per x-unit. The intercept <strong>b</strong> is the predicted y when x = 0, in y-units.</p>
+            <p>A positive slope rises; a negative slope falls. The intercept may not be meaningful if x = 0 is outside the experiment’s tested range. A best-fit line summarizes a trend; it does not prove causation or guarantee predictions outside that range.</p>
+            @if (workspace().graphData.lobfStart && workspace().graphData.lobfEnd) {
+              @if (line(); as answer) {
+                <details>
+                  <summary>Show the calculation for my drawn line</summary>
+                  <p>Using ({{ workspace().graphData.lobfStart!.x }}, {{ workspace().graphData.lobfStart!.y }}) and ({{ workspace().graphData.lobfEnd!.x }}, {{ workspace().graphData.lobfEnd!.y }}):</p>
+                  <p>m = (y₂ − y₁) / (x₂ − x₁) = {{ formatNumber(answer.slope) }}<br />
+                    b = y₁ − m × x₁ = {{ formatNumber(answer.intercept) }}<br />
+                    y = {{ formatNumber(answer.slope) }}x {{ answer.intercept < 0 ? '−' : '+' }} {{ formatNumber(answer.intercept < 0 ? -answer.intercept : answer.intercept) }}
+                  </p>
+                  <p>For each 1 x-unit increase, the line predicts a change of {{ formatNumber(answer.slope) }} y-units. At x = 0, it predicts {{ formatNumber(answer.intercept) }} y-units.</p>
+                </details>
+              } @else {
+                <p role="status">The selected endpoints have the same x value. A vertical line has no slope-intercept equation; choose endpoints with different x values.</p>
+              }
+            } @else {
+              <p>Draw a line to reveal an optional worked calculation based on its endpoints.</p>
+            }
+          </mat-card-content>
+        </mat-card>
+      </section>
+    </fieldset>
+    <div class="workspace-actions">
+      <button mat-flat-button type="button" (click)="save()" [disabled]="saving() || generating() || replacing() || !dirty()">
+        <mat-icon>save</mat-icon> {{ saving() ? 'Saving...' : 'Save workspace' }}
+      </button>
+      <span role="status">{{ dirty() ? 'Unsaved changes' : 'Saved or no changes' }}</span>
+    </div>
+  }
+</div>

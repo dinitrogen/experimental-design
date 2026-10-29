@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { coachGuard } from './core/guards/coach.guard';
 import { taskDeactivateGuard } from './core/guards/task-deactivate.guard';
+import { workspaceDeactivateGuard } from './features/interactive-guides/workspace.guard';
 
 export const routes: Routes = [
   {
@@ -35,6 +36,21 @@ export const routes: Routes = [
           import('./features/study-guides/study-guide-detail').then(
             (m) => m.StudyGuideDetailComponent
           ),
+      },
+      {
+        path: 'interactive-guides',
+        loadComponent: () =>
+          import('./features/interactive-guides/interactive-guide-list').then(
+            (m) => m.InteractiveGuideListComponent
+          ),
+      },
+      {
+        path: 'interactive-guides/data-and-graph',
+        loadComponent: () =>
+          import('./features/interactive-guides/data-graph-guide').then(
+            (m) => m.DataGraphGuideComponent
+          ),
+        canDeactivate: [workspaceDeactivateGuard],
       },
       {
         path: 'practice-events',

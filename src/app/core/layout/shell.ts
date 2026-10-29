@@ -17,6 +17,7 @@ interface NavItem {
   label: string;
   route: string;
   icon: string;
+  isNew?: boolean;
 }
 
 @Component({
@@ -69,7 +70,7 @@ interface NavItem {
               (click)="onNavClick()"
             >
               <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-              <span matListItemTitle>{{ item.label }}</span>
+              <span matListItemTitle>{{ item.label }} @if (item.isNew) { <span class="new-badge">New</span> }</span>
             </a>
           }
         </mat-nav-list>
@@ -185,6 +186,18 @@ interface NavItem {
       color: var(--active-link-color);
     }
 
+    .new-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: #e4f2e7;
+      color: #174e29;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 18px;
+    }
+
     .toolbar-title {
       margin-left: 8px;
       font-weight: 400;
@@ -232,6 +245,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard' },
     { label: 'Tasks', route: '/tasks', icon: 'task_alt' },
     { label: 'Study Guides', route: '/study-guides', icon: 'menu_book' },
+    { label: 'Interactive Guides', route: '/interactive-guides', icon: 'insights', isNew: true },
     { label: 'Practice Events', route: '/practice-events', icon: 'assignment' },
     { label: 'References', route: '/references', icon: 'description' },
     { label: 'Team', route: '/team', icon: 'groups' },
@@ -243,6 +257,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Students', route: '/coach/students', icon: 'people' },
     { label: 'Reviews', route: '/coach/submissions', icon: 'rate_review' },
     { label: 'Study Guides', route: '/study-guides', icon: 'menu_book' },
+    { label: 'Interactive Guides', route: '/interactive-guides', icon: 'insights', isNew: true },
     { label: 'Practice Events', route: '/practice-events', icon: 'assignment' },
     { label: 'References', route: '/references', icon: 'description' },
     { label: 'Team', route: '/team', icon: 'groups' },

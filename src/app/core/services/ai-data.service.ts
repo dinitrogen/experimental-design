@@ -24,6 +24,17 @@ export interface GenerateDataResponse {
   notes: string;
 }
 
+export interface GenerateGuideResponse extends GenerateDataResponse {
+  independentVar: string;
+  dependentVar: string;
+  hypothesis: string;
+  procedure: string;
+}
+
+function toDataTable(rows: GenerateDataResponse['rows']): DataTableEntry[] {
+  return rows.map((row) => ({ ...row, mean: null }));
+}
+
 const AI_GENERIC_ERROR = 'The AI service had a problem generating data. Try again in a moment, or enter the data manually.';
 
 /** Converts Firebase callable errors into messages students can act on. */
@@ -61,16 +72,19 @@ export class AiDataService {
       throw toFriendlyAiError(error);
     }
 
-    const dataTable: DataTableEntry[] = response.rows.map((row) => ({
-      ivValue: row.ivValue,
-      trial1: row.trial1,
-      trial2: row.trial2,
-      trial3: row.trial3,
-      trial4: row.trial4,
-      trial5: row.trial5,
-      mean: null,
-    }));
+    return { dataTable: toDataTable(response.rows), notes: response.notes };
+  }
 
-    return { dataTable, notes: response.notes };
+  async generateGuideExample(): Promise<Omit<GenerateGuideResponse, 'rows'> & { dataTable: DataTableEntry[] }> {
+    const callable = httpsCallable<{ mode: 'practice-guide' }, GenerateGuideResponse>(
+      this.functions,
+      'generateExperimentData',
+    );
+    try {
+      const { rows, ...experiment } = (await callable({ mode: 'practice-guide' })).data;
+      return { ...experiment, dataTable: toDataTable(rows) };
+    } catch (error) {
+      throw toFriendlyAiError(error);
+    }
   }
 }

@@ -31,6 +31,26 @@ beforeAll(async () => {
       rules: readFileSync(resolve(process.cwd(), 'firestore.rules'), 'utf8'),
     },
   });
+
+  describe('interactive guide workspace access', () => {
+    it('allows only the owner to read and write a correctly shaped workspace', async () => {
+      const owner = testEnv.authenticatedContext('student-1').firestore();
+      const other = testEnv.authenticatedContext('student-2').firestore();
+      const anonymous = testEnv.unauthenticatedContext().firestore();
+      const path = 'interactiveGuideWorkspaces/student-1';
+      const value = { version: 1, workspace: '{"example":true}', updatedAt: Timestamp.now() };
+
+      await assertSucceeds(setDoc(doc(owner, path), value));
+      await assertSucceeds(getDoc(doc(owner, path)));
+      await assertFails(getDoc(doc(other, path)));
+      await assertFails(setDoc(doc(other, path), value));
+      await assertFails(getDoc(doc(anonymous, path)));
+      await assertFails(setDoc(doc(owner, path), { ...value, version: 2 }));
+      await assertFails(setDoc(doc(owner, path), { ...value, workspace: {} }));
+      await assertFails(setDoc(doc(owner, path), { ...value, extra: true }));
+      await assertFails(setDoc(doc(owner, path), { ...value, workspace: 'x'.repeat(200001) }));
+    });
+  });
 });
 
 beforeEach(async () => {
@@ -394,4 +414,3 @@ describe('Firestore security rules', () => {
     await assertFails(setDoc(doc(coach, 'archives/2026-2027/submissions/new'), { studentUid: 'x' }));
   });
 });
-

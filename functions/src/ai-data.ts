@@ -20,6 +20,13 @@ export interface GenerateDataResponse {
   notes: string;
 }
 
+export interface GenerateGuideResponse extends GenerateDataResponse {
+  independentVar: string;
+  dependentVar: string;
+  hypothesis: string;
+  procedure: string;
+}
+
 export class AiDataValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -162,4 +169,34 @@ export function parseGenerateDataResponse(
   }
 
   return { rows, notes };
+}
+
+export function parseGenerateGuideResponse(response: unknown): GenerateGuideResponse {
+  if (!isRecord(response) || !Array.isArray(response["rows"]) || response["rows"].length !== 4) {
+    throw new AiDataValidationError("A practice experiment must have four levels.");
+  }
+  const independentVar = readText(response, "independentVar", 200, true);
+  const dependentVar = readText(response, "dependentVar", 200, true);
+  const hypothesis = readText(response, "hypothesis", 2000, true);
+  const procedure = readText(response, "procedure", 4000, true);
+  const ivValues = response["rows"].map((row: unknown) => {
+    if (!isRecord(row) || typeof row["ivValue"] !== "string" || !row["ivValue"].trim()) {
+      throw new AiDataValidationError("Generated IV levels must be numbers.");
+    }
+    const level = Number(row["ivValue"]);
+    if (!Number.isFinite(level) || Math.abs(level) > 1_000_000_000_000) {
+      throw new AiDataValidationError("Generated IV levels must be finite numbers.");
+    }
+    return row["ivValue"].trim();
+  });
+  if (new Set(ivValues.map(Number)).size !== ivValues.length) {
+    throw new AiDataValidationError("Generated IV levels must be distinct.");
+  }
+  const input = parseGenerateDataInput({
+    independentVar, dependentVar, hypothesis, procedure, controlledVars: [], ivValues, numTrials: 3,
+  });
+  return {
+    independentVar, dependentVar, hypothesis, procedure,
+    ...parseGenerateDataResponse(response, input),
+  };
 }

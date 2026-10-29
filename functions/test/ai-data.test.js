@@ -4,6 +4,7 @@ import {
   AiDataValidationError,
   parseGenerateDataInput,
   parseGenerateDataResponse,
+  parseGenerateGuideResponse,
 } from "../lib/ai-data.js";
 
 const validRequest = {
@@ -37,6 +38,40 @@ describe("parseGenerateDataInput", () => {
     assert.deepEqual(parsed.controlledVars, ["Water volume"]);
     assert.deepEqual(parsed.ivValues, ["10 C", "20 C"]);
     assert.equal(parsed.numTrials, 3);
+  });
+
+  describe("parseGenerateGuideResponse", () => {
+    function guideResponse() {
+      const request = { ...validRequest, ivValues: ["10", "20", "30", "40"] };
+      return {
+        ...validResponse(request),
+        independentVar: "Water temperature (C)",
+        dependentVar: "Dissolving time (s)",
+        hypothesis: "Warmer water may reduce dissolving time.",
+        procedure: "Measure the time needed at each water temperature.",
+      };
+    }
+
+    it("accepts a complete invented experiment with four graphable levels", () => {
+      const parsed = parseGenerateGuideResponse(guideResponse());
+      assert.equal(parsed.independentVar, "Water temperature (C)");
+      assert.equal(parsed.rows.length, 4);
+      assert.equal(parsed.rows[0].trial4, null);
+      assert.equal(parsed.procedure, "Measure the time needed at each water temperature.");
+    });
+
+    it("rejects incomplete experiments and malformed or duplicate graph coordinates", () => {
+      assert.throws(() => parseGenerateGuideResponse({ ...guideResponse(), procedure: "" }), AiDataValidationError);
+      assert.throws(() => parseGenerateGuideResponse({ ...guideResponse(), rows: [] }), AiDataValidationError);
+      for (const level of ["", "warm", "Infinity", "20"]) {
+        const response = guideResponse();
+        response.rows[0].ivValue = level;
+        assert.throws(() => parseGenerateGuideResponse(response), AiDataValidationError);
+      }
+      const response = guideResponse();
+      response.rows[0].trial3 = null;
+      assert.throws(() => parseGenerateGuideResponse(response), AiDataValidationError);
+    });
   });
 
   it("rejects missing or malformed experiment details", () => {

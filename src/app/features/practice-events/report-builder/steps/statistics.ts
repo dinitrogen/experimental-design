@@ -123,6 +123,9 @@ import * as stats from '../../../../core/utils/statistics';
               <mat-icon>check_circle</mat-icon>
               Check My Calculations
             </button>
+            @if (requireCompleteTrials() && showValidation() && hasIncompleteTrials()) {
+              <p role="status">Complete all active trials for each level before checking its statistics.</p>
+            }
           </div>
         }
 
@@ -574,6 +577,7 @@ export class StatisticsStepComponent {
   readonly manualCalculations = input<ManualCalculations | undefined>();
   readonly showHints = input(true);
   readonly allowCheckMyWork = input(true);
+  readonly requireCompleteTrials = input(false);
   readonly syncVersion = input(0);
   readonly changed = output<Partial<ReportSubmission>>();
 
@@ -614,6 +618,12 @@ export class StatisticsStepComponent {
   );
   protected readonly activeTrialKeys = computed(() =>
     StatisticsStepComponent.TRIAL_KEYS.slice(0, this.activeTrials())
+  );
+  protected readonly hasIncompleteTrials = computed(() =>
+    this.dataTable().some((row, index) =>
+      (row.ivValue.trim() !== '' || this.activeTrialKeys().some((key) => row[key] !== null)) &&
+      this.getTrialValues(index).length !== this.activeTrials(),
+    ),
   );
 
   protected readonly exampleIvLabel = computed(() => {
@@ -664,6 +674,7 @@ export class StatisticsStepComponent {
   protected isCellCorrect(rowIndex: number, field: keyof StatsSummaryRow): boolean {
     const student = this.summaryRow(rowIndex)[field].trim();
     if (!student) return false;
+    if (this.requireCompleteTrials() && this.getTrialValues(rowIndex).length !== this.activeTrials()) return false;
     const correct = this.autoRowStats(rowIndex)[field];
     if (correct === '—') return false;
     // For mode, compare normalized strings (case-insensitive, whitespace-trimmed)
