@@ -56,24 +56,6 @@ export function createWorkspace(): GuideWorkspace {
   };
 }
 
-export function exampleWorkspace(): GuideWorkspace {
-  const workspace = createWorkspace();
-  return {
-    ...workspace,
-    independentVar: 'Ramp height (cm)',
-    dependentVar: 'Distance rolled (cm)',
-    hypothesis: 'A higher ramp will make the car roll farther.',
-    procedure: 'Release the same toy car from rest on the same ramp and measure its roll distance.',
-    dataTableIvHeader: 'Ramp height (cm)',
-    dataTableDvHeader: 'Distance rolled (cm)',
-    dataTable: [
-      { ivValue: '10', trial1: 42, trial2: 45, trial3: 48, trial4: null, trial5: null, mean: null },
-      { ivValue: '20', trial1: 88, trial2: 92, trial3: 96, trial4: null, trial5: null, mean: null },
-      { ivValue: '30', trial1: 130, trial2: 135, trial3: 140, trial4: null, trial5: null, mean: null },
-    ],
-  };
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

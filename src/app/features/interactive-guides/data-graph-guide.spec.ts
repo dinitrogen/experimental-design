@@ -6,8 +6,22 @@ import { vi } from 'vitest';
 import { AiDataService } from '../../core/services/ai-data.service';
 import { GraphCanvasComponent } from '../../shared/components/graph-canvas';
 import { DataGraphGuideComponent } from './data-graph-guide';
-import { createWorkspace, exampleWorkspace, GuideWorkspace } from './workspace.model';
+import { createWorkspace, GuideWorkspace } from './workspace.model';
 import { InteractiveWorkspaceService } from './workspace.service';
+
+function exampleWorkspace(): GuideWorkspace {
+  const workspace = createWorkspace();
+  return {
+    ...workspace,
+    independentVar: 'Ramp height (cm)',
+    dependentVar: 'Distance rolled (cm)',
+    hypothesis: 'A higher ramp will make the car roll farther.',
+    procedure: 'Release the same toy car from rest on the same ramp.',
+    dataTable: ['10', '20', '30'].map((ivValue) => ({
+      ivValue, trial1: 42, trial2: 45, trial3: 48, trial4: null, trial5: null, mean: null,
+    })),
+  };
+}
 
 describe('DataGraphGuideComponent', () => {
   it('saves entered data, calculations, and exact line endpoints and reloads them', async () => {
@@ -120,7 +134,7 @@ describe('DataGraphGuideComponent', () => {
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
     expect(page.textContent).toContain('Cannot read saved work');
-    expect(page.textContent).not.toContain('Start blank');
+    expect(page.textContent).not.toContain('Reset to blank');
   });
 
   it('generates explicitly labeled practice data after confirmation without saving it automatically', async () => {
@@ -168,8 +182,32 @@ describe('DataGraphGuideComponent', () => {
     expect(page.querySelector<HTMLInputElement>('input[aria-label="Trial 1 for row 1"]')?.value).toBe('1');
     expect(save).not.toHaveBeenCalled();
     expect(fixture.componentInstance.canDeactivate()).toBe(false);
+    const mean = page.querySelector<HTMLInputElement>('input[aria-label="Mean for row 1"]')!;
+    mean.value = '2';
+    mean.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    [...page.querySelectorAll('button')].find((item) => item.textContent?.includes('Check My Calculations'))!.click();
+    fixture.detectChanges();
+    expect(mean.classList.contains('correct')).toBe(true);
+    const summaryMean = page.querySelector<HTMLInputElement>('input[aria-label="mean for 10"]')!;
+    summaryMean.value = '2invalid';
+    summaryMean.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    const checks = [...page.querySelectorAll('button')].filter((item) =>
+      item.textContent?.includes('Check My Calculations'),
+    );
+    checks[1].click();
+    fixture.detectChanges();
+    expect(summaryMean.classList.contains('incorrect')).toBe(true);
+    summaryMean.value = '2';
+    summaryMean.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    checks[1].click();
+    fixture.detectChanges();
+    expect(summaryMean.classList.contains('correct')).toBe(true);
 
-    [...page.querySelectorAll('button')].find((item) => item.textContent?.includes('Start blank'))!.click();
+    expect(page.textContent).not.toContain('Load example');
+    [...page.querySelectorAll('button')].find((item) => item.textContent?.includes('Reset to blank'))!.click();
     await fixture.whenStable();
     fixture.detectChanges();
     expect(page.querySelector<HTMLInputElement>('input[aria-label="IV value for row 1"]')?.value).toBe('');
@@ -178,6 +216,154 @@ describe('DataGraphGuideComponent', () => {
     fixture.detectChanges();
     expect(generateGuideExample).toHaveBeenCalledTimes(2);
     expect(page.querySelector<HTMLInputElement>('input[aria-label="IV value for row 4"]')?.value).toBe('40');
+  });
+
+  it('generates data for student variables, selecting IV levels if all rows are blank', async () => {
+    const example = exampleWorkspace();
+    example.dataTable = example.dataTable.map((row) => ({ ...row, ivValue: '' }));
+    example.manualCalculations.summaryTable[0].mean = '45';
+    example.graphData.lobfStart = { x: 1, y: 1 };
+    const generated = ['10', '20', '30'].map((ivValue) => ({
+      ivValue, trial1: 1, trial2: 2, trial3: 3, trial4: null, trial5: null, mean: null,
+    }));
+    const generateGuideData = vi.fn(async () => ({ dataTable: generated, notes: 'Fictional values.' }));
+    const save = vi.fn();
+    await TestBed.configureTestingModule({
+      imports: [DataGraphGuideComponent],
+      providers: [
+        provideRouter([]),
+        { provide: InteractiveWorkspaceService, useValue: { load: async () => example, save } },
+        { provide: AiDataService, useValue: { generateGuideData } },
+        { provide: MatDialog, useValue: { open: () => ({ afterClosed: () => of(true) }) } },
+      ],
+    }).overrideComponent(GraphCanvasComponent, { set: { template: '' } }).compileComponents();
+    const fixture = TestBed.createComponent(DataGraphGuideComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    [...page.querySelectorAll('button')].find((item) =>
+      item.textContent?.includes('Generate data for my experiment with AI'),
+    )!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(generateGuideData).toHaveBeenCalledWith({
+      independentVar: example.independentVar,
+      dependentVar: example.dependentVar,
+      hypothesis: example.hypothesis,
+      procedure: example.procedure,
+      controlledVars: [],
+      numTrials: 3,
+      numLevels: 3,
+    });
+    expect(page.querySelector<HTMLInputElement>('input[aria-label="IV value for row 1"]')?.value).toBe('10');
+    expect(page.querySelector<HTMLInputElement>('input[aria-label="Mean for row 1"]')?.value).toBe('');
+    expect(page.textContent).toContain('AI-generated practice data (not real measurements)');
+    expect([...page.querySelectorAll('input')].some((input) => input.value === example.independentVar)).toBe(true);
+    expect(save).not.toHaveBeenCalled();
+    [...page.querySelectorAll('button')].find((item) => item.textContent?.includes('Save workspace'))!.click();
+    await fixture.whenStable();
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      hypothesis: example.hypothesis,
+      procedure: example.procedure,
+      dataTable: generated,
+      graphData: expect.objectContaining({ lobfStart: null, lobfEnd: null }),
+      manualCalculations: expect.objectContaining({ summaryTable: expect.arrayContaining([expect.objectContaining({ mean: '' })]) }),
+    }));
+    const mean = page.querySelector<HTMLInputElement>('input[aria-label="Mean for row 1"]')!;
+    mean.value = '2';
+    mean.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    [...page.querySelectorAll('button')].find((item) => item.textContent?.includes('Check My Calculations'))!.click();
+    fixture.detectChanges();
+    expect(mean.classList.contains('correct')).toBe(true);
+  });
+
+  it('does not replace student data if data generation is cancelled or fails', async () => {
+    const example = exampleWorkspace();
+    const generateData = vi.fn().mockRejectedValue(new Error('AI unavailable'));
+    const open = vi.fn().mockReturnValueOnce({ afterClosed: () => of(false) })
+      .mockReturnValue({ afterClosed: () => of(true) });
+    await TestBed.configureTestingModule({
+      imports: [DataGraphGuideComponent],
+      providers: [
+        provideRouter([]),
+        { provide: InteractiveWorkspaceService, useValue: { load: async () => example } },
+        { provide: AiDataService, useValue: { generateData } },
+        { provide: MatDialog, useValue: { open } },
+      ],
+    }).overrideComponent(GraphCanvasComponent, { set: { template: '' } }).compileComponents();
+    const fixture = TestBed.createComponent(DataGraphGuideComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    const button = [...page.querySelectorAll('button')].find((item) =>
+      item.textContent?.includes('Generate data for my experiment with AI'),
+    )!;
+    button.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(generateData).not.toHaveBeenCalled();
+    button.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.textContent).toContain('AI unavailable');
+    expect(page.querySelector<HTMLInputElement>('input[aria-label="Trial 1 for row 1"]')?.value).toBe('42');
+  });
+
+  it('uses student IV levels and refuses incomplete levels or missing variables', async () => {
+    const example = exampleWorkspace();
+    const generateData = vi.fn(async () => ({ dataTable: example.dataTable, notes: 'Fictional values.' }));
+    await TestBed.configureTestingModule({
+      imports: [DataGraphGuideComponent],
+      providers: [
+        provideRouter([]),
+        { provide: InteractiveWorkspaceService, useValue: { load: async () => example } },
+        { provide: AiDataService, useValue: { generateData } },
+        { provide: MatDialog, useValue: { open: () => ({ afterClosed: () => of(true) }) } },
+      ],
+    }).overrideComponent(GraphCanvasComponent, { set: { template: '' } }).compileComponents();
+    const fixture = TestBed.createComponent(DataGraphGuideComponent);
+    fixture.detectChanges();
+    await fixture.componentInstance.ngOnInit();
+    fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    const button = [...page.querySelectorAll('button')].find((item) =>
+      item.textContent?.includes('Generate data for my experiment with AI'),
+    )!;
+    const row = page.querySelector<HTMLInputElement>('input[aria-label="IV value for row 1"]')!;
+    row.value = '';
+    row.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    button.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.textContent).toContain('Enter an IV level in every row');
+    expect(generateData).not.toHaveBeenCalled();
+    row.value = '10';
+    row.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    button.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(generateData).toHaveBeenCalledWith(expect.objectContaining({
+      independentVar: example.independentVar,
+      dependentVar: example.dependentVar,
+      ivValues: ['10', '20', '30'],
+      numTrials: 3,
+    }));
+    const field = [...page.querySelectorAll('mat-form-field')].find((item) =>
+      item.textContent?.includes('Independent variable (with units)'),
+    )!.querySelector('input')!;
+    field.value = '';
+    field.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    button.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(page.textContent).toContain('Enter both variables before generating data');
+    expect(generateData).toHaveBeenCalledOnce();
   });
 
   it('preserves the current workspace when generation fails', async () => {

@@ -4,6 +4,8 @@ import {
   AiDataValidationError,
   parseGenerateDataInput,
   parseGenerateDataResponse,
+  parseGenerateGuideDataInput,
+  parseGenerateGuideDataResponse,
   parseGenerateGuideResponse,
 } from "../lib/ai-data.js";
 
@@ -60,6 +62,14 @@ describe("parseGenerateDataInput", () => {
       assert.equal(parsed.procedure, "Measure the time needed at each water temperature.");
     });
 
+    it("rejects generated variables that do not match the selected experiment", () => {
+      const expected = {
+        independentVar: "Paper towel layers (layers)",
+        dependentVar: "Water absorbed (mL)",
+      };
+      assert.throws(() => parseGenerateGuideResponse(guideResponse(), expected), AiDataValidationError);
+    });
+
     it("rejects incomplete experiments and malformed or duplicate graph coordinates", () => {
       assert.throws(() => parseGenerateGuideResponse({ ...guideResponse(), procedure: "" }), AiDataValidationError);
       assert.throws(() => parseGenerateGuideResponse({ ...guideResponse(), rows: [] }), AiDataValidationError);
@@ -88,6 +98,45 @@ describe("parseGenerateDataInput", () => {
       () => parseGenerateDataInput({ ...validRequest, ivValues: Array(21).fill("level") }),
       AiDataValidationError,
     );
+  });
+});
+
+describe("guide data generation from student variables", () => {
+  it("accepts optional details and generates graphable levels for the requested trial count", () => {
+    const input = parseGenerateGuideDataInput({
+      independentVar: "Water temperature (C)",
+      dependentVar: "Dissolving time (s)",
+      numLevels: 3,
+      numTrials: 4,
+    });
+    const rows = ["10", "20", "30"].map((ivValue) => ({
+      ivValue, trial1: 3, trial2: 4, trial3: 5, trial4: 6, trial5: null,
+    }));
+    const result = parseGenerateGuideDataResponse({ rows, notes: "Fictional values." }, input);
+    assert.equal(input.hypothesis, "");
+    assert.equal(input.procedure, "");
+    assert.equal(result.rows.length, 3);
+    assert.equal(result.rows[0].trial4, 6);
+    assert.equal(result.rows[0].trial5, null);
+  });
+
+  it("rejects missing variables, invalid counts, duplicate levels and missing active trials", () => {
+    const input = { ...validRequest, numLevels: 3, numTrials: 3 };
+    for (const invalid of [
+      { ...input, independentVar: "" },
+      { ...input, numLevels: 0 },
+      { ...input, numLevels: 6 },
+      { ...input, numTrials: 2 },
+    ]) {
+      assert.throws(() => parseGenerateGuideDataInput(invalid), AiDataValidationError);
+    }
+    const parsed = parseGenerateGuideDataInput(input);
+    const response = validResponse({ ivValues: ["10", "20", "30"] });
+    response.rows[1].ivValue = "10";
+    assert.throws(() => parseGenerateGuideDataResponse(response, parsed), AiDataValidationError);
+    response.rows[1].ivValue = "20";
+    response.rows[0].trial2 = null;
+    assert.throws(() => parseGenerateGuideDataResponse(response, parsed), AiDataValidationError);
   });
 });
 

@@ -19,7 +19,6 @@ import {
   blankExtraStatistics,
   createWorkspace,
   drawnLine,
-  exampleWorkspace,
   ExtraStatistics,
   GuideWorkspace,
   isGuideWorkspace,
@@ -169,20 +168,65 @@ export class DataGraphGuideComponent implements OnInit {
     return Number.isFinite(actual) && Math.abs(actual - expected) < 0.015 ? 'Correct' : 'Try again';
   }
 
-  protected async useExample(): Promise<void> {
-    if (!await this.confirmReplacement('Load example data?', 'This replaces the current workspace, including calculations and graph.')) return;
-    this.workspace.set(exampleWorkspace());
+  protected async reset(): Promise<void> {
+    if (!await this.confirmReplacement('Reset to a blank workspace?', 'This replaces the current workspace, including calculations and graph.')) return;
+    this.workspace.set(createWorkspace());
     this.resyncAll();
     this.showExtraCheck.set(false);
     this.aiMessage.set('');
   }
 
-  protected async reset(): Promise<void> {
-    if (!await this.confirmReplacement('Start a blank workspace?', 'This replaces the current workspace, including calculations and graph.')) return;
-    this.workspace.set(createWorkspace());
-    this.resyncAll();
-    this.showExtraCheck.set(false);
+  protected async generateDataForExperiment(): Promise<void> {
+    const current = this.workspace();
+    const levels = current.dataTable.map((row) => row.ivValue.trim());
+    if (!current.independentVar.trim() || !current.dependentVar.trim()) {
+      this.aiMessage.set('Enter both variables before generating data for your experiment.');
+      return;
+    }
+    if (levels.some(Boolean) && levels.some((level) => !level)) {
+      this.aiMessage.set('Enter an IV level in every row, or leave all IV levels blank for AI to choose them.');
+      return;
+    }
+    if (!await this.confirmReplacement(
+      'Generate data for your experiment?',
+      'Your experiment details and any IV levels will be sent to the AI service. Fictional data will replace your trials and clear your calculations and graph.',
+    )) return;
+    const snapshot = JSON.stringify(this.workspace());
+    this.generating.set(true);
     this.aiMessage.set('');
+    try {
+      const request = {
+        independentVar: current.independentVar,
+        dependentVar: current.dependentVar,
+        hypothesis: current.hypothesis,
+        procedure: current.procedure,
+        controlledVars: [],
+        numTrials: current.numTrials,
+      };
+      const result = levels.some(Boolean)
+        ? await this.ai.generateData({ ...request, ivValues: levels })
+        : await this.ai.generateGuideData({ ...request, numLevels: levels.length });
+      if (snapshot !== JSON.stringify(this.workspace())) {
+        this.aiMessage.set('The workspace changed during generation, so the generated data was not applied. Try again.');
+        return;
+      }
+      this.workspace.update((workspace) => ({
+        ...workspace,
+        dataTable: result.dataTable,
+        manualCalculations: createBlankManualCalcs(result.dataTable.length, workspace.numTrials),
+        extraStatistics: result.dataTable.map(() => blankExtraStatistics()),
+        graphData: createWorkspace().graphData,
+        statisticsNotes: '',
+      }));
+      this.resyncAll();
+      this.showExtraCheck.set(false);
+      this.aiMessage.set(`AI-generated practice data (not real measurements). ${result.notes}`);
+    } catch (error) {
+      console.error('Failed to generate interactive guide data:', error);
+      this.aiMessage.set(error instanceof Error ? error.message : 'Data generation failed. Please try again.');
+    } finally {
+      this.generating.set(false);
+    }
   }
 
   protected async generateData(): Promise<void> {

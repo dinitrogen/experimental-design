@@ -1,9 +1,8 @@
-import { createWorkspace, drawnLine, exampleWorkspace, isGuideWorkspace } from './workspace.model';
+import { createWorkspace, drawnLine, isGuideWorkspace } from './workspace.model';
 
 describe('interactive guide workspace', () => {
-  it('accepts blank and example workspaces after a JSON round trip', () => {
+  it('accepts a blank workspace after a JSON round trip', () => {
     expect(isGuideWorkspace(JSON.parse(JSON.stringify(createWorkspace())))).toBe(true);
-    expect(isGuideWorkspace(JSON.parse(JSON.stringify(exampleWorkspace())))).toBe(true);
   });
 
   it('rejects invalid or incomplete saved work instead of replacing it silently', () => {

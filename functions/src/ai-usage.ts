@@ -1,8 +1,11 @@
+import { isGuideThemeId, selectGuideTheme, type GuideTheme } from "./ai-guide-themes.js";
+
 export const AI_DAILY_LIMIT = 10;
 
 export interface DailyAiUsageRecord {
   date: string;
   count: number;
+  lastGuideTheme?: string;
 }
 
 export class AiDailyLimitExceededError extends Error {
@@ -45,4 +48,23 @@ export function nextDailyAiUsage(
     throw new AiDailyLimitExceededError();
   }
   return { date: utcDate, count: count + 1 };
+}
+
+export function nextAiReservation(
+  current: unknown,
+  utcDate: string,
+  guideMode: boolean,
+  choose?: (max: number) => number,
+): { usage: DailyAiUsageRecord; theme?: GuideTheme } {
+  const usage = nextDailyAiUsage(current, utcDate);
+  const last = isRecord(current) ? current["lastGuideTheme"] : undefined;
+  if (last !== undefined && (typeof last !== "string" || !isGuideThemeId(last))) {
+    throw new AiUsageRecordError();
+  }
+  const theme = guideMode ? selectGuideTheme(last, choose) : undefined;
+  const lastGuideTheme = theme?.id ?? last;
+  return {
+    usage: lastGuideTheme === undefined ? usage : { ...usage, lastGuideTheme },
+    theme,
+  };
 }

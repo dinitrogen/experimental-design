@@ -682,9 +682,9 @@ export class StatisticsStepComponent {
       return student.toLowerCase().replace(/\s/g, '') === correct.toLowerCase().replace(/\s/g, '');
     }
     // For numeric fields, compare as numbers with small tolerance
-    const studentNum = parseFloat(student);
-    const correctNum = parseFloat(correct);
-    if (isNaN(studentNum) || isNaN(correctNum)) return student === correct;
+    const studentNum = Number(student);
+    const correctNum = Number(correct);
+    if (!Number.isFinite(studentNum) || !Number.isFinite(correctNum)) return false;
     return Math.abs(studentNum - correctNum) < 0.015;
   }
 

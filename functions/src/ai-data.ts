@@ -27,6 +27,10 @@ export interface GenerateGuideResponse extends GenerateDataResponse {
   procedure: string;
 }
 
+export interface GenerateGuideDataInput extends Omit<GenerateDataInput, "ivValues"> {
+  numLevels: number;
+}
+
 export class AiDataValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -131,6 +135,18 @@ export function parseGenerateDataInput(data: unknown): GenerateDataInput {
   };
 }
 
+export function parseGenerateGuideDataInput(data: unknown): GenerateGuideDataInput {
+  if (!isRecord(data) || typeof data["numLevels"] !== "number" ||
+      !Number.isInteger(data["numLevels"]) || data["numLevels"] < 1 || data["numLevels"] > 5) {
+    throw new AiDataValidationError("Provide between 1 and 5 IV levels.");
+  }
+  const { ivValues: _, ...input } = parseGenerateDataInput({
+    ...data,
+    ivValues: Array.from({ length: data["numLevels"] }, (_, index) => String(index)),
+  });
+  return { ...input, numLevels: data["numLevels"] };
+}
+
 export function parseGenerateDataResponse(
   response: unknown,
   input: GenerateDataInput,
@@ -171,14 +187,10 @@ export function parseGenerateDataResponse(
   return { rows, notes };
 }
 
-export function parseGenerateGuideResponse(response: unknown): GenerateGuideResponse {
-  if (!isRecord(response) || !Array.isArray(response["rows"]) || response["rows"].length !== 4) {
-    throw new AiDataValidationError("A practice experiment must have four levels.");
+function generatedIvValues(response: unknown, numLevels: number): string[] {
+  if (!isRecord(response) || !Array.isArray(response["rows"]) || response["rows"].length !== numLevels) {
+    throw new AiDataValidationError("Generated data has an unexpected number of levels.");
   }
-  const independentVar = readText(response, "independentVar", 200, true);
-  const dependentVar = readText(response, "dependentVar", 200, true);
-  const hypothesis = readText(response, "hypothesis", 2000, true);
-  const procedure = readText(response, "procedure", 4000, true);
   const ivValues = response["rows"].map((row: unknown) => {
     if (!isRecord(row) || typeof row["ivValue"] !== "string" || !row["ivValue"].trim()) {
       throw new AiDataValidationError("Generated IV levels must be numbers.");
@@ -192,6 +204,30 @@ export function parseGenerateGuideResponse(response: unknown): GenerateGuideResp
   if (new Set(ivValues.map(Number)).size !== ivValues.length) {
     throw new AiDataValidationError("Generated IV levels must be distinct.");
   }
+  return ivValues;
+}
+
+export function parseGenerateGuideDataResponse(
+  response: unknown,
+  input: GenerateGuideDataInput,
+): GenerateDataResponse {
+  const ivValues = generatedIvValues(response, input.numLevels);
+  return parseGenerateDataResponse(response, { ...input, ivValues });
+}
+
+export function parseGenerateGuideResponse(
+  response: unknown,
+  expected?: { independentVar: string; dependentVar: string },
+): GenerateGuideResponse {
+  if (!isRecord(response)) throw new AiDataValidationError("Invalid generated experiment.");
+  const independentVar = readText(response, "independentVar", 200, true);
+  const dependentVar = readText(response, "dependentVar", 200, true);
+  if (expected && (independentVar !== expected.independentVar || dependentVar !== expected.dependentVar)) {
+    throw new AiDataValidationError("Generated variables did not match the requested experiment.");
+  }
+  const hypothesis = readText(response, "hypothesis", 2000, true);
+  const procedure = readText(response, "procedure", 4000, true);
+  const ivValues = generatedIvValues(response, 4);
   const input = parseGenerateDataInput({
     independentVar, dependentVar, hypothesis, procedure, controlledVars: [], ivValues, numTrials: 3,
   });

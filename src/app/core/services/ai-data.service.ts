@@ -24,6 +24,10 @@ export interface GenerateDataResponse {
   notes: string;
 }
 
+export interface GenerateGuideDataRequest extends Omit<GenerateDataRequest, 'ivValues'> {
+  numLevels: number;
+}
+
 export interface GenerateGuideResponse extends GenerateDataResponse {
   independentVar: string;
   dependentVar: string;
@@ -83,6 +87,19 @@ export class AiDataService {
     try {
       const { rows, ...experiment } = (await callable({ mode: 'practice-guide' })).data;
       return { ...experiment, dataTable: toDataTable(rows) };
+    } catch (error) {
+      throw toFriendlyAiError(error);
+    }
+  }
+
+  async generateGuideData(request: GenerateGuideDataRequest): Promise<{ dataTable: DataTableEntry[]; notes: string }> {
+    const callable = httpsCallable<GenerateGuideDataRequest & { mode: 'practice-guide-data' }, GenerateDataResponse>(
+      this.functions,
+      'generateExperimentData',
+    );
+    try {
+      const response = (await callable({ ...request, mode: 'practice-guide-data' })).data;
+      return { dataTable: toDataTable(response.rows), notes: response.notes };
     } catch (error) {
       throw toFriendlyAiError(error);
     }

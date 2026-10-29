@@ -129,6 +129,7 @@ For local AI testing, Firebase Functions emulator reads secrets from `functions/
 If you previously stored this key in `functions/.env`, move it to the secret location needed for your workflow and remove the obsolete copy; this callable no longer reads the key from `.env`.
 
 The AI callable allows up to 10 accepted generations per authenticated account per UTC day. Accepted attempts count toward the limit even if Gemini later fails. Production usage is tracked in a server-only Firestore collection; emulator usage is held in memory and does not affect production quota records.
+For guide examples, the service chooses from different experiment themes and avoids the last theme assigned to that account, including across UTC days. The AI invents the details and fictional measurements for the chosen theme.
 
 The AI callable currently uses the stable `gemini-3.1-flash-lite` model. Check Google's [model deprecation schedule](https://ai.google.dev/gemini-api/docs/deprecations) before changing model IDs.
 
@@ -299,9 +300,9 @@ Student responses are stored by task ID and prompt position. Preserve task IDs, 
 
 ### Interactive guides
 
-The **Data Tables, Statistics & Graphing** guide gives each signed-in user one private workspace. Students can enter their own data, load a toy-car example, or have AI invent a simple experiment and fictional practice data without supplying a premise. They enter and check statistics and condensed means, plot points, draw a line, and optionally reveal the equation derived from its endpoints. AI generation uses the same service and quota as practice events; the guide does not send the current workspace's experiment details to that service.
+The **Data Tables, Statistics & Graphing** guide gives each signed-in user one private workspace. Students can enter their own experiment and data, request fictional data for their own variables, or have AI invent the entire experiment and data. For their own experiment, students may provide IV levels or leave every level blank for AI to choose. Students can check their calculations in all three workflows, plot points, draw a line, and optionally reveal the equation derived from its endpoints. Both AI options use the same service and quota as practice events. Generating data for a student's experiment sends its details and IV levels to the AI service; generating an entire experiment does not send the current workspace's details.
 
-Work is saved to the user's account when they select **Save workspace**; unsaved changes prompt a warning before navigation. Loading an example, starting blank, or generating AI data requires confirmation before replacing work. The workspace is separate from task and report submissions. Existing practice-event graphs offer a free-placement toggle and exact coordinate entry; task graphs also allow points between grid marks.
+Work is saved to the user's account when they select **Save workspace**; unsaved changes prompt a warning before navigation. Resetting to blank or generating AI data requires confirmation before replacing work. The workspace is separate from task and report submissions. Existing practice-event graphs offer a free-placement toggle and exact coordinate entry; task graphs also allow points between grid marks.
 
 Workspace records are stored in `interactiveGuideWorkspaces/{uid}` and are accessible only to their owner. Deploy the Firestore rules together with the frontend when releasing changes to this feature.
 

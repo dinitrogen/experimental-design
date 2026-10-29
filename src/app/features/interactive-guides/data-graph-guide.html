@@ -16,24 +16,25 @@
       <button mat-stroked-button type="button" (click)="generateData()" [disabled]="saving() || generating() || replacing()">
         <mat-icon>auto_awesome</mat-icon> Generate an experiment and data with AI
       </button>
-      <button mat-stroked-button type="button" (click)="useExample()" [disabled]="saving() || generating() || replacing()">
-        Load example
+      <button mat-stroked-button type="button" (click)="generateDataForExperiment()" [disabled]="saving() || generating() || replacing()">
+        <mat-icon>auto_awesome</mat-icon> Generate data for my experiment with AI
       </button>
       <button mat-stroked-button type="button" (click)="reset()" [disabled]="saving() || generating() || replacing()">
-        Start blank
+        Reset to blank
       </button>
       <span role="status">{{ dirty() ? 'Unsaved changes' : 'Saved or no changes' }}</span>
     </div>
     @if (saveError()) { <p role="alert">{{ saveError() }}</p> }
     <p>Use <strong>Save workspace</strong> to keep one workspace with your account and reopen it on another device.</p>
-    <p>Optional: AI invents an experiment and fictional practice data, not real measurements. No experiment details from this workspace are sent to the AI service.</p>
-    @if (generating()) { <p role="status">Generating a practice experiment and data...</p> }
+    <p>Enter everything yourself, generate data for your own experiment, or let AI invent an experiment and data. For your own experiment, enter both variables below; optionally enter a hypothesis, procedure, and IV levels. Leave all IV levels blank for AI to choose them.</p>
+    <p>AI-generated data are fictional, not real measurements. Generating data for your experiment sends its details and IV levels to the AI service; generating an entire experiment does not send your workspace details.</p>
+    @if (generating()) { <p role="status">Generating fictional practice data...</p> }
     @if (aiMessage()) { <p role="status">{{ aiMessage() }}</p> }
 
     <fieldset [disabled]="generating() || replacing()" class="workspace-fieldset">
       <section>
         <h2>1. Describe your experiment</h2>
-        <p>Include units in your variable names. Or use the AI button above to generate a fictional experiment and data.</p>
+        <p>Include units in your variable names. Use the buttons above if you want AI to generate data.</p>
         <div class="fields">
           <mat-form-field appearance="outline">
             <mat-label>Independent variable (with units)</mat-label>
@@ -79,7 +80,7 @@
 
       <section>
         <h2>3. Practice statistics</h2>
-        <p>Complete the summary and sample calculations below. Q1 and Q3 use the medians of the lower and upper halves, excluding the overall median when there is an odd number of trials. Variance and sample standard deviation are optional challenges.</p>
+        <p>Complete the summary and sample calculations below. Check your final results in the summary table; the example work itself is not checked. Q1 and Q3 use the medians of the lower and upper halves, excluding the overall median when there is an odd number of trials. Variance and sample standard deviation are optional challenges.</p>
         <app-step-statistics
           [dataTable]="workspace().dataTable"
           [numTrials]="workspace().numTrials"
