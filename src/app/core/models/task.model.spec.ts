@@ -200,15 +200,19 @@ describe('task definition compatibility', () => {
       'Topic 3 — Paper Bridge',
     ];
     expect(task?.responseHeading).toContain('For each topic and materials list');
+    expect(task?.responseHeading).not.toContain('Hint');
+    expect(task?.responseNote).toBe('(You have a ruler and stopwatch for all the experiments)');
     for (const [index, section] of sectionNames.entries()) {
       const instructions = task?.sectionInstructions?.[section] ?? '';
       expect(instructions).toContain('**Topic:**');
       expect(instructions).toContain('**Materials (must use at least 2):**\n- ');
       expect(instructions).not.toContain('?');
       expect(instructions.toLowerCase()).not.toContain('identical');
+      expect(instructions).not.toContain('Ruler');
+      expect(instructions).not.toContain('Stopwatch');
       expect(
         instructions.split('\n').filter((line) => line.startsWith('- ')).length,
-      ).toBeGreaterThanOrEqual(5);
+      ).toBeGreaterThanOrEqual(4);
       const prompts = task!.prompts.slice(index * 4, index * 4 + 4);
       expect(prompts[0].sectionHeader).toBe(section);
       expect(prompts.map((prompt) => prompt.label)).toEqual([

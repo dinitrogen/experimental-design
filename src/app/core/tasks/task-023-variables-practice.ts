@@ -38,7 +38,8 @@ export const TASK_023: TaskDefinition = {
   id: 'task-023-variables-practice',
   title: 'Report Writing Practice: Variables',
   responseHeading:
-    'For each topic and materials list, come up with the variables that would make a strong experiment. Hint: Think of a possible problem statement in your head: “How does [IV] affect [DV]?”',
+    'For each topic and materials list, come up with the variables that would make a strong experiment.',
+  responseNote: '(You have a ruler and stopwatch for all the experiments)',
   sectionInstructions: {
     'Topic 1 — Water Absorption': [
       '**Topic:** Water absorption',
@@ -49,7 +50,6 @@ export const TASK_023: TaskDefinition = {
       '- Water',
       '- Graduated cylinder (a marked container used to measure liquid volume)',
       '- Tray',
-      '- Stopwatch',
       '- Balance',
     ].join('\n'),
     'Topic 2 — Magnetism': [
@@ -58,7 +58,6 @@ export const TASK_023: TaskDefinition = {
       '**Materials (must use at least 2):**',
       '- Magnet',
       '- Paper clips',
-      '- Ruler',
       '- Nonmagnetic surface',
       '- Masking tape',
     ].join('\n'),
@@ -69,7 +68,6 @@ export const TASK_023: TaskDefinition = {
       '- Sheets of paper',
       '- Coins',
       '- Two supports',
-      '- Ruler',
       '- Cardboard',
       '- Binder clips',
     ].join('\n'),

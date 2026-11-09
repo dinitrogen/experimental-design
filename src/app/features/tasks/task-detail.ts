@@ -100,6 +100,9 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
         <mat-divider />
 
         <h2>{{ task()!.responseHeading ?? 'Your Responses' }}</h2>
+        @if (task()!.responseNote) {
+          <p>{{ task()!.responseNote }}</p>
+        }
 
         @for (prompt of task()!.prompts; track $index; let i = $index) {
           @if (!prompt.inline) {
