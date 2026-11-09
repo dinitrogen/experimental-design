@@ -35,6 +35,8 @@ export interface TaskPrompt {
   expectedColumns?: string[];
   /** For 'table': number of data rows */
   rows?: number;
+  /** For 'table': render editable cells as textareas with this many visible rows */
+  tableCellTextRows?: number;
   /** For 'text': visible textarea rows */
   textRows?: number;
   /** For 'table': expected cell values (row-major) for auto-check. null = no check for that cell */

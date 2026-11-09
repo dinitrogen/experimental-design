@@ -183,11 +183,40 @@ describe('createInitialTaskResponse', () => {
 
 describe('task definition compatibility', () => {
   it('archives only tasks 001 through 016 without removing them from lookup', () => {
-    expect(new Set(TASK_DEFINITIONS.map((task) => task.id)).size).toBe(22);
+    expect(new Set(TASK_DEFINITIONS.map((task) => task.id)).size).toBe(23);
     for (const task of TASK_DEFINITIONS) {
       const number = Number(task.id.match(/^task-(\d{3})-/)?.[1]);
       expect(task.archived === true).toBe(number >= 1 && number <= 16);
       expect(getTaskDefinition(task.id)).toBe(task);
+    }
+  });
+
+  it('provides three variables exercises with separate report-style fields', () => {
+    const task = getTaskDefinition('task-023-variables-practice');
+    expect(task?.prompts).toHaveLength(12);
+    const sectionNames = [
+      'Question 1 — Water Absorption',
+      'Question 2 — Magnetism',
+      'Question 3 — Paper Bridge',
+    ];
+    for (const [index, section] of sectionNames.entries()) {
+      expect(task?.sectionInstructions?.[section]).toContain('**Materials:**');
+      const prompts = task!.prompts.slice(index * 4, index * 4 + 4);
+      expect(prompts[0].sectionHeader).toBe(section);
+      expect(prompts.map((prompt) => prompt.label)).toEqual([
+        'Independent Variable (IV)',
+        'IV Levels',
+        'Dependent Variable (DV)',
+        'Controlled Variables (CV)',
+      ]);
+      expect(prompts.map((prompt) => prompt.type)).toEqual(['table', 'table', 'table', 'table']);
+      expect(prompts.map((prompt) => JSON.parse(createInitialTaskResponse(prompt)))).toEqual([
+        [['', '']],
+        [['', '', '']],
+        [['', '']],
+        [[''], [''], ['']],
+      ]);
+      expect(prompts.every((prompt) => (prompt.tableCellTextRows ?? 0) > 0)).toBe(true);
     }
   });
 

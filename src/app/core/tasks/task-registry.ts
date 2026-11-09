@@ -1,4 +1,5 @@
 import type { TaskDefinition } from '../models/task.model';
+import { TASK_023 } from './task-023-variables-practice';
 import { TASK_017, TASK_018, TASK_019 } from './report-sections-a-e';
 import { TASK_020, TASK_021 } from './report-sections-g-i';
 import { TASK_022 } from './task-022-report-sections-k-l-cer';
@@ -20,6 +21,7 @@ import { TASK_002 } from './task-002-variance-stddev';
 import { TASK_001 } from './task-001-experiment-brainstorm';
 
 export const TASK_DEFINITIONS: TaskDefinition[] = [
+  TASK_023,
   TASK_021,
   TASK_022,
   TASK_020,

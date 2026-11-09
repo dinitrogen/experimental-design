@@ -145,7 +145,7 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                             @for (row of getTableData(i); track $index) {
                               <tr>
                                 @for (cell of row; track $index) {
-                                  <td>{{ cell || '—' }}</td>
+                                  <td [style.white-space]="prompt.tableCellTextRows ? 'pre-wrap' : null">{{ cell || '—' }}</td>
                                 }
                               </tr>
                             }
@@ -342,6 +342,17 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                                     <td>
                                       @if (isCellReadOnly(prompt, r, c)) {
                                         <span class="readonly-cell">{{ cell }}</span>
+                                      } @else if (prompt.tableCellTextRows) {
+                                        <textarea
+                                          class="table-input table-textarea"
+                                          [value]="cell"
+                                          [rows]="prompt.tableCellTextRows"
+                                          (input)="onTableCellChange(i, r, c, $event)"
+                                          [attr.aria-label]="
+                                            (getTableHeaders(i)[c] || 'Column ' + (c + 1)) +
+                                            ' Row ' + (r + 1)
+                                          "
+                                        ></textarea>
                                       } @else {
                                         <input
                                           class="table-input"
@@ -697,6 +708,13 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
       font-style: italic;
     }
 
+    .table-textarea {
+      display: block;
+      min-width: 0;
+      font-family: inherit;
+      resize: vertical;
+    }
+
     .table-input:focus {
       background: color-mix(in srgb, var(--primary-color) 10%, transparent);
       outline: 2px solid var(--primary-color);
@@ -833,7 +851,17 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
   }
 
   protected canSubmit(): boolean {
-    return this.responses().some((r) => r.trim().length > 0);
+    return this.responses().some((response, index) => {
+      const prompt = this.task()?.prompts[index];
+      if (prompt?.type === 'table') {
+        return parseTaskTableResponse(response, prompt).rows.some((row, rowIndex) =>
+          row.some((cell, colIndex) =>
+            !this.isCellReadOnly(prompt, rowIndex, colIndex) && cell.trim().length > 0,
+          ),
+        );
+      }
+      return response.trim().length > 0;
+    });
   }
 
   protected getNextPrompt(index: number): TaskPrompt | undefined {
@@ -1051,7 +1079,7 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
   }
 
   protected onTableCellChange(promptIndex: number, row: number, col: number, event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
+    const value = (event.target as HTMLInputElement | HTMLTextAreaElement).value;
     const prompt = this.task()?.prompts[promptIndex];
     if (!prompt) return;
     const response = parseTaskTableResponse(this.responses()[promptIndex] ?? '', prompt);

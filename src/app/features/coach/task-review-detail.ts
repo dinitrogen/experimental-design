@@ -130,7 +130,7 @@ import { Firestore, doc, getDoc } from '@angular/fire/firestore';
                       @for (row of parseTable(response, i); track $index) {
                         <tr>
                           @for (cell of row; track $index) {
-                            <td>{{ cell || '—' }}</td>
+                            <td [style.white-space]="getPrompt(i)?.tableCellTextRows ? 'pre-wrap' : null">{{ cell || '—' }}</td>
                           }
                         </tr>
                       }
