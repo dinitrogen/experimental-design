@@ -195,12 +195,16 @@ describe('task definition compatibility', () => {
     const task = getTaskDefinition('task-023-variables-practice');
     expect(task?.prompts).toHaveLength(12);
     const sectionNames = [
-      'Question 1 — Water Absorption',
-      'Question 2 — Magnetism',
-      'Question 3 — Paper Bridge',
+      'Topic 1 — Water Absorption',
+      'Topic 2 — Magnetism',
+      'Topic 3 — Paper Bridge',
     ];
+    expect(task?.responseHeading).toContain('For each topic and materials list');
     for (const [index, section] of sectionNames.entries()) {
-      expect(task?.sectionInstructions?.[section]).toContain('**Materials:**');
+      const instructions = task?.sectionInstructions?.[section] ?? '';
+      expect(instructions).toContain('**Topic:**');
+      expect(instructions).toContain('**Materials:**\n- ');
+      expect(instructions).not.toContain('?');
       const prompts = task!.prompts.slice(index * 4, index * 4 + 4);
       expect(prompts[0].sectionHeader).toBe(section);
       expect(prompts.map((prompt) => prompt.label)).toEqual([
@@ -217,6 +221,8 @@ describe('task definition compatibility', () => {
         [[''], [''], ['']],
       ]);
       expect(prompts.every((prompt) => (prompt.tableCellTextRows ?? 0) > 0)).toBe(true);
+      expect(prompts.every((prompt) => prompt.subLabel === undefined)).toBe(true);
+      expect(prompts[3].columns).toEqual(['Define']);
     }
   });
 

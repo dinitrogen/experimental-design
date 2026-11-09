@@ -54,6 +54,9 @@ describe('variables practice', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     fixture.detectChanges();
     const page: HTMLElement = fixture.nativeElement;
+    expect(page.textContent).toContain(
+      'For each topic and materials list, come up with the variables that would make a strong experiment.',
+    );
     const fields = page.querySelectorAll<HTMLTextAreaElement>('textarea.table-textarea');
     expect(fields).toHaveLength(30);
     const submit = [...page.querySelectorAll('button')].find((button) =>

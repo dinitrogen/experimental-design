@@ -50,6 +50,8 @@ export interface TaskPrompt {
 export interface TaskDefinition {
   id: string;
   title: string;
+  /** Optional task-specific heading shown above the student response prompts */
+  responseHeading?: string;
   /** Archived tasks remain available for existing assignments and submissions. */
   archived?: boolean;
   /** Relative path to the markdown prompt file in public/ (legacy task format) */
