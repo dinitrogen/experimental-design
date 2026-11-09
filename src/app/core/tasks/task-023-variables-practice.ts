@@ -61,7 +61,6 @@ export const TASK_023: TaskDefinition = {
       '- Ruler',
       '- Nonmagnetic surface',
       '- Masking tape',
-      '- Compass',
     ].join('\n'),
     'Topic 3 — Paper Bridge': [
       '**Topic:** Paper bridge strength',
