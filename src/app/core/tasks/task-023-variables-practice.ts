@@ -40,28 +40,40 @@ export const TASK_023: TaskDefinition = {
   responseHeading:
     'For each topic and materials list, come up with the variables that would make a strong experiment.',
   sectionInstructions: {
-    'Topic 1 — Water Absorption': `**Topic:** Water absorption
-
-**Materials:**
-- Identical paper towels
-- Scissors
-- Water
-- Graduated cylinder
-- Tray`,
-    'Topic 2 — Magnetism': `**Topic:** Magnetism
-
-**Materials:**
-- Magnet
-- Identical paper clips
-- Ruler
-- Nonmagnetic surface`,
-    'Topic 3 — Paper Bridge': `**Topic:** Paper bridge strength
-
-**Materials:**
-- Identical sheets of paper
-- Identical coins
-- Two supports
-- Ruler`,
+    'Topic 1 — Water Absorption': [
+      '**Topic:** Water absorption',
+      '',
+      '**Materials:**',
+      '- Paper towels',
+      '- Scissors',
+      '- Water',
+      '- Graduated cylinder (a marked container used to measure liquid volume)',
+      '- Tray',
+      '- Stopwatch',
+      '- Balance',
+    ].join('\n'),
+    'Topic 2 — Magnetism': [
+      '**Topic:** Magnetism',
+      '',
+      '**Materials:**',
+      '- Magnet',
+      '- Paper clips',
+      '- Ruler',
+      '- Nonmagnetic surface',
+      '- Masking tape',
+      '- Second magnet',
+    ].join('\n'),
+    'Topic 3 — Paper Bridge': [
+      '**Topic:** Paper bridge strength',
+      '',
+      '**Materials:**',
+      '- Sheets of paper',
+      '- Coins',
+      '- Two supports',
+      '- Ruler',
+      '- Cardboard',
+      '- Binder clips',
+    ].join('\n'),
   },
   prompts: [
     ...variablesPrompts('Topic 1 — Water Absorption'),

@@ -205,6 +205,10 @@ describe('task definition compatibility', () => {
       expect(instructions).toContain('**Topic:**');
       expect(instructions).toContain('**Materials:**\n- ');
       expect(instructions).not.toContain('?');
+      expect(instructions.toLowerCase()).not.toContain('identical');
+      expect(
+        instructions.split('\n').filter((line) => line.startsWith('- ')).length,
+      ).toBeGreaterThanOrEqual(6);
       const prompts = task!.prompts.slice(index * 4, index * 4 + 4);
       expect(prompts[0].sectionHeader).toBe(section);
       expect(prompts.map((prompt) => prompt.label)).toEqual([
@@ -224,6 +228,9 @@ describe('task definition compatibility', () => {
       expect(prompts.every((prompt) => prompt.subLabel === undefined)).toBe(true);
       expect(prompts[3].columns).toEqual(['Define']);
     }
+    expect(task?.sectionInstructions?.[sectionNames[0]]).toContain(
+      'Graduated cylinder (a marked container used to measure liquid volume)',
+    );
   });
 
   it('provides separate CER and conclusion responses without a variation CER', () => {
