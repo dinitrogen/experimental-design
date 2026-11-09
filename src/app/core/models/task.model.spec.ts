@@ -203,7 +203,7 @@ describe('task definition compatibility', () => {
     for (const [index, section] of sectionNames.entries()) {
       const instructions = task?.sectionInstructions?.[section] ?? '';
       expect(instructions).toContain('**Topic:**');
-      expect(instructions).toContain('**Materials:**\n- ');
+      expect(instructions).toContain('**Materials (must use at least 2):**\n- ');
       expect(instructions).not.toContain('?');
       expect(instructions.toLowerCase()).not.toContain('identical');
       expect(
@@ -231,6 +231,8 @@ describe('task definition compatibility', () => {
     expect(task?.sectionInstructions?.[sectionNames[0]]).toContain(
       'Graduated cylinder (a marked container used to measure liquid volume)',
     );
+    expect(task?.sectionInstructions?.[sectionNames[1]]).toContain('- Compass');
+    expect(task?.sectionInstructions?.[sectionNames[1]]).not.toContain('Second magnet');
   });
 
   it('provides separate CER and conclusion responses without a variation CER', () => {
