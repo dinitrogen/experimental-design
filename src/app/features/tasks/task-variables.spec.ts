@@ -57,6 +57,7 @@ describe('variables practice', () => {
     expect(page.textContent).toContain(
       'For each topic and materials list, come up with the variables that would make a strong experiment.',
     );
+    expect(page.textContent).toContain('Think of a possible problem statement in your head');
     const fields = page.querySelectorAll<HTMLTextAreaElement>('textarea.table-textarea');
     expect(fields).toHaveLength(30);
     const submit = [...page.querySelectorAll('button')].find((button) =>

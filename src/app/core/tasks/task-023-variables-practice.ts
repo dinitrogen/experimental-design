@@ -38,7 +38,7 @@ export const TASK_023: TaskDefinition = {
   id: 'task-023-variables-practice',
   title: 'Report Writing Practice: Variables',
   responseHeading:
-    'For each topic and materials list, come up with the variables that would make a strong experiment.',
+    'For each topic and materials list, come up with the variables that would make a strong experiment. Hint: Think of a possible problem statement in your head: “How does [IV] affect [DV]?”',
   sectionInstructions: {
     'Topic 1 — Water Absorption': [
       '**Topic:** Water absorption',
