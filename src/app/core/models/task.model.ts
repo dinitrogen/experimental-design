@@ -1,7 +1,7 @@
 import { Timestamp } from '@angular/fire/firestore';
 import { GraphData } from './submission.model';
 
-export type PromptType = 'text' | 'number' | 'short-answer' | 'table' | 'graph';
+export type PromptType = 'text' | 'number' | 'short-answer' | 'choice' | 'table' | 'graph';
 
 export interface TaskGraphConfig {
   xMin: number;
@@ -21,6 +21,8 @@ export interface TaskPrompt {
   sectionHeader?: string;
   /** Short label for the input field (mat-label). Falls back to `label` if not set. */
   inputLabel?: string;
+  /** For 'choice': options shown as radio buttons */
+  options?: string[];
   /** If true, render side-by-side with the previous prompt in the same card */
   inline?: boolean;
   /** For 'number': expected answer for auto-check */

@@ -183,7 +183,7 @@ describe('createInitialTaskResponse', () => {
 
 describe('task definition compatibility', () => {
   it('archives only tasks 001 through 016 without removing them from lookup', () => {
-    expect(new Set(TASK_DEFINITIONS.map((task) => task.id)).size).toBe(24);
+    expect(new Set(TASK_DEFINITIONS.map((task) => task.id)).size).toBe(25);
     for (const task of TASK_DEFINITIONS) {
       const number = Number(task.id.match(/^task-(\d{3})-/)?.[1]);
       expect(task.archived === true).toBe(number >= 1 && number <= 16);
@@ -261,7 +261,7 @@ describe('task definition compatibility', () => {
       .filter((prompt) => prompt.sectionHeader)
       .map((prompt) => prompt.sectionHeader);
 
-    expect(task?.title).toBe('Error Type Identification Practice');
+    expect(task?.title).toBe('Error Type Identification Practice (Longer)');
     expect(task?.responseHeading).toContain('random, systematic, or procedural');
     expect(task?.prompts).toHaveLength(30);
     expect(sectionNames).toHaveLength(15);
@@ -277,11 +277,34 @@ describe('task definition compatibility', () => {
       const prompts = task!.prompts.slice(index * 2, index * 2 + 2);
       expect(prompts[0].sectionHeader).toBe(sectionNames?.[index]);
       expect(task?.sectionInstructions?.[sectionNames![index]!]).toBeTruthy();
+      expect(prompts.map((prompt) => prompt.label)).toEqual(['Error Type', 'Effect on Results']);
+      expect(prompts.map((prompt) => prompt.type)).toEqual(['choice', 'text']);
+      expect(prompts[0].options).toEqual(['Random', 'Systematic', 'Procedural']);
+    }
+  });
+
+  it('provides 10 error examples with a type and results prompt each', () => {
+    const task = getTaskDefinition('task-025-error-types');
+    const sectionNames = task?.prompts
+      .filter((prompt) => prompt.sectionHeader)
+      .map((prompt) => prompt.sectionHeader);
+
+    expect(task?.title).toBe('Error Type Identification Practice (10 Scenarios)');
+    expect(task?.responseHeading).toContain('random, systematic, or procedural');
+    expect(task?.prompts).toHaveLength(20);
+    expect(sectionNames).toHaveLength(10);
+    expect(new Set(sectionNames).size).toBe(10);
+    expect(Object.keys(task?.sectionInstructions ?? {})).toHaveLength(10);
+    for (let index = 0; index < 10; index++) {
+      const prompts = task!.prompts.slice(index * 2, index * 2 + 2);
+      expect(prompts[0].sectionHeader).toBe(sectionNames?.[index]);
+      expect(task?.sectionInstructions?.[sectionNames![index]!]).toBeTruthy();
       expect(prompts.map((prompt) => prompt.label)).toEqual([
         'Error Type',
         'Effect on Results',
       ]);
-      expect(prompts.map((prompt) => prompt.type)).toEqual(['short-answer', 'text']);
+      expect(prompts.map((prompt) => prompt.type)).toEqual(['choice', 'text']);
+      expect(prompts[0].options).toEqual(['Random', 'Systematic', 'Procedural']);
     }
   });
 

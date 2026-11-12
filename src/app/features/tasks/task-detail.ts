@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
@@ -44,6 +45,7 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatRadioModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDividerModule,
@@ -301,6 +303,18 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
                             (input)="onResponseChange(i, $event)"
                           />
                         </mat-form-field>
+                      }
+                      @case ('choice') {
+                        <mat-radio-group
+                          class="choice-options"
+                          [value]="responses()[i]"
+                          [attr.aria-label]="prompt.label"
+                          (change)="onOptionChange(i, $event.value)"
+                        >
+                          @for (option of prompt.options ?? []; track option) {
+                            <mat-radio-button [value]="option">{{ option }}</mat-radio-button>
+                          }
+                        </mat-radio-group>
                       }
                       @case ('number') {
                         <mat-form-field appearance="outline" class="response-field number-field">
@@ -599,6 +613,12 @@ import { CanDeactivateTask } from '../../core/guards/task-deactivate.guard';
 
     .response-field {
       width: 100%;
+    }
+
+    .choice-options {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
     }
 
     .submitted-response {
@@ -1060,6 +1080,15 @@ export class TaskDetailComponent implements OnInit, OnDestroy, CanDeactivateTask
     this.responses.update((prev) => {
       const copy = [...prev];
       copy[index] = el.value;
+      return copy;
+    });
+    this.markDirtyAndScheduleSave();
+  }
+
+  protected onOptionChange(index: number, value: string): void {
+    this.responses.update((prev) => {
+      const copy = [...prev];
+      copy[index] = value;
       return copy;
     });
     this.markDirtyAndScheduleSave();

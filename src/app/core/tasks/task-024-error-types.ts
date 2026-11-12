@@ -86,7 +86,8 @@ function createExamplePrompts(
     {
       sectionHeader: `Example ${index + 1} — ${title}`,
       label: 'Error Type',
-      type: 'short-answer',
+      type: 'choice',
+      options: ['Random', 'Systematic', 'Procedural'],
       subLabel: 'Identify whether the error is random, systematic, or procedural.',
     },
     {
@@ -99,7 +100,7 @@ function createExamplePrompts(
 
 export const TASK_024: TaskDefinition = {
   id: 'task-024-error-types',
-  title: 'Error Type Identification Practice',
+  title: 'Error Type Identification Practice (Longer)',
   responseHeading:
     'For each example, identify whether the error is random, systematic, or procedural, then briefly describe how it could affect the results.',
   sectionInstructions: Object.fromEntries(
