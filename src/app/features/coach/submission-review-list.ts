@@ -38,7 +38,88 @@ import { Timestamp } from '@angular/fire/firestore';
     <div class="content-container">
       <h1 class="page-title">Submission Reviews</h1>
 
-      <mat-tab-group (selectedIndexChange)="activeTab.set($event)">
+      <mat-tab-group>
+        <!-- Tasks Tab -->
+        <mat-tab label="Tasks">
+          <div class="tab-content">
+            <div class="tab-header">
+              <mat-form-field appearance="outline" class="filter-field">
+                <mat-label>Filter by status</mat-label>
+                <mat-select [value]="taskStatusFilter()" (selectionChange)="taskStatusFilter.set($event.value)">
+                  <mat-option value="all">All</mat-option>
+                  <mat-option value="submitted">Needs Review</mat-option>
+                  <mat-option value="reviewed">Reviewed</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            @if (loadingTasks()) {
+              <div class="loading-container">
+                <mat-spinner diameter="48" />
+              </div>
+            } @else if (filteredTaskSubmissions().length === 0) {
+              <mat-card>
+                <mat-card-content class="empty-state">
+                  <mat-icon>inbox</mat-icon>
+                  <h2>No Task Submissions</h2>
+                  <p>No student task submissions yet.</p>
+                </mat-card-content>
+              </mat-card>
+            } @else {
+              <mat-card>
+                <table mat-table [dataSource]="filteredTaskSubmissions()" class="review-table">
+                  <ng-container matColumnDef="taskName">
+                    <th mat-header-cell *matHeaderCellDef>Task</th>
+                    <td mat-cell *matCellDef="let sub">{{ getTaskName(sub.taskId) }}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="taskStudent">
+                    <th mat-header-cell *matHeaderCellDef>Student</th>
+                    <td mat-cell *matCellDef="let sub">{{ sub.studentDisplayName || sub.studentUid }}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="taskSubmittedAt">
+                    <th mat-header-cell *matHeaderCellDef>Submitted</th>
+                    <td mat-cell *matCellDef="let sub">{{ formatDate(sub.submittedAt) }}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="taskStatus">
+                    <th mat-header-cell *matHeaderCellDef>Status</th>
+                    <td mat-cell *matCellDef="let sub">
+                      <mat-chip-set>
+                        <mat-chip
+                          [highlighted]="sub.status === 'submitted'"
+                          [class.chip-submitted]="sub.status === 'submitted'"
+                          [class.chip-reviewed]="sub.status === 'reviewed'"
+                        >
+                          {{ sub.status === 'submitted' ? 'Needs Review' : 'Reviewed' }}
+                        </mat-chip>
+                      </mat-chip-set>
+                    </td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="taskActions">
+                    <th mat-header-cell *matHeaderCellDef>Actions</th>
+                    <td mat-cell *matCellDef="let sub">
+                      <a
+                        mat-icon-button
+                        [routerLink]="['/coach/tasks', sub.id]"
+                        [attr.aria-label]="'Review task from ' + (sub.studentDisplayName || sub.studentUid)"
+                        matTooltip="Review task submission"
+                      >
+                        <mat-icon>rate_review</mat-icon>
+                      </a>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="taskColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: taskColumns"></tr>
+                </table>
+              </mat-card>
+            }
+          </div>
+        </mat-tab>
+
         <!-- Reports Tab -->
         <mat-tab label="Reports">
           <div class="tab-content">
@@ -139,87 +220,6 @@ import { Timestamp } from '@angular/fire/firestore';
             }
           </div>
         </mat-tab>
-
-        <!-- Tasks Tab -->
-        <mat-tab label="Tasks">
-          <div class="tab-content">
-            <div class="tab-header">
-              <mat-form-field appearance="outline" class="filter-field">
-                <mat-label>Filter by status</mat-label>
-                <mat-select [value]="taskStatusFilter()" (selectionChange)="taskStatusFilter.set($event.value)">
-                  <mat-option value="all">All</mat-option>
-                  <mat-option value="submitted">Needs Review</mat-option>
-                  <mat-option value="reviewed">Reviewed</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-
-            @if (loadingTasks()) {
-              <div class="loading-container">
-                <mat-spinner diameter="48" />
-              </div>
-            } @else if (filteredTaskSubmissions().length === 0) {
-              <mat-card>
-                <mat-card-content class="empty-state">
-                  <mat-icon>inbox</mat-icon>
-                  <h2>No Task Submissions</h2>
-                  <p>No student task submissions yet.</p>
-                </mat-card-content>
-              </mat-card>
-            } @else {
-              <mat-card>
-                <table mat-table [dataSource]="filteredTaskSubmissions()" class="review-table">
-                  <ng-container matColumnDef="taskName">
-                    <th mat-header-cell *matHeaderCellDef>Task</th>
-                    <td mat-cell *matCellDef="let sub">{{ getTaskName(sub.taskId) }}</td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="taskStudent">
-                    <th mat-header-cell *matHeaderCellDef>Student</th>
-                    <td mat-cell *matCellDef="let sub">{{ sub.studentDisplayName || sub.studentUid }}</td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="taskSubmittedAt">
-                    <th mat-header-cell *matHeaderCellDef>Submitted</th>
-                    <td mat-cell *matCellDef="let sub">{{ formatDate(sub.submittedAt) }}</td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="taskStatus">
-                    <th mat-header-cell *matHeaderCellDef>Status</th>
-                    <td mat-cell *matCellDef="let sub">
-                      <mat-chip-set>
-                        <mat-chip
-                          [highlighted]="sub.status === 'submitted'"
-                          [class.chip-submitted]="sub.status === 'submitted'"
-                          [class.chip-reviewed]="sub.status === 'reviewed'"
-                        >
-                          {{ sub.status === 'submitted' ? 'Needs Review' : 'Reviewed' }}
-                        </mat-chip>
-                      </mat-chip-set>
-                    </td>
-                  </ng-container>
-
-                  <ng-container matColumnDef="taskActions">
-                    <th mat-header-cell *matHeaderCellDef>Actions</th>
-                    <td mat-cell *matCellDef="let sub">
-                      <a
-                        mat-icon-button
-                        [routerLink]="['/coach/tasks', sub.id]"
-                        [attr.aria-label]="'Review task from ' + (sub.studentDisplayName || sub.studentUid)"
-                        matTooltip="Review task submission"
-                      >
-                        <mat-icon>rate_review</mat-icon>
-                      </a>
-                    </td>
-                  </ng-container>
-
-                  <tr mat-header-row *matHeaderRowDef="taskColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: taskColumns"></tr>
-                </table>
-              </mat-card>
-            }
-          </div>
-        </mat-tab>
       </mat-tab-group>
     </div>
   `,
@@ -307,7 +307,6 @@ export class SubmissionReviewListComponent {
   protected readonly taskSubmissions = signal<TaskSubmission[]>([]);
   protected readonly loading = signal(true);
   protected readonly loadingTasks = signal(true);
-  protected readonly activeTab = signal(0);
   protected readonly statusFilter = signal<'all' | 'submitted' | 'reviewed'>('all');
   protected readonly taskStatusFilter = signal<'all' | 'submitted' | 'reviewed'>('all');
   protected readonly displayedColumns = ['event', 'student', 'submittedAt', 'status', 'score', 'actions'];
