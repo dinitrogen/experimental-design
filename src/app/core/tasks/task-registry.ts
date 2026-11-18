@@ -1,4 +1,6 @@
 import type { TaskDefinition } from '../models/task.model';
+import { TASK_028 } from './task-028-improvements-salt-ice';
+import { TASK_027 } from './task-027-improvements-paper-airplane';
 import { TASK_025 } from './task-025-error-types';
 import { TASK_024 } from './task-024-error-types';
 import { TASK_023 } from './task-023-variables-practice';
@@ -23,6 +25,8 @@ import { TASK_002 } from './task-002-variance-stddev';
 import { TASK_001 } from './task-001-experiment-brainstorm';
 
 export const TASK_DEFINITIONS: TaskDefinition[] = [
+  TASK_028,
+  TASK_027,
   TASK_025,
   TASK_024,
   TASK_023,
